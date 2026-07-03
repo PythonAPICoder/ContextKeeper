@@ -1,15 +1,21 @@
 from __future__ import annotations
 
 import logging
+import sys
 
 import uvicorn
 
 from .app import create_app
-from .config import load_config
+from .config import ConfigError, load_config
 
 
 def run() -> None:
-    settings = load_config()
+    try:
+        settings = load_config()
+    except ConfigError as exc:
+        print(f"ContextKeeper configuration error: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
+
     app = create_app(settings)
     logger = logging.getLogger("ctxkeeper")
     logger.info("Starting ContextKeeper on http://%s:%s", settings.server.host, settings.server.port)

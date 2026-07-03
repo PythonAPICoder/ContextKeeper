@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 
 
 class AppConfig(BaseModel):
@@ -39,6 +39,7 @@ class MetricsConfig(BaseModel):
 class DashboardConfig(BaseModel):
     enabled: bool = True
     title: str = "ContextKeeper Dashboard"
+    refresh_interval_ms: int = 1000
 
 
 class ContextConfig(BaseModel):
@@ -46,6 +47,7 @@ class ContextConfig(BaseModel):
     default_context_window_tokens: int = 16384
     warning_threshold_percent: int = 75
     compression_threshold_percent: int = 85
+    minimum_threshold_percent: int = 10
     keep_recent_messages: int = 8
 
 
@@ -64,6 +66,11 @@ class Settings(BaseModel):
     dashboard: DashboardConfig = Field(default_factory=DashboardConfig)
     context: ContextConfig = Field(default_factory=ContextConfig)
     compression: CompressionConfig = Field(default_factory=CompressionConfig)
+    models: dict[str, dict[str, int]] = Field(default_factory=dict)
+
+
+class ConfigError(RuntimeError):
+    """Raised when ContextKeeper configuration cannot be loaded."""
 
 
 def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
@@ -76,27 +83,40 @@ def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any
     return merged
 
 
+def _env_overrides() -> dict[str, Any]:
+    env_override: dict[str, Any] = {}
+
+    if host := os.getenv("CONTEXTKEEPER_HOST"):
+        env_override.setdefault("server", {})["host"] = host
+    if port := os.getenv("CONTEXTKEEPER_PORT"):
+        env_override.setdefault("server", {})["port"] = port
+    if url := os.getenv("CONTEXTKEEPER_OLLAMA_URL"):
+        env_override.setdefault("ollama", {})["base_url"] = url
+    if level := os.getenv("CONTEXTKEEPER_LOG_LEVEL"):
+        env_override.setdefault("logging", {})["level"] = level
+
+    return env_override
+
+
 def load_config(config_path: str | Path = "contextkeeper.yaml") -> Settings:
     path = Path(config_path)
     data: dict[str, Any] = {}
     if path.exists():
-        with path.open("r", encoding="utf-8") as file:
-            data = yaml.safe_load(file) or {}
+        try:
+            with path.open("r", encoding="utf-8") as file:
+                loaded = yaml.safe_load(file) or {}
+        except yaml.YAMLError as exc:
+            raise ConfigError(f"Invalid YAML in {path}: {exc}") from exc
+        except OSError as exc:
+            raise ConfigError(f"Unable to read config file {path}: {exc}") from exc
 
-    env_override: dict[str, Any] = {
-        "server": {},
-        "ollama": {},
-        "logging": {},
-    }
+        if not isinstance(loaded, dict):
+            raise ConfigError(f"Config file {path} must contain a YAML mapping.")
+        data = loaded
 
-    if host := os.getenv("CONTEXTKEEPER_HOST"):
-        env_override["server"]["host"] = host
-    if port := os.getenv("CONTEXTKEEPER_PORT"):
-        env_override["server"]["port"] = int(port)
-    if url := os.getenv("CONTEXTKEEPER_OLLAMA_URL"):
-        env_override["ollama"]["base_url"] = url
-    if level := os.getenv("CONTEXTKEEPER_LOG_LEVEL"):
-        env_override["logging"]["level"] = level
-
-    env_override = {k: v for k, v in env_override.items() if v}
-    return Settings.model_validate(_deep_merge(data, env_override))
+    try:
+        return Settings.model_validate(_deep_merge(data, _env_overrides()))
+    except ValueError as exc:
+        raise ConfigError(f"Invalid ContextKeeper configuration: {exc}") from exc
+    except ValidationError as exc:
+        raise ConfigError(f"Invalid ContextKeeper configuration: {exc}") from exc

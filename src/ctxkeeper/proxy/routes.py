@@ -32,9 +32,7 @@ def create_proxy_router(settings: Settings) -> APIRouter:
     router = APIRouter()
     ollama = OllamaClient(settings.ollama.base_url, settings.ollama.timeout_seconds)
 
-    @router.api_route("/api/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"])
-    @router.api_route("/v1/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"])
-    async def proxy(request: Request, path: str) -> Response:
+    async def proxy_request(request: Request) -> Response:
         started = time.perf_counter()
         full_path = request.url.path
         body = await request.body()
@@ -126,5 +124,14 @@ def create_proxy_router(settings: Settings) -> APIRouter:
                     "ollama_base_url": settings.ollama.base_url,
                 },
             )
+
+    @router.get("/api/tags")
+    async def api_tags(request: Request) -> Response:
+        return await proxy_request(request)
+
+    @router.api_route("/api/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"])
+    @router.api_route("/v1/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"])
+    async def proxy(request: Request, path: str) -> Response:
+        return await proxy_request(request)
 
     return router

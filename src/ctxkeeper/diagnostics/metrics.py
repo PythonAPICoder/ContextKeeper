@@ -2,11 +2,18 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from math import ceil
 import subprocess
 from threading import Lock
 from typing import Any
 
 import psutil
+
+
+def estimate_text_tokens(text: str) -> int:
+    if not text:
+        return 0
+    return max(1, ceil(len(text) / 4))
 
 
 @dataclass

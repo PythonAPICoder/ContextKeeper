@@ -62,6 +62,10 @@ class ConversationStore:
         with self._lock:
             return self._conversations.get(conversation_id)
 
+    def all(self) -> list[Conversation]:
+        with self._lock:
+            return list(self._conversations.values())
+
     def delete(self, conversation_id: str) -> bool:
         with self._lock:
             return self._conversations.pop(conversation_id, None) is not None

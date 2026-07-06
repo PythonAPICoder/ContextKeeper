@@ -1,3 +1,4 @@
+from .compression_plan import CompressionPlan, CompressionPlanner, CompressionPlanStatus
 from .conversation_store import (
     Conversation,
     ConversationMessage,
@@ -16,6 +17,9 @@ __all__ = [
     "Conversation",
     "ConversationMessage",
     "ConversationStore",
+    "CompressionPlan",
+    "CompressionPlanner",
+    "CompressionPlanStatus",
     "ContextMeter",
     "ContextMonitor",
     "ContextMonitoringStatistics",

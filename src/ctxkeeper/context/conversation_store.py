@@ -83,3 +83,6 @@ class ConversationStore:
     @staticmethod
     def _new_conversation_id() -> str:
         return f"ck_conv_{uuid4().hex}"
+
+
+conversation_store = ConversationStore()

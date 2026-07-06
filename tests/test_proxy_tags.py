@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 import logging
+from types import SimpleNamespace
 from typing import ClassVar
 
 import httpx
@@ -9,6 +11,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from ctxkeeper.config import Settings
+from ctxkeeper.context import conversation_store
 from ctxkeeper.proxy import routes
 
 
@@ -39,6 +42,19 @@ class FakeOllamaClient:
                 "query": query,
             }
         )
+        if path == "/api/chat":
+            return httpx.Response(
+                status_code=200,
+                json={
+                    "model": "gpt-oss:20b",
+                    "message": {
+                        "role": "assistant",
+                        "content": "Hello from Ollama.",
+                    },
+                    "done": True,
+                },
+                headers={"content-type": "application/json"},
+            )
         return httpx.Response(
             status_code=200,
             json={
@@ -53,6 +69,11 @@ class FakeOllamaClient:
             },
             headers={"content-type": "application/json"},
         )
+
+
+class FakeConversationIdentityRegistry:
+    def observe_request(self, **_: object) -> SimpleNamespace:
+        return SimpleNamespace(conversation_id="ck_conv_proxy_test")
 
 
 def test_api_tags_passthrough_uses_configured_ollama_url(
@@ -94,3 +115,52 @@ def test_api_tags_passthrough_uses_configured_ollama_url(
     assert "status=200" in log_text
     assert "latency_ms=" in log_text
     assert "gpt-oss prompt" not in log_text
+
+
+def test_api_chat_updates_conversation_store_without_changing_body(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    conversation_store.clear()
+    FakeOllamaClient.instances = []
+    FakeOllamaClient.requests = []
+    monkeypatch.setattr(routes, "OllamaClient", FakeOllamaClient)
+    monkeypatch.setattr(routes, "conversation_identity_registry", FakeConversationIdentityRegistry())
+    settings = Settings(ollama={"base_url": "http://ollama.test:11434"})
+
+    app = FastAPI()
+    app.include_router(routes.create_proxy_router(settings))
+    client = TestClient(app)
+    body = (
+        b'{"model":"gpt-oss:20b","messages":['
+        b'{"role":"system","content":"Use short answers."},'
+        b'{"role":"user","content":"Say hello."}'
+        b'],"stream":false}'
+    )
+
+    response = client.post(
+        "/api/chat",
+        content=body,
+        headers={"content-type": "application/json"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["message"]["content"] == "Hello from Ollama."
+    assert FakeOllamaClient.requests[0]["body"] == body
+    assert conversation_store.stats() == {
+        "conversation_count": 1,
+        "message_count": 3,
+    }
+    conversation = conversation_store.get("ck_conv_proxy_test")
+    assert conversation is not None
+    assert [message.role for message in conversation.messages] == [
+        "system",
+        "user",
+        "assistant",
+    ]
+    assert [message.content for message in conversation.messages] == [
+        "Use short answers.",
+        "Say hello.",
+        "Hello from Ollama.",
+    ]
+    assert json.loads(FakeOllamaClient.requests[0]["body"].decode("utf-8"))["messages"][1]["content"] == "Say hello."
+    conversation_store.clear()

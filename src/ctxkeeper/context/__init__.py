@@ -12,8 +12,10 @@ from .context_monitor import (
     ContextMonitorScan,
     MonitoredConversation,
 )
+from .summarizer import BaseSummarizer, OllamaSummarizer
 
 __all__ = [
+    "BaseSummarizer",
     "Conversation",
     "ConversationMessage",
     "ConversationStore",
@@ -26,5 +28,6 @@ __all__ = [
     "ContextMonitorScan",
     "ContextStatus",
     "MonitoredConversation",
+    "OllamaSummarizer",
     "conversation_store",
 ]

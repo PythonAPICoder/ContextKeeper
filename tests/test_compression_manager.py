@@ -1,17 +1,40 @@
 from __future__ import annotations
 
 from datetime import timezone
+from typing import Sequence
+
+import pytest
 
 from ctxkeeper.context import (
     CompressionManager,
     CompressionMetadata,
     CompressionPlanStatus,
+    ContextMeter,
+    Conversation,
     ConversationMessage,
 )
 
 
 def _message(content: str, role: str = "user") -> ConversationMessage:
     return ConversationMessage(role=role, content=content)
+
+
+def _meter() -> ContextMeter:
+    return ContextMeter(
+        context_window_tokens=50,
+        warning_threshold_percent=40,
+        compression_threshold_percent=50,
+    )
+
+
+class FakeSummarizer:
+    def __init__(self, summary: str = "compressed summary") -> None:
+        self.summary = summary
+        self.calls: list[list[dict[str, str]]] = []
+
+    async def summarize(self, messages: Sequence[dict[str, str]]) -> str | None:
+        self.calls.append(list(messages))
+        return self.summary
 
 
 def test_select_messages_keeps_recent_messages_and_selects_older_for_compression() -> None:
@@ -136,3 +159,117 @@ def test_archive_plan_placeholder_preserves_full_history_without_encryption() ->
     assert archive_plan.messages == messages
     assert archive_plan.encryption_enabled is False
     assert "not implemented" in archive_plan.reason
+
+
+@pytest.mark.anyio
+async def test_compress_if_needed_returns_unchanged_below_threshold() -> None:
+    summarizer = FakeSummarizer()
+    manager = CompressionManager(
+        keep_recent_messages=1,
+        max_summary_tokens=10,
+        meter=_meter(),
+        summarizer=summarizer,
+    )
+    conversation = Conversation(conversation_id="conv-1")
+    conversation.messages = [_message("hello")]
+    original_messages = list(conversation.messages)
+
+    result = await manager.compress_if_needed(conversation)
+
+    assert result is conversation
+    assert conversation.messages == original_messages
+    assert summarizer.calls == []
+
+
+@pytest.mark.anyio
+async def test_compress_if_needed_compresses_above_threshold() -> None:
+    summarizer = FakeSummarizer("summary of older messages")
+    manager = CompressionManager(
+        keep_recent_messages=1,
+        max_summary_tokens=10,
+        meter=_meter(),
+        summarizer=summarizer,
+    )
+    conversation = Conversation(conversation_id="conv-1")
+    conversation.messages = [
+        _message("a" * 76),
+        _message("b" * 76),
+        _message("keep me"),
+    ]
+    original_recent_message = conversation.messages[-1]
+
+    result = await manager.compress_if_needed(conversation)
+
+    assert result is conversation
+    assert len(summarizer.calls) == 1
+    assert [message["content"] for message in summarizer.calls[0]] == ["a" * 76, "b" * 76]
+    assert len(conversation.messages) == 2
+    assert conversation.messages[0].role == "system"
+    assert conversation.messages[0].content.startswith("[ContextKeeper rolling summary]\n")
+    assert conversation.messages[0].content.endswith("summary of older messages")
+    assert conversation.messages[1] is original_recent_message
+    metadata = manager.metadata_by_conversation_id["conv-1"]
+    assert metadata.compression_count == 1
+    assert metadata.total_messages_compressed == 2
+
+
+@pytest.mark.anyio
+async def test_compress_if_needed_returns_unchanged_when_disabled() -> None:
+    manager = CompressionManager(
+        keep_recent_messages=1,
+        max_summary_tokens=10,
+        enabled=False,
+    )
+    conversation = Conversation(conversation_id="conv-1")
+    conversation.messages = [_message("a" * 76), _message("b" * 76)]
+    original_messages = list(conversation.messages)
+
+    result = await manager.compress_if_needed(conversation)
+
+    assert result is conversation
+    assert conversation.messages == original_messages
+
+
+@pytest.mark.anyio
+async def test_compress_if_needed_returns_empty_conversation_unchanged() -> None:
+    manager = CompressionManager(
+        keep_recent_messages=1,
+        max_summary_tokens=10,
+        enabled=True,
+    )
+    conversation = Conversation(conversation_id="conv-1")
+
+    result = await manager.compress_if_needed(conversation)
+
+    assert result is conversation
+    assert conversation.messages == []
+
+
+@pytest.mark.anyio
+async def test_compress_if_needed_is_idempotent_without_new_history() -> None:
+    summarizer = FakeSummarizer("summary of older messages")
+    manager = CompressionManager(
+        keep_recent_messages=1,
+        max_summary_tokens=10,
+        meter=_meter(),
+        summarizer=summarizer,
+    )
+    conversation = Conversation(conversation_id="conv-1")
+    conversation.messages = [
+        _message("a" * 76),
+        _message("b" * 76),
+        _message("keep me"),
+    ]
+
+    await manager.compress_if_needed(conversation)
+    messages_after_first_compression = list(conversation.messages)
+    await manager.compress_if_needed(conversation)
+
+    assert summarizer.calls == [
+        [
+            {"role": "user", "content": "a" * 76},
+            {"role": "user", "content": "b" * 76},
+        ]
+    ]
+    assert conversation.messages == messages_after_first_compression
+    assert manager.metadata_by_conversation_id["conv-1"].compression_count == 1

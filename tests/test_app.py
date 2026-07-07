@@ -1,3 +1,4 @@
+import pytest
 from fastapi.testclient import TestClient
 
 from ctxkeeper.app import create_app
@@ -5,6 +6,13 @@ from ctxkeeper.config import Settings
 from ctxkeeper.context.compression_manager import ROLLING_SUMMARY_PREFIX
 from ctxkeeper.context.conversation_store import conversation_store
 from ctxkeeper.dashboard.routes import build_dashboard_status
+
+
+@pytest.fixture(autouse=True)
+def clear_conversation_store() -> None:
+    conversation_store.clear()
+    yield
+    conversation_store.clear()
 
 
 def test_health_endpoint() -> None:
@@ -27,6 +35,7 @@ def test_dashboard_endpoint() -> None:
     assert "Request Statistics" in response.text
     assert "Compression History" in response.text
     assert "Live Activity" in response.text
+    assert "Active Conversation" in response.text
 
 
 def test_dashboard_data_endpoint(monkeypatch) -> None:
@@ -34,6 +43,7 @@ def test_dashboard_data_endpoint(monkeypatch) -> None:
         return {"status": "online", "version": "test", "latency_ms": 1.0}
 
     monkeypatch.setattr("ctxkeeper.dashboard.routes._check_ollama", fake_check_ollama)
+    conversation_store.append_message("dashboard-live", "user", "hello")
     app = create_app(Settings())
     client = TestClient(app)
 
@@ -48,11 +58,12 @@ def test_dashboard_data_endpoint(monkeypatch) -> None:
     assert "latest" in data["requests"]
     assert "usage_percent" in data["context"]
     assert "count" in data["compression"]
+    assert data["active_conversation"]["conversation_id"] == "dashboard-live"
+    assert data["active_conversation"]["recent_messages"][0]["content"] == "hello"
     assert data["refresh_interval_ms"] == 1000
 
 
 def test_build_dashboard_status_includes_context_and_compression_history() -> None:
-    conversation_store.clear()
     conversation = conversation_store.create("dashboard-test")
     conversation_store.append_message("dashboard-test", "user", "hello")
     conversation_store.append_message(
@@ -90,4 +101,7 @@ def test_build_dashboard_status_includes_context_and_compression_history() -> No
     assert status["context"]["usage_percent"] > 0
     assert status["compression"]["count"] == 1
     assert status["compression"]["history"][0]["conversation_id"] == "dashboard-test"
-    conversation_store.clear()
+    assert status["active_conversation"]["conversation_id"] == "dashboard-test"
+    assert status["active_conversation"]["model_name"] == "test-model"
+    assert status["active_conversation"]["rolling_summary"] == "older conversation summary"
+    assert status["active_conversation"]["context"]["usage_percent"] > 0

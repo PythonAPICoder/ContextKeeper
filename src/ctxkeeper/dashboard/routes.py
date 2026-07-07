@@ -13,6 +13,7 @@ from ..context.context_meter import ContextMeter
 from ..context.context_monitor import ContextMonitor
 from ..context.conversation_store import Conversation, conversation_store
 from ..diagnostics.metrics import metrics_store
+from .snapshots import ConversationSnapshotProvider
 
 
 async def _check_ollama(settings: Settings) -> dict[str, object]:
@@ -33,11 +34,22 @@ async def _check_ollama(settings: Settings) -> dict[str, object]:
 def _create_context_monitor(settings: Settings) -> ContextMonitor:
     return ContextMonitor(
         store=conversation_store,
-        meter=ContextMeter(
-            context_window_tokens=settings.context.default_context_window_tokens,
-            warning_threshold_percent=settings.context.warning_threshold_percent,
-            compression_threshold_percent=settings.context.compression_threshold_percent,
-        ),
+        meter=_create_context_meter(settings),
+    )
+
+
+def _create_context_meter(settings: Settings) -> ContextMeter:
+    return ContextMeter(
+        context_window_tokens=settings.context.default_context_window_tokens,
+        warning_threshold_percent=settings.context.warning_threshold_percent,
+        compression_threshold_percent=settings.context.compression_threshold_percent,
+    )
+
+
+def _create_conversation_snapshot_provider(settings: Settings) -> ConversationSnapshotProvider:
+    return ConversationSnapshotProvider(
+        store=conversation_store,
+        meter=_create_context_meter(settings),
     )
 
 
@@ -73,6 +85,9 @@ def build_dashboard_status(
     context_scan = _create_context_monitor(settings).scan()
     compression_history = _compression_history(conversation_store.all())
     context_stats = context_scan.statistics
+    active_conversation = _create_conversation_snapshot_provider(settings).active_snapshot(
+        model_name=request_metrics.get("last_model")
+    )
 
     return {
         "contextkeeper": {
@@ -103,6 +118,7 @@ def build_dashboard_status(
             "count": sum(item["compression_count"] for item in compression_history),
             "history": compression_history[:10],
         },
+        "active_conversation": active_conversation.to_dict(),
         "system": metrics_snapshot["system"],
         "refresh_interval_ms": settings.dashboard.refresh_interval_ms or 1000,
     }
@@ -179,6 +195,12 @@ th,td {{ text-align:left; padding:8px; border-bottom:1px solid rgba(255,255,255,
 .dot.online {{ background:var(--good); color:var(--good); }} .dot.waiting {{ background:var(--warn); color:var(--warn); }} .dot.offline {{ background:var(--bad); color:var(--bad); }}
 .pipe {{ height:4px; background:linear-gradient(90deg,var(--line),var(--accent),var(--line)); border-radius:99px; opacity:.7; }}
 .small {{ font-size:12px; color:var(--muted); overflow-wrap:anywhere; }}
+.conversation-meta {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; margin-bottom:14px; }}
+.summary {{ background:rgba(15,23,42,.62); border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:12px; white-space:pre-wrap; }}
+.messages {{ display:grid; gap:10px; margin-top:12px; }}
+.message {{ background:rgba(15,23,42,.46); border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:10px 12px; }}
+.message-role {{ color:var(--accent); font-size:12px; font-weight:700; text-transform:uppercase; }}
+.message-content {{ margin-top:4px; white-space:pre-wrap; }}
 @media (max-width: 1000px) {{ .flow {{ grid-template-columns:1fr; }} .pipe {{ height:20px; width:4px; justify-self:center; }} }}
 </style>
 </head>
@@ -209,10 +231,25 @@ th,td {{ text-align:left; padding:8px; border-bottom:1px solid rgba(255,255,255,
   <div class="card"><h2>Compression History</h2><div id="compressionCount" class="value">0</div><div id="compressionText" class="muted">Compression events will appear here.</div></div>
 </div>
 <div class="grid">
+  <div class="card" style="grid-column:1/-1">
+    <h2>Active Conversation</h2>
+    <div class="conversation-meta">
+      <div><div class="small">Conversation ID</div><div id="activeConversationId" class="muted">None</div></div>
+      <div><div class="small">Model</div><div id="activeModelName" class="muted">None</div></div>
+      <div><div class="small">Context Usage</div><div id="activeContextUsage" class="muted">--</div></div>
+    </div>
+    <div class="small">Rolling Summary</div>
+    <div id="activeRollingSummary" class="summary muted">No rolling summary available.</div>
+    <div class="small" style="margin-top:14px">Recent Messages</div>
+    <div id="activeRecentMessages" class="messages"><div class="muted">No recent messages.</div></div>
+  </div>
   <div class="card" style="grid-column:1/-1"><h2>Live Activity</h2><table><thead><tr><th>Time</th><th>Client</th><th>Endpoint</th><th>Model</th><th>Status</th><th>Latency</th></tr></thead><tbody id="recent"></tbody></table></div>
 </div>
 <script>
 const DASHBOARD_REFRESH_INTERVAL_MS = {settings.dashboard.refresh_interval_ms or 1000};
+function escapeHtml(value) {{
+  return String(value ?? '').replace(/[&<>"']/g, char => ({{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}}[char]));
+}}
 function setDot(id, status) {{
   const el = document.getElementById(id);
   el.className = 'dot ' + (status === 'online' || status === 'active' ? 'online' : status === 'offline' ? 'offline' : 'waiting');
@@ -262,6 +299,21 @@ async function refreshDashboardData() {{
   document.getElementById('contextUsageBar').style.width = Math.min(context.usage_percent, 100) + '%';
   document.getElementById('compressionCount').textContent = compression.count;
   document.getElementById('compressionText').textContent = compression.history.length + ' recent compression event(s)';
+  refreshActiveConversation(data.active_conversation);
+}}
+function refreshActiveConversation(active) {{
+  document.getElementById('activeConversationId').textContent = active.conversation_id || 'None';
+  document.getElementById('activeModelName').textContent = active.model_name || 'None';
+  if (active.context) {{
+    document.getElementById('activeContextUsage').textContent = active.context.usage_percent + '% (' + active.context.estimated_tokens + ' / ' + active.context.context_window_tokens + ' tokens)';
+  }} else {{
+    document.getElementById('activeContextUsage').textContent = '--';
+  }}
+  document.getElementById('activeRollingSummary').textContent = active.rolling_summary || 'No rolling summary available.';
+  const messages = active.recent_messages || [];
+  document.getElementById('activeRecentMessages').innerHTML = messages.length
+    ? messages.map(message => `<div class="message"><div class="message-role">${{escapeHtml(message.role)}}</div><div class="message-content">${{escapeHtml(message.content)}}</div><div class="small">${{escapeHtml(new Date(message.timestamp).toLocaleTimeString())}}</div></div>`).join('')
+    : '<div class="muted">No recent messages.</div>';
 }}
 async function refresh() {{ await Promise.all([refreshHealth(), refreshMetrics(), refreshDashboardData()]); }}
 refresh(); setInterval(refresh, DASHBOARD_REFRESH_INTERVAL_MS);

@@ -100,23 +100,25 @@ th,td {{ text-align:left; padding:8px; border-bottom:1px solid rgba(255,255,255,
 <section class="flow">
   <div class="node"><div class="node-title"><span id="clientDot" class="dot waiting"></span>Client</div><div id="clientText" class="value">Waiting</div><div id="clientSub" class="small">No clients seen yet</div></div>
   <div class="pipe"></div>
-  <div class="node"><div class="node-title"><span id="proxyDot" class="dot online"></span>ContextKeeper</div><div class="value ok">Online</div><div id="proxySub" class="small">Listening on port {settings.server.port}</div></div>
+  <div class="node"><div class="node-title"><span id="proxyDot" class="dot online"></span>ContextKeeper Status</div><div class="value ok">Online</div><div id="proxySub" class="small">Listening on port {settings.server.port}</div></div>
   <div class="pipe"></div>
-  <div class="node"><div class="node-title"><span id="ollamaDot" class="dot waiting"></span>Ollama</div><div id="ollamaText" class="value">Checking</div><div id="ollamaSub" class="small">{settings.ollama.base_url}</div></div>
+  <div class="node"><div class="node-title"><span id="ollamaDot" class="dot waiting"></span>Ollama Status</div><div id="ollamaText" class="value">Checking</div><div id="ollamaSub" class="small">{settings.ollama.base_url}</div></div>
   <div class="pipe"></div>
   <div class="node"><div class="node-title"><span id="modelDot" class="dot waiting"></span>Model</div><div id="modelText" class="value">Waiting</div><div id="modelSub" class="small">No active model yet</div></div>
 </section>
 
 <div class="grid">
   <div class="card"><h2>Status</h2><div class="value ok">Running</div><div class="muted">Proxy → {settings.ollama.base_url}</div></div>
-  <div class="card"><h2>Requests</h2><div id="req" class="value">0</div><div class="muted">Total requests</div></div>
+  <div class="card"><h2>Request Statistics</h2><div id="req" class="value">0</div><div class="muted">Total requests</div></div>
   <div class="card"><h2>Errors</h2><div id="err" class="value">0</div><div class="muted">Total errors</div></div>
   <div class="card"><h2>CPU</h2><div id="cpu" class="value">--%</div><div class="bar"><div id="cpuBar" class="fill"></div></div></div>
   <div class="card"><h2>RAM</h2><div id="ram" class="value">--%</div><div id="ramText" class="muted"></div><div class="bar"><div id="ramBar" class="fill"></div></div></div>
   <div class="card"><h2>GPU / VRAM</h2><div id="gpu" class="value">--</div><div id="vramText" class="muted"></div><div class="bar"><div id="gpuBar" class="fill"></div></div></div>
+  <div class="card"><h2>Context Usage</h2><div class="value">--</div><div class="muted">Context window usage will appear here.</div></div>
+  <div class="card"><h2>Compression History</h2><div class="value">--</div><div class="muted">Compression events will appear here.</div></div>
 </div>
 <div class="grid">
-  <div class="card" style="grid-column:1/-1"><h2>Recent Requests</h2><table><thead><tr><th>Time</th><th>Client</th><th>Endpoint</th><th>Model</th><th>Status</th><th>Latency</th></tr></thead><tbody id="recent"></tbody></table></div>
+  <div class="card" style="grid-column:1/-1"><h2>Live Activity</h2><table><thead><tr><th>Time</th><th>Client</th><th>Endpoint</th><th>Model</th><th>Status</th><th>Latency</th></tr></thead><tbody id="recent"></tbody></table></div>
 </div>
 <script>
 function setDot(id, status) {{

@@ -1,12 +1,17 @@
 from __future__ import annotations
 
 import time
+from typing import Any
 
 import httpx
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 
 from ..config import Settings
+from ..context.compression_manager import ROLLING_SUMMARY_PREFIX
+from ..context.context_meter import ContextMeter
+from ..context.context_monitor import ContextMonitor
+from ..context.conversation_store import Conversation, conversation_store
 from ..diagnostics.metrics import metrics_store
 
 
@@ -23,6 +28,84 @@ async def _check_ollama(settings: Settings) -> dict[str, object]:
     except Exception as exc:
         latency_ms = round((time.perf_counter() - started) * 1000, 2)
         return {"status": "offline", "version": None, "latency_ms": latency_ms, "detail": str(exc)}
+
+
+def _create_context_monitor(settings: Settings) -> ContextMonitor:
+    return ContextMonitor(
+        store=conversation_store,
+        meter=ContextMeter(
+            context_window_tokens=settings.context.default_context_window_tokens,
+            warning_threshold_percent=settings.context.warning_threshold_percent,
+            compression_threshold_percent=settings.context.compression_threshold_percent,
+        ),
+    )
+
+
+def _compression_history(conversations: list[Conversation]) -> list[dict[str, Any]]:
+    history: list[dict[str, Any]] = []
+    for conversation in conversations:
+        summaries = [
+            message
+            for message in conversation.messages
+            if message.role == "system" and message.content.startswith(ROLLING_SUMMARY_PREFIX)
+        ]
+        if not summaries:
+            continue
+        latest = max(summaries, key=lambda message: message.timestamp)
+        history.append(
+            {
+                "conversation_id": conversation.conversation_id,
+                "compression_count": len(summaries),
+                "last_compressed_at": latest.timestamp.isoformat(),
+            }
+        )
+    return sorted(history, key=lambda item: str(item["last_compressed_at"]), reverse=True)
+
+
+def build_dashboard_status(
+    *,
+    settings: Settings,
+    metrics_snapshot: dict[str, Any],
+    ollama_status: dict[str, object],
+) -> dict[str, Any]:
+    request_metrics = metrics_snapshot["requests"]
+    recent_requests = list(request_metrics.get("recent_requests", []))
+    context_scan = _create_context_monitor(settings).scan()
+    compression_history = _compression_history(conversation_store.all())
+    context_stats = context_scan.statistics
+
+    return {
+        "contextkeeper": {
+            "status": "running",
+            "app": settings.app.name,
+        },
+        "ollama": ollama_status,
+        "requests": {
+            "total_count": request_metrics.get("total_requests", 0),
+            "recent_count": len(recent_requests),
+            "latest": recent_requests[:10],
+            "total_errors": request_metrics.get("total_errors", 0),
+            "last_endpoint": request_metrics.get("last_endpoint"),
+            "last_model": request_metrics.get("last_model"),
+            "last_latency_ms": request_metrics.get("last_latency_ms"),
+            "last_status_code": request_metrics.get("last_status_code"),
+        },
+        "context": {
+            "usage_percent": context_stats.max_usage_percent,
+            "average_usage_percent": context_stats.average_usage_percent,
+            "conversation_count": context_stats.conversation_count,
+            "message_count": context_stats.message_count,
+            "estimated_tokens": context_stats.total_estimated_tokens,
+            "warning_count": context_stats.warning_count,
+            "compression_candidate_count": context_stats.compression_candidate_count,
+        },
+        "compression": {
+            "count": sum(item["compression_count"] for item in compression_history),
+            "history": compression_history[:10],
+        },
+        "system": metrics_snapshot["system"],
+        "refresh_interval_ms": settings.dashboard.refresh_interval_ms or 1000,
+    }
 
 
 def create_dashboard_router(settings: Settings) -> APIRouter:
@@ -54,6 +137,14 @@ def create_dashboard_router(settings: Settings) -> APIRouter:
     @router.get("/metrics")
     async def metrics() -> dict[str, object]:
         return metrics_store.snapshot()
+
+    @router.get("/dashboard/data")
+    async def dashboard_data() -> dict[str, Any]:
+        return build_dashboard_status(
+            settings=settings,
+            metrics_snapshot=metrics_store.snapshot(),
+            ollama_status=await _check_ollama(settings),
+        )
 
     @router.get("/dashboard", response_class=HTMLResponse)
     async def dashboard() -> str:
@@ -114,13 +205,14 @@ th,td {{ text-align:left; padding:8px; border-bottom:1px solid rgba(255,255,255,
   <div class="card"><h2>CPU</h2><div id="cpu" class="value">--%</div><div class="bar"><div id="cpuBar" class="fill"></div></div></div>
   <div class="card"><h2>RAM</h2><div id="ram" class="value">--%</div><div id="ramText" class="muted"></div><div class="bar"><div id="ramBar" class="fill"></div></div></div>
   <div class="card"><h2>GPU / VRAM</h2><div id="gpu" class="value">--</div><div id="vramText" class="muted"></div><div class="bar"><div id="gpuBar" class="fill"></div></div></div>
-  <div class="card"><h2>Context Usage</h2><div class="value">--</div><div class="muted">Context window usage will appear here.</div></div>
-  <div class="card"><h2>Compression History</h2><div class="value">--</div><div class="muted">Compression events will appear here.</div></div>
+  <div class="card"><h2>Context Usage</h2><div id="contextUsage" class="value">--%</div><div id="contextUsageText" class="muted">Context window usage will appear here.</div><div class="bar"><div id="contextUsageBar" class="fill"></div></div></div>
+  <div class="card"><h2>Compression History</h2><div id="compressionCount" class="value">0</div><div id="compressionText" class="muted">Compression events will appear here.</div></div>
 </div>
 <div class="grid">
   <div class="card" style="grid-column:1/-1"><h2>Live Activity</h2><table><thead><tr><th>Time</th><th>Client</th><th>Endpoint</th><th>Model</th><th>Status</th><th>Latency</th></tr></thead><tbody id="recent"></tbody></table></div>
 </div>
 <script>
+const DASHBOARD_REFRESH_INTERVAL_MS = {settings.dashboard.refresh_interval_ms or 1000};
 function setDot(id, status) {{
   const el = document.getElementById(id);
   el.className = 'dot ' + (status === 'online' || status === 'active' ? 'online' : status === 'offline' ? 'offline' : 'waiting');
@@ -160,8 +252,19 @@ async function refreshMetrics() {{
   }} else {{ document.getElementById('gpu').textContent = 'N/A'; document.getElementById('vramText').textContent = 'nvidia-smi not available'; }}
   document.getElementById('recent').innerHTML = r.recent_requests.map(x => `<tr><td>${{new Date(x.timestamp).toLocaleTimeString()}}</td><td>${{x.client_host||''}}</td><td>${{x.endpoint}}</td><td>${{x.model||''}}</td><td>${{x.status_code}}</td><td>${{x.latency_ms}} ms</td></tr>`).join('');
 }}
-async function refresh() {{ await Promise.all([refreshHealth(), refreshMetrics()]); }}
-refresh(); setInterval(refresh, 2000);
+async function refreshDashboardData() {{
+  const res = await fetch('/dashboard/data');
+  const data = await res.json();
+  const context = data.context;
+  const compression = data.compression;
+  document.getElementById('contextUsage').textContent = context.usage_percent + '%';
+  document.getElementById('contextUsageText').textContent = context.estimated_tokens + ' estimated tokens across ' + context.conversation_count + ' conversation(s)';
+  document.getElementById('contextUsageBar').style.width = Math.min(context.usage_percent, 100) + '%';
+  document.getElementById('compressionCount').textContent = compression.count;
+  document.getElementById('compressionText').textContent = compression.history.length + ' recent compression event(s)';
+}}
+async function refresh() {{ await Promise.all([refreshHealth(), refreshMetrics(), refreshDashboardData()]); }}
+refresh(); setInterval(refresh, DASHBOARD_REFRESH_INTERVAL_MS);
 </script>
 </body>
 </html>

@@ -69,6 +69,19 @@ place an editable `contextkeeper.yaml` beside `ContextKeeper.exe` to override
 the bundled default. Source runs continue to load `contextkeeper.yaml` from the
 current working directory.
 
+## Building a Windows Installer
+
+The installer foundation uses Inno Setup and expects the PyInstaller executable
+to exist first.
+
+```powershell
+pyinstaller contextkeeper.spec
+ISCC.exe installer\ContextKeeper.iss
+```
+
+The installer script lives in `installer/ContextKeeper.iss`. Service
+installation hooks are placeholders and will be implemented in a later phase.
+
 ## Important
 
 The product is called **ContextKeeper**, but the Python package is named `ctxkeeper` to avoid conflict with an unrelated PyPI package named `contextkeeper`.

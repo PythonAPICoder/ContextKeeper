@@ -36,6 +36,11 @@ def test_dashboard_endpoint() -> None:
     assert "Compression History" in response.text
     assert "Live Activity" in response.text
     assert "Active Conversation" in response.text
+    assert "System Health" in response.text
+    assert "Insights" in response.text
+    assert "Recommendations" in response.text
+    assert "Activity Timeline" in response.text
+    assert "Request Trend" in response.text
 
 
 def test_dashboard_data_endpoint(monkeypatch) -> None:
@@ -58,6 +63,15 @@ def test_dashboard_data_endpoint(monkeypatch) -> None:
     assert "latest" in data["requests"]
     assert "usage_percent" in data["context"]
     assert "count" in data["compression"]
+    assert data["intelligence"]["health"]["status"] in {"healthy", "busy", "warning", "critical", "offline"}
+    assert "message" in data["intelligence"]["health"]
+    assert "insights" in data["intelligence"]
+    assert "recommendations" in data["intelligence"]
+    assert "request_direction" in data["intelligence"]["trends"]
+    assert "average_request_rate" in data["intelligence"]["trends"]
+    assert "average_latency_ms" in data["intelligence"]["trends"]
+    assert "timeline" in data["intelligence"]
+    assert "conversation_risk" in data["intelligence"]
     assert data["active_conversation"]["conversation_id"] == "dashboard-live"
     assert data["active_conversation"]["recent_messages"][0]["content"] == "hello"
     assert data["refresh_interval_ms"] == 1000
@@ -80,8 +94,18 @@ def test_build_dashboard_status_includes_context_and_compression_history() -> No
             "last_latency_ms": 12.5,
             "last_status_code": 200,
             "recent_requests": [
-                {"endpoint": "/api/chat", "status_code": 200},
-                {"endpoint": "/api/tags", "status_code": 200},
+                {
+                    "timestamp": "2026-07-08T12:01:00+00:00",
+                    "endpoint": "/api/chat",
+                    "status_code": 200,
+                    "latency_ms": 100.0,
+                },
+                {
+                    "timestamp": "2026-07-08T12:00:00+00:00",
+                    "endpoint": "/api/tags",
+                    "status_code": 200,
+                    "latency_ms": 50.0,
+                },
             ],
         },
         "system": {"cpu_percent": 0, "ram_percent": 0, "gpu": None},
@@ -105,3 +129,9 @@ def test_build_dashboard_status_includes_context_and_compression_history() -> No
     assert status["active_conversation"]["model_name"] == "test-model"
     assert status["active_conversation"]["rolling_summary"] == "older conversation summary"
     assert status["active_conversation"]["context"]["usage_percent"] > 0
+    assert status["intelligence"]["health"]["status"] == "critical"
+    assert status["intelligence"]["health"]["message"] == "Ollama is unavailable."
+    assert status["intelligence"]["trends"]["average_latency_ms"] == 75.0
+    assert status["intelligence"]["trends"]["average_request_rate"] == 2.0
+    assert status["intelligence"]["timeline"][0]["message"] == "/api/chat returned 200 in 100.0 ms"
+    assert status["intelligence"]["conversation_risk"]["status"] == "healthy"

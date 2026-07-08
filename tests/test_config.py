@@ -75,3 +75,24 @@ def test_invalid_config_raises_clear_error(tmp_path: Path) -> None:
 
     with pytest.raises(ConfigError, match="must contain a YAML mapping"):
         load_config(config_path)
+
+
+def test_load_config_uses_frozen_resource_resolution(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    exe_dir = tmp_path / "dist"
+    exe_dir.mkdir()
+    config_path = exe_dir / "contextkeeper.yaml"
+    config_path.write_text(
+        """
+server:
+  host: "127.0.0.1"
+  port: 11675
+""",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr("sys.frozen", True, raising=False)
+    monkeypatch.setattr("sys.executable", str(exe_dir / "ContextKeeper.exe"))
+
+    settings = load_config()
+
+    assert settings.server.host == "127.0.0.1"
+    assert settings.server.port == 11675

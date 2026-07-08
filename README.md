@@ -41,6 +41,26 @@ Test Ollama passthrough:
 Invoke-RestMethod http://localhost:11500/api/tags
 ```
 
+## Building a Windows Executable
+
+The first-stage standalone executable build uses PyInstaller.
+
+```powershell
+python -m pip install -e ".[build]"
+pyinstaller contextkeeper.spec
+```
+
+The executable is written to:
+
+```text
+dist/ContextKeeper.exe
+```
+
+`contextkeeper.yaml` is bundled as a fallback resource. For packaged runs,
+place an editable `contextkeeper.yaml` beside `ContextKeeper.exe` to override
+the bundled default. Source runs continue to load `contextkeeper.yaml` from the
+current working directory.
+
 ## Important
 
 The product is called **ContextKeeper**, but the Python package is named `ctxkeeper` to avoid conflict with an unrelated PyPI package named `contextkeeper`.

@@ -7,6 +7,8 @@ from typing import Any
 import yaml
 from pydantic import BaseModel, Field, ValidationError
 
+from .resources import DEFAULT_CONFIG_NAME, resolve_config_path
+
 
 class AppConfig(BaseModel):
     name: str = "ContextKeeper"
@@ -98,8 +100,8 @@ def _env_overrides() -> dict[str, Any]:
     return env_override
 
 
-def load_config(config_path: str | Path = "contextkeeper.yaml") -> Settings:
-    path = Path(config_path)
+def load_config(config_path: str | Path = DEFAULT_CONFIG_NAME) -> Settings:
+    path = resolve_config_path(config_path)
     data: dict[str, Any] = {}
     if path.exists():
         try:

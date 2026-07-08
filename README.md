@@ -29,6 +29,14 @@ python -m pip install -e .
 python -m ctxkeeper.main
 ```
 
+On first launch, ContextKeeper creates `contextkeeper.yaml` through an
+interactive configuration wizard if the file does not exist. To rerun the
+wizard later:
+
+```powershell
+python -m ctxkeeper.main --configure
+```
+
 Open:
 
 ```text

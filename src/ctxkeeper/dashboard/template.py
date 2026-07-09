@@ -48,8 +48,9 @@ h1 {{ margin:0; font-size:25px; }}
 .page-sub {{ color:var(--muted); margin-top:4px; }}
 .command-meta {{ display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }}
 .operations-page {{ grid-template-rows:auto auto auto; min-height:calc(100vh - 91px); overflow:visible; }}
-.ops-hero {{ display:grid; grid-template-columns:minmax(360px,1.08fr) repeat(3,minmax(170px,.72fr)); gap:10px; align-items:stretch; min-width:0; }}
+.ops-hero {{ display:grid; grid-template-columns:minmax(360px,1.35fr) minmax(280px,.65fr); grid-template-areas:"hero actions" "stats stats"; gap:10px; align-items:stretch; min-width:0; }}
 .hero-status {{ position:relative; overflow:hidden; min-height:104px; min-width:0; display:grid; align-content:center; padding:14px 18px; background:linear-gradient(135deg,rgba(15,23,42,.96),rgba(17,24,39,.92)); border-left:5px solid var(--accent); }}
+.ops-hero > .hero-status {{ grid-area:hero; }}
 .hero-status::after {{ content:""; position:absolute; inset:auto -22% -70% 38%; height:180px; background:radial-gradient(circle,rgba(56,189,248,.18),transparent 68%); pointer-events:none; }}
 .hero-status.healthy {{ border-left-color:var(--good); }} .hero-status.warning,.hero-status.busy {{ border-left-color:var(--warn); }} .hero-status.critical,.hero-status.offline {{ border-left-color:var(--bad); }}
 .hero-kicker {{ color:var(--muted); font-size:11px; font-weight:800; letter-spacing:.11em; text-transform:uppercase; }}
@@ -57,6 +58,23 @@ h1 {{ margin:0; font-size:25px; }}
 .hero-title span:last-child {{ min-width:0; overflow:hidden; text-overflow:ellipsis; }}
 .hero-icon {{ font-size:20px; }}
 .hero-copy {{ max-width:780px; margin-top:5px; color:var(--soft); font-size:13px; line-height:1.3; }}
+.hero-status #systemHealthCard {{ position:relative; z-index:1; margin-top:10px; min-height:0; padding:9px 10px; background:rgba(15,23,42,.48); box-shadow:none; }}
+.hero-status #systemHealthCard .signal-body {{ grid-template-columns:minmax(0,1fr) 44px; }}
+.hero-status #systemHealthCard .gauge {{ width:44px; height:44px; }}
+.hero-status #systemHealthCard .value {{ font-size:19px; }}
+.ops-hero > .action-panel {{ grid-area:actions; }}
+.hero-stats-grid {{ grid-area:stats; display:grid; grid-template-columns:repeat(4,minmax(160px,1fr)); gap:10px; min-width:0; }}
+.hero-stat-card {{ position:relative; overflow:hidden; min-height:112px; display:grid; align-content:space-between; gap:10px; padding:14px; }}
+.hero-stat-card::before {{ content:""; position:absolute; inset:0; background:linear-gradient(135deg,rgba(56,189,248,.1),transparent 42%); opacity:.82; pointer-events:none; }}
+.hero-stat-card > * {{ position:relative; z-index:1; }}
+.hero-stat-card:hover .hero-stat-icon {{ transform:translateY(-1px); border-color:rgba(56,189,248,.34); }}
+.hero-stat-top {{ display:flex; align-items:center; justify-content:space-between; gap:10px; }}
+.hero-stat-label {{ color:var(--soft); font-size:12px; font-weight:850; letter-spacing:.08em; text-transform:uppercase; }}
+.hero-stat-icon {{ display:grid; place-items:center; width:34px; height:34px; border-radius:9px; color:var(--accent); background:rgba(56,189,248,.1); border:1px solid rgba(56,189,248,.2); transition:transform .18s ease,border-color .18s ease; }}
+.hero-stat-icon svg {{ width:18px; height:18px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }}
+.hero-stat-value {{ font-size:clamp(30px,2.1vw,40px); line-height:.95; font-weight:850; letter-spacing:0; overflow-wrap:anywhere; }}
+.hero-stat-desc {{ color:var(--muted); font-size:12px; line-height:1.25; }}
+.hero-stat-hidden-binding {{ display:none; }}
 .operations-lower {{ display:grid; grid-template-columns:minmax(300px,.82fr) minmax(360px,1fr) minmax(340px,1fr); gap:14px; min-height:0; min-width:0; }}
 .grid {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px; }}
 .card {{ background:linear-gradient(180deg,rgba(24,33,50,.82),rgba(15,23,42,.76)); border:1px solid rgba(203,213,225,.1); border-radius:10px; padding:12px; box-shadow:var(--shadow); backdrop-filter:blur(18px); transition:border-color .18s ease, transform .18s ease, background .18s ease,box-shadow .18s ease; }}
@@ -147,18 +165,21 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
   .topbar-pill {{ min-height:26px; padding:3px 8px; }}
   .dashboard-main {{ padding:8px 12px 14px; }}
   .page.active {{ gap:8px; }}
-  .ops-hero {{ grid-template-columns:minmax(280px,.9fr) repeat(3,minmax(132px,1fr)); grid-template-rows:auto auto; gap:8px; }}
+  .ops-hero {{ grid-template-columns:minmax(280px,1.15fr) minmax(240px,.85fr); gap:8px; }}
+  .hero-stats-grid {{ grid-template-columns:repeat(4,minmax(132px,1fr)); gap:8px; }}
+  .hero-stat-card {{ min-height:92px; padding:11px; gap:7px; }}
+  .hero-stat-icon {{ width:30px; height:30px; }}
+  .hero-stat-value {{ font-size:28px; }}
+  .hero-stat-desc {{ font-size:11px; }}
   .hero-status {{ grid-column:1; grid-row:1; min-height:74px; padding:10px 14px; }}
   .hero-title {{ font-size:18px; white-space:nowrap; margin-top:3px; }}
   .hero-icon {{ font-size:17px; }}
   .hero-copy {{ max-width:none; margin-top:3px; font-size:11px; line-height:1.22; display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden; }}
   .hero-kicker {{ font-size:10px; }}
   .hero-status .command-meta {{ display:none; }}
+  .hero-status #systemHealthCard {{ margin-top:6px; padding:7px 8px; }}
   .command-meta {{ margin-top:5px; }}
-  #systemHealthCard {{ grid-column:2; grid-row:1; }}
-  #overview > .signal-card:nth-of-type(3) {{ grid-column:3; grid-row:1; }}
-  #overview > .signal-card:nth-of-type(4) {{ grid-column:4; grid-row:1; }}
-  .action-panel {{ grid-column:1; grid-row:2; }}
+  .action-panel {{ grid-area:actions; }}
   .signal-card {{ min-height:78px; min-width:0; }}
   .signal-card .value,.signal-node .value {{ font-size:22px; }}
   .signal-card h2,.signal-node .node-title {{ font-size:12px; }}
@@ -197,7 +218,9 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
   .conversation-compact .summary {{ max-height:38px; }}
 }}
 @media (max-width: 1500px) {{
-  .ops-hero {{ grid-template-columns:minmax(250px,.85fr) repeat(3,minmax(108px,1fr)); gap:7px; }}
+  .ops-hero {{ grid-template-columns:minmax(250px,1fr) minmax(220px,.78fr); gap:7px; }}
+  .hero-stats-grid {{ grid-template-columns:repeat(2,minmax(160px,1fr)); gap:7px; }}
+  .hero-stat-card {{ min-height:84px; }}
   .hero-title {{ white-space:normal; }}
   .hero-title span:last-child {{ overflow:visible; text-overflow:clip; }}
   .operations-lower {{ grid-template-columns:minmax(250px,.85fr) minmax(270px,1fr); }}
@@ -216,16 +239,20 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
   .dashboard-main {{ min-height:calc(100vh - 47px); padding:6px 10px 12px; }}
   .page.active {{ gap:6px; }}
   .operations-page {{ min-height:calc(100vh - 59px); }}
-  .ops-hero {{ grid-template-columns:minmax(220px,.82fr) repeat(2,minmax(118px,1fr)); grid-template-rows:auto auto; gap:6px; }}
+  .ops-hero {{ grid-template-columns:minmax(220px,.9fr) minmax(200px,.72fr); grid-template-rows:auto auto; gap:6px; }}
+  .hero-stats-grid {{ grid-template-columns:repeat(2,minmax(132px,1fr)); }}
+  .hero-stat-card {{ min-height:70px; padding:8px 10px; gap:5px; }}
+  .hero-stat-label {{ font-size:10px; letter-spacing:.06em; }}
+  .hero-stat-icon {{ width:26px; height:26px; border-radius:7px; }}
+  .hero-stat-icon svg {{ width:15px; height:15px; }}
+  .hero-stat-value {{ font-size:24px; }}
+  .hero-stat-desc {{ font-size:10px; line-height:1.15; }}
   .hero-status {{ grid-column:1; grid-row:1; min-height:58px; padding:8px 10px; }}
   .hero-kicker {{ font-size:9px; }}
   .hero-title {{ gap:7px; margin-top:2px; font-size:16px; line-height:1.05; }}
   .hero-icon {{ font-size:15px; }}
   .hero-copy {{ display:none; }}
-  #systemHealthCard {{ grid-column:2; grid-row:1; }}
-  #overview > .signal-card:nth-of-type(3) {{ grid-column:3; grid-row:1; }}
-  #overview > .signal-card:nth-of-type(4) {{ grid-column:2/4; grid-row:2; }}
-  .action-panel {{ grid-column:1; grid-row:2; padding:8px 10px; }}
+  .action-panel {{ grid-area:actions; padding:8px 10px; }}
   .action-panel .health-title {{ margin-bottom:3px; }}
   .action-panel .panel-list {{ max-height:none; }}
   .action-panel .panel-item {{ padding:4px 6px; font-size:11px; line-height:1.2; }}
@@ -269,7 +296,7 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
   .conversation-compact .summary {{ max-height:32px; padding:8px; }}
 }}
 @media (max-width: 1000px) {{ .app-shell {{ grid-template-columns:220px minmax(0,1fr); }} .dashboard-main {{ padding:14px 16px 18px; }} .ops-hero,.operations-lower {{ grid-template-columns:1fr; }} .hero-title {{ white-space:normal; }} .hero-title span:last-child {{ overflow:visible; text-overflow:clip; }} .flow-stage {{ grid-template-columns:1fr; }} .pipe {{ height:20px; width:4px; justify-self:center; }} .resource-stack {{ grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); }} }}
-@media (max-width: 1000px) {{ .app-shell {{ grid-template-columns:1fr; }} .sidebar {{ position:relative; height:auto; gap:14px; }} .nav {{ grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); }} .sidebar-footer {{ display:none; }} .topbar {{ position:relative; align-items:flex-start; flex-direction:column; }} .dashboard-main {{ padding:18px; }} .page.active,.ops-hero,.operations-lower {{ grid-template-columns:1fr; }} .operations-page {{ min-height:auto; }} .timeline-item {{ grid-template-columns:1fr; }} }}
+@media (max-width: 1000px) {{ .app-shell {{ grid-template-columns:1fr; }} .sidebar {{ position:relative; height:auto; gap:14px; }} .nav {{ grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); }} .sidebar-footer {{ display:none; }} .topbar {{ position:relative; align-items:flex-start; flex-direction:column; }} .dashboard-main {{ padding:18px; }} .page.active,.ops-hero,.operations-lower {{ grid-template-columns:1fr; }} .ops-hero {{ grid-template-areas:"hero" "actions" "stats"; }} .hero-stats-grid {{ grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); }} .operations-page {{ min-height:auto; }} .timeline-item {{ grid-template-columns:1fr; }} }}
 </style>
 </head>
 <body>
@@ -316,23 +343,43 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
         <span class="badge info">Local</span>
         <span class="badge busy">Live refresh</span>
       </div>
-    </div>
-    <div id="systemHealthCard" class="card health-card signal-card compact-card">
-      <div class="health-title"><h2><span class="icon-label"><span class="icon-mark">*</span>System Health</span></h2><span id="systemHealthBadge" class="badge">Checking</span></div>
-      <div class="signal-body">
-        <div class="signal-stack">
-          <div id="systemHealthStatus" class="value">--</div>
-          <div id="systemHealthMessage" class="muted">Dashboard intelligence is loading.</div>
+      <div id="systemHealthCard" class="card health-card signal-card compact-card">
+        <div class="health-title"><h2><span class="icon-label"><span class="icon-mark">*</span>System Health</span></h2><span id="systemHealthBadge" class="badge">Checking</span></div>
+        <div class="signal-body">
+          <div class="signal-stack">
+            <div id="systemHealthStatus" class="value">--</div>
+            <div id="systemHealthMessage" class="muted">Dashboard intelligence is loading.</div>
+          </div>
+          <svg class="gauge" viewBox="0 0 120 120" aria-hidden="true">
+            <circle class="gauge-track" cx="60" cy="60" r="48" pathLength="100"></circle>
+            <circle id="healthGaugeArc" class="gauge-progress" cx="60" cy="60" r="48" pathLength="100"></circle>
+          </svg>
         </div>
-        <svg class="gauge" viewBox="0 0 120 120" aria-hidden="true">
-          <circle class="gauge-track" cx="60" cy="60" r="48" pathLength="100"></circle>
-          <circle id="healthGaugeArc" class="gauge-progress" cx="60" cy="60" r="48" pathLength="100"></circle>
-        </svg>
       </div>
     </div>
-    <div class="card signal-card compact-card"><h2><span class="icon-label"><span class="icon-mark">%</span>Context Usage</span></h2><div class="signal-body"><div class="signal-stack"><div id="contextUsage" class="value">--%</div><div id="contextUsageText" class="muted">Context window usage will appear here.</div><div class="bar"><div id="contextUsageBar" class="fill"></div></div></div><svg class="gauge" viewBox="0 0 120 120" aria-hidden="true"><circle class="gauge-track" cx="60" cy="60" r="48" pathLength="100"></circle><circle id="contextGaugeArc" class="gauge-progress" cx="60" cy="60" r="48" pathLength="100"></circle></svg></div></div>
-    <div class="card signal-card compact-card"><h2><span class="icon-label"><span class="icon-mark">#</span>Request Statistics</span></h2><div id="req" class="value">0</div><div class="muted">Total requests</div><svg class="mini-chart" viewBox="0 0 220 48" preserveAspectRatio="none" aria-hidden="true"><polygon id="requestSparkArea" class="spark-area" points="0,48 220,48"></polygon><polyline id="requestSparkline" class="sparkline" points="0,40 44,40 88,40 132,40 176,40 220,40"></polyline></svg></div>
     <div class="card compact-card action-panel"><div class="health-title"><h2><span class="icon-label"><span class="icon-mark">!</span>Recommendations</span></h2><span class="badge">Action</span></div><div id="recommendationsList" class="panel-list"><div class="muted">No operator action queued.</div></div><div class="small">Open Analytics for full insight history.</div></div>
+    <div class="hero-stats-grid" aria-label="Hero statistics">
+      <div class="card hero-stat-card">
+        <div class="hero-stat-top"><div class="hero-stat-label">Total Requests</div><div class="hero-stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h10"></path><path d="M4 12h16"></path><path d="M4 17h7"></path><path d="m16 15 3-3-3-3"></path></svg></div></div>
+        <div id="req" class="hero-stat-value">0</div>
+        <div class="hero-stat-desc">Request Statistics across the local proxy.</div>
+        <svg class="mini-chart hero-stat-hidden-binding" viewBox="0 0 220 48" preserveAspectRatio="none" aria-hidden="true"><polygon id="requestSparkArea" class="spark-area" points="0,48 220,48"></polygon><polyline id="requestSparkline" class="sparkline" points="0,40 44,40 88,40 132,40 176,40 220,40"></polyline></svg>
+      </div>
+      <div class="card hero-stat-card">
+        <div class="hero-stat-top"><div class="hero-stat-label">Active Conversations</div><div class="hero-stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 8h10"></path><path d="M7 12h7"></path><path d="M5 18 3 21v-4a7 7 0 0 1-1-4V9a6 6 0 0 1 6-6h8a6 6 0 0 1 6 6v4a6 6 0 0 1-6 6H8z"></path></svg></div></div>
+        <div id="activeConversationCount" class="hero-stat-value">0</div>
+        <div class="hero-stat-desc">Conversation windows currently tracked.</div>
+      </div>
+      <div class="card hero-stat-card">
+        <div class="hero-stat-top"><div class="hero-stat-label">Compression Savings</div><div class="hero-stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 3v5H3"></path><path d="M16 21v-5h5"></path><path d="M3 8a8 8 0 0 1 13.7-4.7L21 8"></path><path d="M21 16a8 8 0 0 1-13.7 4.7L3 16"></path></svg></div></div>
+        <div id="compressionCount" class="hero-stat-value">0</div>
+        <div id="compressionText" class="hero-stat-desc">Compression events will appear here.</div>
+      </div>
+      <div class="card hero-stat-card">
+        <div class="hero-stat-top"><div class="hero-stat-label">Average Response Time</div><div class="hero-stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 8v5l3 2"></path><circle cx="12" cy="12" r="9"></circle></svg></div></div>
+        <div class="signal-body"><div><div id="averageLatency" class="hero-stat-value">0 ms</div><div class="hero-stat-desc">Recent request latency.</div></div><svg class="gauge" viewBox="0 0 120 120" aria-hidden="true"><circle class="gauge-track" cx="60" cy="60" r="48" pathLength="100"></circle><circle id="latencyGaugeArc" class="gauge-progress" cx="60" cy="60" r="48" pathLength="100"></circle></svg></div>
+      </div>
+    </div>
   </section>
 
   <section id="connections" class="card flow-panel ops-panel">
@@ -358,7 +405,7 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
         <div><div class="small">Request Trend</div><div id="requestTrend" class="value">Flat</div><div id="requestTrendText" class="muted">Awaiting request data.</div></div>
         <div><div class="small">Rate</div><div id="requestRate" class="value">0</div><div class="muted">requests / min</div></div>
       </div>
-      <div class="signal-body"><div><div class="small">Average Latency</div><div id="averageLatency" class="value">0 ms</div><div class="muted">recent requests</div></div><svg class="gauge" viewBox="0 0 120 120" aria-hidden="true"><circle class="gauge-track" cx="60" cy="60" r="48" pathLength="100"></circle><circle id="latencyGaugeArc" class="gauge-progress" cx="60" cy="60" r="48" pathLength="100"></circle></svg></div>
+      <div class="muted">Average response time is summarized in the hero statistics row.</div>
     </div>
     <div id="resources" class="card ops-panel">
       <h2>Resources</h2>
@@ -404,8 +451,9 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
 <section id="context" class="page" data-page="context">
   <div class="page-header"><div><h2 class="page-title">Context</h2><div class="page-sub">Context pressure, compression history, and token estimates.</div></div></div>
   <div class="grid">
+    <div class="card signal-card compact-card"><h2><span class="icon-label"><span class="icon-mark">%</span>Context Usage</span></h2><div class="signal-body"><div class="signal-stack"><div id="contextUsage" class="value">--%</div><div id="contextUsageText" class="muted">Context window usage will appear here.</div><div class="bar"><div id="contextUsageBar" class="fill"></div></div></div><svg class="gauge" viewBox="0 0 120 120" aria-hidden="true"><circle class="gauge-track" cx="60" cy="60" r="48" pathLength="100"></circle><circle id="contextGaugeArc" class="gauge-progress" cx="60" cy="60" r="48" pathLength="100"></circle></svg></div></div>
     <div class="card"><h2>Status</h2><div class="value ok">Running</div><div class="muted">Proxy -> {settings.ollama.base_url}</div></div>
-    <div class="card"><h2>Compression History</h2><div id="compressionCount" class="value">0</div><div id="compressionText" class="muted">Compression events will appear here.</div></div>
+    <div class="card"><h2>Compression History</h2><div class="value">Tracked</div><div class="muted">Compression activity is summarized in the Operations hero statistics row.</div></div>
   </div>
 </section>
 
@@ -576,6 +624,7 @@ async function refreshDashboardData() {{
   const intelligence = data.intelligence || {{}};
   setText('contextUsage', context.usage_percent + '%');
   setText('contextUsageText', context.estimated_tokens + ' estimated tokens across ' + context.conversation_count + ' conversation(s)');
+  setText('activeConversationCount', context.conversation_count);
   setWidth('contextUsageBar', Math.min(context.usage_percent, 100) + '%');
   setGauge('contextGaugeArc', context.usage_percent);
   setText('compressionCount', compression.count);

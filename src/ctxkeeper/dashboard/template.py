@@ -137,19 +137,37 @@ h1 {{ margin:0; font-size:25px; }}
 table {{ width:100%; border-collapse:collapse; font-size:13px; }}
 th,td {{ text-align:left; padding:7px 8px; border-bottom:1px solid rgba(255,255,255,.08); }}
 th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.06em; }}
-.flow-panel {{ position:relative; display:grid; grid-template-rows:auto 1fr; gap:12px; min-height:0; overflow:visible; padding:18px; background:linear-gradient(145deg,rgba(15,23,42,.96),rgba(24,33,50,.86)); }}
-.flow-panel::before {{ content:""; position:absolute; inset:54px 18px 18px; border:1px solid rgba(56,189,248,.08); border-radius:8px; pointer-events:none; }}
+.flow-panel {{ position:relative; display:grid; grid-template-rows:auto 1fr; gap:14px; min-height:0; overflow:visible; padding:18px; background:linear-gradient(145deg,rgba(15,23,42,.96),rgba(24,33,50,.86)); }}
+.flow-panel::before {{ content:""; position:absolute; inset:58px 18px 18px; border:1px solid rgba(56,189,248,.08); border-radius:10px; pointer-events:none; }}
+.flow-panel::after {{ content:""; position:absolute; inset:0; background:radial-gradient(circle at 50% 0%,rgba(56,189,248,.11),transparent 42%); pointer-events:none; }}
+.flow-panel > * {{ position:relative; z-index:1; }}
+.flow-heading {{ display:flex; align-items:center; gap:9px; }}
+.flow-heading svg {{ width:17px; height:17px; stroke:var(--accent); fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }}
 .flow-stage {{ position:relative; display:grid; grid-template-columns:minmax(150px,1fr) 44px minmax(150px,1fr) 44px minmax(150px,1fr) 44px minmax(150px,1fr); gap:10px; align-items:center; min-width:0; min-height:0; }}
 .flow-note {{ color:var(--muted); font-size:12px; }}
 .node {{ position:relative; background:radial-gradient(circle at 50% 0%,rgba(56,189,248,.13),transparent 46%),rgba(15,23,42,.92); border:1px solid rgba(255,255,255,.1); border-radius:8px; padding:14px; min-width:0; min-height:142px; box-shadow:var(--shadow); transition:border-color .18s ease, transform .18s ease, background .18s ease; }}
 .node::before {{ content:""; display:block; width:46px; height:46px; margin:0 auto 10px; border-radius:50%; border:1px solid rgba(56,189,248,.32); background:rgba(2,6,23,.44); box-shadow:0 0 0 8px rgba(56,189,248,.06); }}
 .node .node-title,.node .value,.node .small {{ position:relative; text-align:center; }}
+.flow-node {{ display:grid; grid-template-rows:auto 1fr auto; gap:10px; min-height:148px; padding:14px; border-radius:10px; background:linear-gradient(180deg,rgba(30,41,59,.72),rgba(15,23,42,.9)); }}
+.flow-node::before {{ display:none; }}
+.flow-node-head {{ display:flex; align-items:center; justify-content:space-between; gap:10px; }}
+.flow-node-title {{ display:flex; align-items:center; gap:8px; min-width:0; color:var(--soft); font-size:12px; font-weight:850; letter-spacing:.08em; text-transform:uppercase; }}
+.flow-node-icon {{ display:grid; place-items:center; width:32px; height:32px; border-radius:9px; color:var(--accent); background:rgba(56,189,248,.1); border:1px solid rgba(56,189,248,.18); }}
+.flow-node-icon svg {{ width:17px; height:17px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }}
+.flow-node-main {{ display:grid; align-content:center; gap:5px; min-width:0; }}
+.flow-node-main .value {{ font-size:clamp(21px,1.45vw,28px); line-height:1; font-weight:850; text-align:left; }}
+.flow-node-main .small {{ text-align:left; line-height:1.25; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }}
+.flow-node-foot {{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding-top:8px; border-top:1px solid rgba(203,213,225,.08); }}
+.flow-endpoint {{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--muted); font-size:11px; }}
+.flow-status {{ flex:0 0 auto; }}
 .signal-node {{ display:flex; flex-direction:column; justify-content:space-between; background:linear-gradient(180deg,rgba(30,41,59,.96),rgba(15,23,42,.92)); }}
+.signal-node.flow-node {{ display:grid; justify-content:stretch; }}
 .node-title {{ font-weight:800; font-size:14px; margin-bottom:8px; }}
 .dot {{ display:inline-block; width:12px; height:12px; border-radius:99px; background:var(--warn); margin-right:8px; box-shadow:0 0 16px currentColor; animation:statusPulse 2s ease-in-out infinite; }}
 .dot.online {{ background:var(--good); color:var(--good); }} .dot.waiting {{ background:var(--warn); color:var(--warn); }} .dot.offline {{ background:var(--bad); color:var(--bad); }}
 @keyframes statusPulse {{ 0%,100% {{ opacity:.72; }} 50% {{ opacity:1; }} }}
 .pipe {{ position:relative; height:2px; background:linear-gradient(90deg,rgba(45,58,79,.35),rgba(56,189,248,.85),rgba(45,58,79,.35)); border-radius:99px; opacity:.9; }}
+.pipe::before {{ content:""; position:absolute; inset:-12px 0; border-top:1px dashed rgba(148,163,184,.22); top:50%; }}
 .pipe::after {{ content:""; position:absolute; left:50%; top:50%; width:10px; height:10px; border-radius:50%; transform:translate(-50%,-50%); background:rgba(56,189,248,.5); box-shadow:0 0 18px rgba(56,189,248,.42); }}
 .small {{ font-size:12px; color:var(--muted); overflow-wrap:anywhere; }}
 .traffic-panel {{ display:grid; grid-template-rows:auto auto 1fr; gap:10px; }}
@@ -224,6 +242,14 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
   .flow-stage > :nth-child(6) {{ grid-column:2; grid-row:3; }}
   .flow-stage > :nth-child(7) {{ grid-column:1; grid-row:3; }}
   .node {{ min-height:78px; padding:7px; }}
+  .flow-node {{ min-height:84px; padding:8px; gap:6px; }}
+  .flow-node-icon {{ width:24px; height:24px; border-radius:7px; }}
+  .flow-node-icon svg {{ width:14px; height:14px; }}
+  .flow-node-title {{ font-size:10px; letter-spacing:.05em; }}
+  .flow-node-main .value {{ font-size:18px; }}
+  .flow-node-main .small {{ font-size:10px; line-height:1.16; }}
+  .flow-node-foot {{ padding-top:5px; }}
+  .flow-endpoint {{ font-size:9px; }}
   .node::before {{ width:20px; height:20px; margin-bottom:4px; box-shadow:0 0 0 4px rgba(56,189,248,.05); }}
   .node-title {{ font-size:11px; margin-bottom:3px; }}
   .node .value {{ font-size:18px; }}
@@ -305,6 +331,15 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
   .flow-stage {{ grid-template-columns:minmax(104px,1fr) 20px minmax(104px,1fr); gap:5px; }}
   .flow-stage > :nth-child(4) {{ height:12px; }}
   .node {{ min-height:56px; padding:5px; }}
+  .flow-node {{ min-height:64px; padding:6px; gap:4px; }}
+  .flow-node-head {{ gap:6px; }}
+  .flow-node-icon {{ width:20px; height:20px; }}
+  .flow-node-title {{ font-size:9px; }}
+  .flow-node-main {{ gap:3px; }}
+  .flow-node-main .value {{ font-size:15px; }}
+  .flow-node-main .small {{ font-size:9px; line-height:1.1; }}
+  .flow-node-foot {{ gap:5px; padding-top:4px; }}
+  .flow-endpoint {{ font-size:8px; }}
   .node::before {{ width:14px; height:14px; margin-bottom:2px; box-shadow:0 0 0 3px rgba(56,189,248,.05); }}
   .node-title {{ font-size:10px; margin-bottom:2px; }}
   .node .value {{ font-size:15px; }}
@@ -428,17 +463,33 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
 
   <section id="connections" class="card flow-panel ops-panel">
     <div class="health-title">
-      <h2>Connection Flow</h2>
+      <h2 class="flow-heading"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"></path><path d="M18 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"></path><path d="M6 22a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"></path><path d="M8.6 6.5 15.4 10.5"></path><path d="M15.4 13.5 8.6 17.5"></path></svg>Connection Flow</h2>
       <span class="flow-note">Static topology now; connector placeholders are reserved for animated traffic flow.</span>
     </div>
     <div class="flow-stage">
-      <div class="node"><div class="node-title"><span id="clientDot" class="dot waiting"></span>Client</div><div id="clientText" class="value">Waiting</div><div id="clientSub" class="small">No clients seen yet</div></div>
+      <div class="node flow-node">
+        <div class="flow-node-head"><div class="flow-node-title"><span id="clientDot" class="dot waiting"></span>Client</div><div class="flow-node-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"></rect><path d="M8 20h8"></path><path d="M12 16v4"></path></svg></div></div>
+        <div class="flow-node-main"><div id="clientText" class="value">Waiting</div><div id="clientSub" class="small">No clients seen yet</div></div>
+        <div class="flow-node-foot"><span class="flow-endpoint">Inbound requests</span><span id="clientStatusBadge" class="badge waiting flow-status">Waiting</span></div>
+      </div>
       <div class="pipe"></div>
-      <div class="node"><div class="node-title"><span id="proxyDot" class="dot online"></span>ContextKeeper Status</div><div class="value ok">Online</div><div id="proxySub" class="small">Listening on port {settings.server.port}</div></div>
+      <div class="node flow-node">
+        <div class="flow-node-head"><div class="flow-node-title"><span id="proxyDot" class="dot online"></span>ContextKeeper Status</div><div class="flow-node-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.4 8 8 9 4.6-1 8-4 8-9V6z"></path><path d="m9 12 2 2 4-5"></path></svg></div></div>
+        <div class="flow-node-main"><div class="value ok">Online</div><div id="proxySub" class="small">Listening on port {settings.server.port}</div></div>
+        <div class="flow-node-foot"><span class="flow-endpoint">Local proxy</span><span id="proxyStatusBadge" class="badge online flow-status">Online</span></div>
+      </div>
       <div class="pipe"></div>
-      <div class="node signal-node"><div class="node-title"><span id="ollamaDot" class="dot waiting"></span>Ollama Status</div><div id="ollamaText" class="value">Checking</div><div id="ollamaSub" class="small">{settings.ollama.base_url}</div></div>
+      <div class="node flow-node signal-node">
+        <div class="flow-node-head"><div class="flow-node-title"><span id="ollamaDot" class="dot waiting"></span>Ollama Status</div><div class="flow-node-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 2v4"></path><path d="M12 18v4"></path><path d="M4.9 4.9 7.8 7.8"></path><path d="m16.2 16.2 2.9 2.9"></path><path d="M2 12h4"></path><path d="M18 12h4"></path><circle cx="12" cy="12" r="4"></circle></svg></div></div>
+        <div class="flow-node-main"><div id="ollamaText" class="value">Checking</div><div id="ollamaSub" class="small">{settings.ollama.base_url}</div></div>
+        <div class="flow-node-foot"><span class="flow-endpoint">Upstream runtime</span><span id="ollamaStatusBadge" class="badge waiting flow-status">Checking</span></div>
+      </div>
       <div class="pipe"></div>
-      <div class="node"><div class="node-title"><span id="modelDot" class="dot waiting"></span>Model</div><div id="modelText" class="value">Waiting</div><div id="modelSub" class="small">No active model yet</div></div>
+      <div class="node flow-node">
+        <div class="flow-node-head"><div class="flow-node-title"><span id="modelDot" class="dot waiting"></span>Model</div><div class="flow-node-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 7h8"></path><path d="M8 12h8"></path><path d="M8 17h5"></path><rect x="4" y="3" width="16" height="18" rx="2"></rect></svg></div></div>
+        <div class="flow-node-main"><div id="modelText" class="value">Waiting</div><div id="modelSub" class="small">No active model yet</div></div>
+        <div class="flow-node-foot"><span class="flow-endpoint">Active model</span><span id="modelStatusBadge" class="badge waiting flow-status">Waiting</span></div>
+      </div>
     </div>
   </section>
 
@@ -631,18 +682,22 @@ async function refreshHealth() {{
   const h = await res.json();
   const c = h.connections;
   setDot('clientDot', c.client.status);
+  setStatusBadge('clientStatusBadge', c.client.status || 'waiting');
   setText('clientText', c.client.count > 0 ? 'Connected' : 'Waiting');
   setText('clientSub', c.client.count + ' client(s) seen recently');
   setDot('proxyDot', c.proxy.status);
+  setStatusBadge('proxyStatusBadge', c.proxy.status || 'online');
   setText('proxySub', 'Listening at ' + c.proxy.listen);
   setStatusBadge('opsContextKeeperStatus', c.proxy.status || h.status || 'running');
   setText('opsContextKeeperDetail', 'Listening at ' + c.proxy.listen);
   setDot('ollamaDot', c.ollama.status);
+  setStatusBadge('ollamaStatusBadge', c.ollama.status || 'waiting');
   setText('ollamaText', c.ollama.status === 'online' ? 'Online' : c.ollama.status);
   setText('ollamaSub', h.ollama_base_url + (c.ollama.version ? ' - v' + c.ollama.version : '') + ' - ' + c.ollama.latency_ms + ' ms');
   setStatusBadge('opsOllamaStatus', c.ollama.status || 'waiting');
   setText('opsOllamaDetail', h.ollama_base_url + (c.ollama.version ? ' - v' + c.ollama.version : '') + ' - ' + c.ollama.latency_ms + ' ms');
   setDot('modelDot', c.model.status);
+  setStatusBadge('modelStatusBadge', c.model.status || 'waiting');
   setText('modelText', c.model.name ? 'Active' : 'Waiting');
   setText('modelSub', c.model.name || 'No active model yet');
   setStatusBadge('opsModelStatus', c.model.status || 'waiting');

@@ -58,10 +58,24 @@ h1 {{ margin:0; font-size:25px; }}
 .hero-title span:last-child {{ min-width:0; overflow:hidden; text-overflow:ellipsis; }}
 .hero-icon {{ font-size:20px; }}
 .hero-copy {{ max-width:780px; margin-top:5px; color:var(--soft); font-size:13px; line-height:1.3; }}
-.hero-status #systemHealthCard {{ position:relative; z-index:1; margin-top:10px; min-height:0; padding:9px 10px; background:rgba(15,23,42,.48); box-shadow:none; }}
-.hero-status #systemHealthCard .signal-body {{ grid-template-columns:minmax(0,1fr) 44px; }}
-.hero-status #systemHealthCard .gauge {{ width:44px; height:44px; }}
-.hero-status #systemHealthCard .value {{ font-size:19px; }}
+.hero-status #systemHealthCard {{ position:relative; z-index:1; margin-top:10px; min-height:0; padding:12px; background:linear-gradient(145deg,rgba(15,23,42,.72),rgba(30,41,59,.58)); box-shadow:none; }}
+.ops-health-panel {{ display:grid; gap:12px; }}
+.ops-health-panel::before {{ content:""; position:absolute; inset:0; background:radial-gradient(circle at 86% 10%,rgba(56,189,248,.14),transparent 38%); pointer-events:none; }}
+.ops-health-panel > * {{ position:relative; z-index:1; }}
+.ops-health-heading {{ display:flex; align-items:center; gap:8px; }}
+.ops-health-heading svg,.ops-health-row svg {{ width:16px; height:16px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; color:var(--accent); }}
+.ops-health-body {{ display:grid; grid-template-columns:minmax(0,1fr) 70px; gap:12px; align-items:center; }}
+.ops-health-primary {{ display:grid; gap:5px; min-width:0; }}
+.ops-health-status {{ font-size:24px; line-height:1; font-weight:850; }}
+.ops-health-message {{ font-size:12px; line-height:1.28; color:var(--soft); }}
+.ops-health-gauge {{ display:grid; justify-items:center; gap:3px; }}
+.ops-health-gauge .gauge {{ width:58px; height:58px; }}
+.ops-health-gauge-label {{ color:var(--muted); font-size:10px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }}
+.ops-health-details {{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; }}
+.ops-health-row {{ display:grid; grid-template-columns:18px minmax(0,1fr) auto; gap:7px; align-items:center; min-height:34px; padding:7px 8px; border:1px solid rgba(203,213,225,.09); border-radius:8px; background:rgba(2,6,23,.2); }}
+.ops-health-row-main {{ min-width:0; }}
+.ops-health-row-label {{ color:var(--soft); font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; }}
+.ops-health-row-detail {{ color:var(--muted); font-size:11px; line-height:1.2; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }}
 .ops-hero > .action-panel {{ grid-area:actions; }}
 .hero-stats-grid {{ grid-area:stats; display:grid; grid-template-columns:repeat(4,minmax(160px,1fr)); gap:10px; min-width:0; }}
 .hero-stat-card {{ position:relative; overflow:hidden; min-height:112px; display:grid; align-content:space-between; gap:10px; padding:14px; }}
@@ -83,6 +97,7 @@ h1 {{ margin:0; font-size:25px; }}
 .ops-panel {{ min-height:0; overflow:hidden; }}
 .compact-card {{ min-height:0; padding:11px; }}
 .signal-card {{ min-height:112px; min-width:170px; display:flex; flex-direction:column; justify-content:space-between; background:linear-gradient(180deg,rgba(30,41,59,.96),rgba(15,23,42,.92)); }}
+.signal-card.ops-health-panel {{ display:grid; justify-content:stretch; }}
 .signal-card h2,.signal-node .node-title {{ color:var(--soft); font-size:13px; text-transform:uppercase; letter-spacing:.08em; }}
 .signal-card .value,.signal-node .value {{ font-size:29px; line-height:1; }}
 .signal-body {{ display:grid; grid-template-columns:minmax(0,1fr) 68px; gap:9px; align-items:center; }}
@@ -102,7 +117,7 @@ h1 {{ margin:0; font-size:25px; }}
 .icon-label {{ display:inline-flex; align-items:center; gap:8px; }}
 .icon-mark {{ color:var(--accent); font-size:14px; }}
 .badge {{ display:inline-flex; align-items:center; min-height:22px; padding:2px 7px; border-radius:999px; font-size:11px; font-weight:700; text-transform:uppercase; background:rgba(148,163,184,.16); color:var(--muted); }}
-.badge.positive,.badge.healthy,.badge.low {{ color:var(--good); background:rgba(34,197,94,.12); }} .badge.info,.badge.busy {{ color:var(--accent); background:rgba(56,189,248,.12); }} .badge.warning,.badge.medium {{ color:var(--warn); background:rgba(245,158,11,.12); }} .badge.critical,.badge.high,.badge.offline {{ color:var(--bad); background:rgba(239,68,68,.12); }}
+.badge.positive,.badge.healthy,.badge.low,.badge.online,.badge.active,.badge.running {{ color:var(--good); background:rgba(34,197,94,.12); }} .badge.info,.badge.busy {{ color:var(--accent); background:rgba(56,189,248,.12); }} .badge.warning,.badge.medium,.badge.waiting,.badge.pending {{ color:var(--warn); background:rgba(245,158,11,.12); }} .badge.critical,.badge.high,.badge.offline,.badge.error {{ color:var(--bad); background:rgba(239,68,68,.12); }}
 .panel-list {{ display:grid; gap:8px; }}
 .panel-item {{ display:flex; justify-content:space-between; gap:10px; align-items:flex-start; background:rgba(15,23,42,.46); border:1px solid rgba(255,255,255,.08); border-radius:8px; padding:7px 9px; transition:border-color .18s ease, background .18s ease; }}
 .panel-item:hover,.timeline-item:hover,.message:hover {{ border-color:rgba(129,140,248,.24); background:rgba(15,23,42,.68); }}
@@ -177,7 +192,15 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
   .hero-copy {{ max-width:none; margin-top:3px; font-size:11px; line-height:1.22; display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden; }}
   .hero-kicker {{ font-size:10px; }}
   .hero-status .command-meta {{ display:none; }}
-  .hero-status #systemHealthCard {{ margin-top:6px; padding:7px 8px; }}
+  .hero-status #systemHealthCard {{ margin-top:6px; padding:8px; }}
+  .ops-health-panel {{ gap:8px; }}
+  .ops-health-body {{ grid-template-columns:minmax(0,1fr) 52px; gap:8px; }}
+  .ops-health-status {{ font-size:20px; }}
+  .ops-health-message {{ font-size:11px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }}
+  .ops-health-gauge .gauge {{ width:48px; height:48px; }}
+  .ops-health-details {{ gap:5px; }}
+  .ops-health-row {{ min-height:30px; padding:5px 6px; }}
+  .ops-health-row-detail {{ font-size:10px; }}
   .command-meta {{ margin-top:5px; }}
   .action-panel {{ grid-area:actions; }}
   .signal-card {{ min-height:78px; min-width:0; }}
@@ -252,6 +275,14 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
   .hero-title {{ gap:7px; margin-top:2px; font-size:16px; line-height:1.05; }}
   .hero-icon {{ font-size:15px; }}
   .hero-copy {{ display:none; }}
+  .ops-health-body {{ grid-template-columns:minmax(0,1fr) 42px; }}
+  .ops-health-status {{ font-size:18px; }}
+  .ops-health-gauge .gauge {{ width:40px; height:40px; }}
+  .ops-health-gauge-label {{ display:none; }}
+  .ops-health-details {{ grid-template-columns:1fr; }}
+  .ops-health-row {{ grid-template-columns:16px minmax(0,1fr) auto; min-height:28px; padding:4px 6px; }}
+  .ops-health-row svg {{ width:14px; height:14px; }}
+  .ops-health-row-label {{ font-size:10px; }}
   .action-panel {{ grid-area:actions; padding:8px 10px; }}
   .action-panel .health-title {{ margin-bottom:3px; }}
   .action-panel .panel-list {{ max-height:none; }}
@@ -343,17 +374,30 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
         <span class="badge info">Local</span>
         <span class="badge busy">Live refresh</span>
       </div>
-      <div id="systemHealthCard" class="card health-card signal-card compact-card">
-        <div class="health-title"><h2><span class="icon-label"><span class="icon-mark">*</span>System Health</span></h2><span id="systemHealthBadge" class="badge">Checking</span></div>
-        <div class="signal-body">
-          <div class="signal-stack">
-            <div id="systemHealthStatus" class="value">--</div>
-            <div id="systemHealthMessage" class="muted">Dashboard intelligence is loading.</div>
+      <div id="systemHealthCard" class="card health-card signal-card compact-card ops-health-panel">
+        <div class="health-title">
+          <h2 class="ops-health-heading"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.4 8 8 9 4.6-1 8-4 8-9V6z"></path><path d="m9 12 2 2 4-5"></path></svg>System Health</h2>
+          <span id="systemHealthBadge" class="badge">Checking</span>
+        </div>
+        <div class="ops-health-body">
+          <div class="ops-health-primary">
+            <div id="systemHealthStatus" class="ops-health-status">--</div>
+            <div id="systemHealthMessage" class="ops-health-message">Dashboard intelligence is loading.</div>
           </div>
-          <svg class="gauge" viewBox="0 0 120 120" aria-hidden="true">
-            <circle class="gauge-track" cx="60" cy="60" r="48" pathLength="100"></circle>
-            <circle id="healthGaugeArc" class="gauge-progress" cx="60" cy="60" r="48" pathLength="100"></circle>
-          </svg>
+          <div class="ops-health-gauge">
+            <svg class="gauge" viewBox="0 0 120 120" aria-hidden="true">
+              <circle class="gauge-track" cx="60" cy="60" r="48" pathLength="100"></circle>
+              <circle id="healthGaugeArc" class="gauge-progress" cx="60" cy="60" r="48" pathLength="100"></circle>
+            </svg>
+            <div class="ops-health-gauge-label">Health</div>
+          </div>
+        </div>
+        <div class="ops-health-details" aria-label="System health details">
+          <div class="ops-health-row"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16"></path><path d="M4 12h16"></path><path d="M4 18h16"></path></svg><div class="ops-health-row-main"><div class="ops-health-row-label">ContextKeeper</div><div id="opsContextKeeperDetail" class="ops-health-row-detail">Listening locally</div></div><span id="opsContextKeeperStatus" class="badge healthy">Online</span></div>
+          <div class="ops-health-row"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v4"></path><path d="M12 18v4"></path><path d="M4.9 4.9 7.8 7.8"></path><path d="m16.2 16.2 2.9 2.9"></path><path d="M2 12h4"></path><path d="M18 12h4"></path><circle cx="12" cy="12" r="4"></circle></svg><div class="ops-health-row-main"><div class="ops-health-row-label">Ollama</div><div id="opsOllamaDetail" class="ops-health-row-detail">Checking upstream</div></div><span id="opsOllamaStatus" class="badge">Checking</span></div>
+          <div class="ops-health-row"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7h8"></path><path d="M8 12h8"></path><path d="M8 17h5"></path><rect x="4" y="3" width="16" height="18" rx="2"></rect></svg><div class="ops-health-row-main"><div class="ops-health-row-label">Active Model</div><div id="opsModelDetail" class="ops-health-row-detail">No active model yet</div></div><span id="opsModelStatus" class="badge">Waiting</span></div>
+          <div class="ops-health-row"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8v5l3 2"></path><circle cx="12" cy="12" r="9"></circle></svg><div class="ops-health-row-main"><div class="ops-health-row-label">Uptime</div><div id="opsUptimeDetail" class="ops-health-row-detail">Not exposed by backend</div></div><span id="opsUptimeStatus" class="badge info">Local</span></div>
+          <div class="ops-health-row"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.6-6.4"></path><path d="M21 3v6h-6"></path></svg><div class="ops-health-row-main"><div class="ops-health-row-label">Last Refresh</div><div id="opsLastRefreshDetail" class="ops-health-row-detail">Every {settings.dashboard.refresh_interval_ms or 1000} ms</div></div><span id="opsLastRefreshStatus" class="badge info">Pending</span></div>
         </div>
       </div>
     </div>
@@ -511,6 +555,12 @@ function setText(id, value) {{
     el.classList.add('value-pop');
   }}
 }}
+function setStatusBadge(id, value) {{
+  const el = byId(id);
+  if (!el) return;
+  el.className = 'badge ' + safeClass(value);
+  setText(id, titleCase(value || 'unknown'));
+}}
 function setHtml(id, html) {{
   const el = byId(id);
   if (el) el.innerHTML = html;
@@ -585,12 +635,24 @@ async function refreshHealth() {{
   setText('clientSub', c.client.count + ' client(s) seen recently');
   setDot('proxyDot', c.proxy.status);
   setText('proxySub', 'Listening at ' + c.proxy.listen);
+  setStatusBadge('opsContextKeeperStatus', c.proxy.status || h.status || 'running');
+  setText('opsContextKeeperDetail', 'Listening at ' + c.proxy.listen);
   setDot('ollamaDot', c.ollama.status);
   setText('ollamaText', c.ollama.status === 'online' ? 'Online' : c.ollama.status);
   setText('ollamaSub', h.ollama_base_url + (c.ollama.version ? ' - v' + c.ollama.version : '') + ' - ' + c.ollama.latency_ms + ' ms');
+  setStatusBadge('opsOllamaStatus', c.ollama.status || 'waiting');
+  setText('opsOllamaDetail', h.ollama_base_url + (c.ollama.version ? ' - v' + c.ollama.version : '') + ' - ' + c.ollama.latency_ms + ' ms');
   setDot('modelDot', c.model.status);
   setText('modelText', c.model.name ? 'Active' : 'Waiting');
   setText('modelSub', c.model.name || 'No active model yet');
+  setStatusBadge('opsModelStatus', c.model.status || 'waiting');
+  setText('opsModelDetail', c.model.name || 'No active model yet');
+  setText('opsUptimeDetail', 'Not exposed by backend');
+  setStatusBadge('opsUptimeStatus', 'info');
+  setText('opsUptimeStatus', 'Local');
+  setText('opsLastRefreshDetail', 'Every ' + DASHBOARD_REFRESH_INTERVAL_MS + ' ms');
+  setStatusBadge('opsLastRefreshStatus', 'running');
+  setText('opsLastRefreshStatus', new Date().toLocaleTimeString());
 }}
 async function refreshMetrics() {{
   const res = await fetch('/metrics');
@@ -636,7 +698,7 @@ function refreshIntelligence(intelligence) {{
   const health = intelligence.health || {{}};
   const status = health.status || 'unknown';
   const healthCard = byId('systemHealthCard');
-  if (healthCard) healthCard.className = 'card health-card signal-card compact-card ' + safeClass(status);
+  if (healthCard) healthCard.className = 'card health-card signal-card compact-card ops-health-panel ' + safeClass(status);
   const hero = byId('opsHeroStatus');
   if (hero) hero.className = 'card hero-status ' + safeClass(status);
   const heroState = heroStateForStatus(status);

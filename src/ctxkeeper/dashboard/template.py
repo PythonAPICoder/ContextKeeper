@@ -12,28 +12,33 @@ def render_dashboard_html(settings: Settings) -> str:
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>{settings.dashboard.title}</title>
 <style>
-:root {{ --bg:#090e1a; --sidebar:#0d1424; --panel:#111827; --card:#182132; --card-strong:#1f2937; --text:#e5e7eb; --muted:#94a3b8; --soft:#cbd5e1; --good:#22c55e; --warn:#f59e0b; --bad:#ef4444; --accent:#38bdf8; --accent-2:#818cf8; --line:#2d3a4f; --shadow:0 14px 34px rgba(0,0,0,.24); }}
+:root {{ --bg:#090e1a; --sidebar:#0d1424; --panel:#111827; --card:#182132; --card-strong:#1f2937; --text:#e5e7eb; --muted:#94a3b8; --soft:#cbd5e1; --good:#22c55e; --warn:#f59e0b; --bad:#ef4444; --accent:#38bdf8; --accent-2:#818cf8; --line:#2d3a4f; --glass:rgba(15,23,42,.66); --glass-strong:rgba(24,33,50,.88); --shadow:0 18px 46px rgba(0,0,0,.28); --shadow-soft:0 10px 24px rgba(0,0,0,.2); }}
 * {{ box-sizing:border-box; }}
 html {{ scroll-behavior:smooth; }}
-body {{ margin:0; font-family:Segoe UI, Arial, sans-serif; background:var(--bg); color:var(--text); }}
+body {{ margin:0; min-width:320px; font-family:"Segoe UI Variable", Segoe UI, Arial, sans-serif; background:var(--bg); color:var(--text); }}
+body::before {{ content:""; position:fixed; inset:0; z-index:-1; pointer-events:none; background:radial-gradient(circle at 18% 8%,rgba(56,189,248,.16),transparent 28%),radial-gradient(circle at 84% 18%,rgba(129,140,248,.12),transparent 30%),linear-gradient(135deg,#070b14,#0b1220 45%,#101827); }}
 a {{ color:inherit; text-decoration:none; }}
-.app-shell {{ min-height:100vh; display:grid; grid-template-columns:240px minmax(0,1fr); background:linear-gradient(135deg,#080d18,#0f172a 52%,#101827); }}
-.sidebar {{ position:sticky; top:0; height:100vh; display:flex; flex-direction:column; gap:28px; padding:22px 18px; background:rgba(13,20,36,.96); border-right:1px solid rgba(255,255,255,.08); }}
-.brand {{ display:flex; align-items:center; gap:12px; padding:6px 6px 14px; border-bottom:1px solid rgba(255,255,255,.08); }}
-.brand-mark {{ display:grid; place-items:center; width:38px; height:38px; border-radius:10px; background:linear-gradient(135deg,var(--accent),var(--accent-2)); color:#020617; font-weight:900; }}
-.brand-name {{ font-weight:800; }}
+.app-shell {{ min-height:100vh; display:grid; grid-template-columns:240px minmax(0,1fr); background:linear-gradient(90deg,rgba(13,20,36,.72),transparent 38%); }}
+.sidebar {{ position:sticky; top:0; height:100vh; display:flex; flex-direction:column; gap:26px; padding:20px 16px; background:linear-gradient(180deg,rgba(13,20,36,.94),rgba(9,14,26,.9)); border-right:1px solid rgba(203,213,225,.09); box-shadow:8px 0 34px rgba(0,0,0,.18); backdrop-filter:blur(18px); }}
+.brand {{ display:flex; align-items:center; gap:12px; padding:6px 6px 14px; border-bottom:1px solid rgba(203,213,225,.09); }}
+.brand-mark {{ display:grid; place-items:center; width:38px; height:38px; border-radius:8px; background:linear-gradient(135deg,var(--accent),var(--accent-2)); color:#020617; font-weight:900; box-shadow:0 10px 24px rgba(56,189,248,.18); }}
+.brand-name {{ font-weight:800; letter-spacing:.01em; }}
 .brand-sub {{ color:var(--muted); font-size:12px; margin-top:2px; }}
 .nav {{ display:grid; gap:7px; }}
-.nav a {{ position:relative; display:flex; align-items:center; gap:10px; min-height:40px; padding:8px 10px 8px 12px; border-radius:8px; color:var(--soft); font-size:14px; border:1px solid transparent; transition:background .18s ease,border-color .18s ease,color .18s ease,transform .18s ease; }}
-.nav a:hover {{ background:rgba(148,163,184,.12); color:var(--text); transform:translateX(1px); }}
-.nav a.active {{ background:linear-gradient(90deg,rgba(56,189,248,.18),rgba(129,140,248,.08)); border-color:rgba(56,189,248,.26); color:#fff; box-shadow:inset 3px 0 0 var(--accent); }}
+.nav a {{ position:relative; display:flex; align-items:center; gap:10px; min-height:40px; padding:8px 10px 8px 12px; border-radius:8px; color:var(--soft); font-size:14px; border:1px solid transparent; transition:background .18s ease,border-color .18s ease,color .18s ease,transform .18s ease,box-shadow .18s ease; }}
+.nav a:hover {{ background:rgba(148,163,184,.12); color:var(--text); transform:translateX(1px); border-color:rgba(203,213,225,.08); }}
+.nav a.active {{ background:linear-gradient(90deg,rgba(56,189,248,.18),rgba(129,140,248,.08)); border-color:rgba(56,189,248,.26); color:#fff; box-shadow:inset 3px 0 0 var(--accent),0 8px 20px rgba(2,6,23,.18); }}
 .nav-kicker {{ color:var(--muted); font-size:11px; text-transform:uppercase; font-weight:800; letter-spacing:.08em; margin:4px 10px; }}
-.sidebar-footer {{ margin-top:auto; color:var(--muted); font-size:12px; line-height:1.5; padding:12px 10px; border-top:1px solid rgba(255,255,255,.08); }}
-.workspace {{ min-width:0; }}
-.topbar {{ position:sticky; top:0; z-index:5; display:flex; justify-content:space-between; align-items:center; gap:16px; padding:12px 22px; background:rgba(9,14,26,.88); backdrop-filter:blur(18px); border-bottom:1px solid rgba(255,255,255,.08); }}
+.sidebar-footer {{ margin-top:auto; color:var(--muted); font-size:12px; line-height:1.5; padding:12px 10px; border-top:1px solid rgba(203,213,225,.09); }}
+.workspace {{ min-width:0; display:grid; grid-template-rows:auto 1fr; }}
+.topbar {{ position:sticky; top:0; z-index:5; display:flex; justify-content:space-between; align-items:center; gap:18px; margin:12px 14px 0; padding:12px 16px; background:linear-gradient(135deg,rgba(15,23,42,.84),rgba(24,33,50,.72)); backdrop-filter:blur(20px); border:1px solid rgba(203,213,225,.11); border-radius:12px; box-shadow:var(--shadow-soft); }}
+.topbar-left {{ min-width:0; display:flex; align-items:center; gap:14px; }}
+.topbar-title {{ min-width:0; }}
+.topbar-status {{ display:inline-flex; align-items:center; gap:8px; min-height:28px; padding:4px 9px; border:1px solid rgba(34,197,94,.2); border-radius:999px; background:rgba(34,197,94,.09); color:#86efac; font-size:12px; font-weight:800; text-transform:uppercase; }}
+.topbar-status-dot {{ width:8px; height:8px; border-radius:50%; background:var(--good); box-shadow:0 0 14px rgba(34,197,94,.7); }}
 .topbar-actions {{ display:flex; flex-wrap:wrap; justify-content:flex-end; gap:10px; color:var(--muted); font-size:13px; }}
-.topbar-pill {{ display:inline-flex; align-items:center; min-height:30px; padding:5px 10px; border:1px solid rgba(255,255,255,.1); border-radius:999px; background:rgba(15,23,42,.62); }}
-.dashboard-main {{ min-height:calc(100vh - 63px); min-width:0; padding:10px 16px 18px; }}
+.topbar-pill {{ display:inline-flex; align-items:center; min-height:30px; padding:5px 10px; border:1px solid rgba(203,213,225,.1); border-radius:999px; background:rgba(15,23,42,.7); box-shadow:inset 0 1px 0 rgba(255,255,255,.04); }}
+.dashboard-main {{ min-height:calc(100vh - 87px); min-width:0; padding:14px 16px 18px; }}
 h1 {{ margin:0; font-size:25px; }}
 .sub {{ color:var(--muted); margin-top:3px; }}
 .page {{ display:none; }}
@@ -54,8 +59,8 @@ h1 {{ margin:0; font-size:25px; }}
 .hero-copy {{ max-width:780px; margin-top:5px; color:var(--soft); font-size:13px; line-height:1.3; }}
 .operations-lower {{ display:grid; grid-template-columns:minmax(300px,.82fr) minmax(360px,1fr) minmax(340px,1fr); gap:14px; min-height:0; min-width:0; }}
 .grid {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px; }}
-.card {{ background:rgba(24,33,50,.92); border:1px solid rgba(255,255,255,.08); border-radius:8px; padding:12px; box-shadow:var(--shadow); transition:border-color .18s ease, transform .18s ease, background .18s ease; }}
-.card:hover,.node:hover {{ border-color:rgba(56,189,248,.24); transform:translateY(-1px); background:rgba(27,38,57,.94); }}
+.card {{ background:linear-gradient(180deg,rgba(24,33,50,.82),rgba(15,23,42,.76)); border:1px solid rgba(203,213,225,.1); border-radius:10px; padding:12px; box-shadow:var(--shadow); backdrop-filter:blur(18px); transition:border-color .18s ease, transform .18s ease, background .18s ease,box-shadow .18s ease; }}
+.card:hover,.node:hover {{ border-color:rgba(56,189,248,.24); transform:translateY(-1px); background:linear-gradient(180deg,rgba(30,41,59,.88),rgba(15,23,42,.8)); box-shadow:0 20px 46px rgba(0,0,0,.3); }}
 .card h2 {{ margin:0 0 7px; font-size:13px; letter-spacing:.02em; }}
 .ops-panel {{ min-height:0; overflow:hidden; }}
 .compact-card {{ min-height:0; padding:11px; }}
@@ -129,7 +134,7 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
 .conversation-meta.compact {{ grid-template-columns:repeat(2,minmax(0,1fr)); margin-bottom:0; }}
 .conversation-compact {{ display:grid; gap:10px; }}
 .conversation-compact .summary {{ max-height:62px; overflow:hidden; }}
-.summary {{ background:rgba(15,23,42,.62); border:1px solid rgba(255,255,255,.08); border-radius:10px; padding:12px; white-space:pre-wrap; }}
+.summary {{ background:rgba(15,23,42,.62); border:1px solid rgba(203,213,225,.09); border-radius:10px; padding:12px; white-space:pre-wrap; }}
 .messages {{ display:grid; gap:10px; margin-top:12px; }}
 .message {{ background:rgba(15,23,42,.46); border:1px solid rgba(255,255,255,.08); border-radius:10px; padding:10px 12px; }}
 .message-role {{ color:var(--accent); font-size:12px; font-weight:700; text-transform:uppercase; }}
@@ -287,9 +292,12 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
 </aside>
 <div class="workspace">
 <header class="topbar">
-  <div>
-<h1>ContextKeeper</h1>
-<div class="sub">Transparent Ollama Proxy - Diagnostics - System Monitor</div>
+  <div class="topbar-left">
+    <div class="topbar-title">
+      <h1>ContextKeeper</h1>
+      <div class="sub">Transparent Ollama Proxy - Diagnostics - System Monitor</div>
+    </div>
+    <div class="topbar-status"><span class="topbar-status-dot"></span>Operations</div>
   </div>
   <div class="topbar-actions">
     <span class="topbar-pill">Proxy port {settings.server.port}</span>

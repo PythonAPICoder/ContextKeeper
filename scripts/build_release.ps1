@@ -17,6 +17,9 @@ $ExecutablePath = Join-Path $DistDir "ContextKeeper.exe"
 $InstallerPath = Join-Path $DistDir "installer\ContextKeeperSetup.exe"
 $InstallerScript = Join-Path $ProjectRoot "installer\ContextKeeper.iss"
 $PyInstallerSpec = Join-Path $ProjectRoot "contextkeeper.spec"
+$ReadmePath = Join-Path $ProjectRoot "README.md"
+$LicensePath = Join-Path $ProjectRoot "installer\LICENSE.txt"
+$DefaultConfigPath = Join-Path $ProjectRoot "contextkeeper.yaml"
 
 function Write-Section {
     param([Parameter(Mandatory = $true)][string]$Title)
@@ -80,6 +83,8 @@ Set-Location $ProjectRoot
 Write-Section "Preflight"
 Test-RequiredFile -Path $PyInstallerSpec -Description "PyInstaller spec file"
 Test-RequiredFile -Path $InstallerScript -Description "Inno Setup installer script"
+Test-RequiredFile -Path $ReadmePath -Description "Project README"
+Test-RequiredFile -Path $LicensePath -Description "Installer license"
 $InnoSetupCompiler = Find-InnoSetupCompiler
 if (-not $InnoSetupCompiler) {
     Write-Error "Inno Setup compiler (ISCC.exe) was not found. Install Inno Setup and ensure ISCC.exe is on PATH or installed in the default location."
@@ -110,7 +115,16 @@ if (-not (Test-Path $InstallerPath)) {
     exit 1
 }
 
+Write-Section "Release Files"
+Copy-Item -LiteralPath $ReadmePath -Destination (Join-Path $DistDir "README.md") -Force
+Copy-Item -LiteralPath $LicensePath -Destination (Join-Path $DistDir "LICENSE.txt") -Force
+if (Test-Path $DefaultConfigPath) {
+    Copy-Item -LiteralPath $DefaultConfigPath -Destination (Join-Path $DistDir "contextkeeper.yaml") -Force
+}
+Write-Host "Copied README, license, and default configuration when available."
+
 Write-Section "Summary"
 Write-Host "Release build complete."
 Write-Host "Executable: $ExecutablePath"
 Write-Host "Installer:   $InstallerPath"
+Write-Host "Release dir: $DistDir"

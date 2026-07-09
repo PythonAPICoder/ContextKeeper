@@ -29,6 +29,22 @@ def test_run_contextkeeper_uses_existing_app_and_server_settings() -> None:
     assert captured["port"] == 11650
 
 
+def test_run_contextkeeper_prints_readable_startup_banner(capsys) -> None:
+    settings = Settings()
+    settings.server.host = "127.0.0.1"
+    settings.server.port = 11651
+    settings.ollama.base_url = "http://ollama.local:11434"
+
+    run_contextkeeper(settings, server_runner=lambda app, *, host, port: None)
+
+    output = capsys.readouterr().out
+    assert "ContextKeeper 0.1.0" in output
+    assert "Config:" in output
+    assert "Ollama: http://ollama.local:11434" in output
+    assert "Proxy: http://127.0.0.1:11651" in output
+    assert "Dashboard: http://localhost:11651/dashboard" in output
+
+
 def test_create_contextkeeper_app_preserves_dashboard_and_proxy_routes() -> None:
     app = create_contextkeeper_app(Settings())
     client = TestClient(app)

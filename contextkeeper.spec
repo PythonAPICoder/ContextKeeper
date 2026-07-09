@@ -1,11 +1,15 @@
 # -*- mode: python ; coding: utf-8 -*-
 
 from pathlib import Path
+import sys
 
 from PyInstaller.utils.hooks import collect_submodules
 
 
 project_root = Path(SPECPATH)
+sys.path.insert(0, str(project_root / "src"))
+
+from ctxkeeper.branding import PRODUCT_NAME, VERSION  # noqa: E402
 
 
 a = Analysis(
@@ -28,7 +32,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name="ContextKeeper",
+    name=PRODUCT_NAME,
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

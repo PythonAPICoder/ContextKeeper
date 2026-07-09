@@ -39,6 +39,7 @@ Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription:
 Source: "..\dist\ContextKeeper.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\contextkeeper.yaml"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
 Source: "LICENSE.txt"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\README.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\scripts\install_service.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
 Source: "..\scripts\uninstall_service.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
 

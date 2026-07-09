@@ -2,11 +2,11 @@
 
 ContextKeeper is a transparent, Ollama-compatible middleware layer that sits between AI clients and Ollama.
 
-Clients connect to ContextKeeper instead of Ollama. ContextKeeper proxies requests, preserves streaming, logs diagnostics, exposes system metrics, and provides a dashboard foundation for future context management.
+Clients connect to ContextKeeper instead of Ollama. ContextKeeper proxies requests, preserves streaming, logs diagnostics, exposes system metrics, and provides a local operations dashboard.
 
 ## Current Status
 
-Phase 1 clean repository starter.
+Local Windows product foundation.
 
 Implemented:
 
@@ -19,6 +19,9 @@ Implemented:
 - Basic system metrics for CPU/RAM
 - Optional NVIDIA GPU/VRAM metrics through `nvidia-smi`
 - Basic dashboard
+- Dashboard intelligence panels
+- Windows executable and installer foundation
+- First-run configuration wizard
 - Pytest smoke tests
 
 ## Quick Start
@@ -75,12 +78,13 @@ The installer foundation uses Inno Setup and expects the PyInstaller executable
 to exist first.
 
 ```powershell
-pyinstaller contextkeeper.spec
-ISCC.exe installer\ContextKeeper.iss
+.\scripts\build_release.ps1
 ```
 
-The installer script lives in `installer/ContextKeeper.iss`. Service
-installation hooks are placeholders and will be implemented in a later phase.
+The release script runs preflight checks, builds `dist/ContextKeeper.exe`,
+builds `dist/installer/ContextKeeperSetup.exe`, and copies user-facing release
+files into `dist/`. Service installation hooks are placeholders and will be
+implemented in a later phase.
 
 ## Important
 

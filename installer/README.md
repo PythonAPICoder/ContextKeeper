@@ -16,9 +16,10 @@ The recommended way to build a release is to run:
 ```
 
 The script runs preflight checks for `contextkeeper.spec`,
-`installer/ContextKeeper.iss`, and `ISCC.exe`; cleans prior generated
-artifacts; runs PyInstaller; verifies `dist/ContextKeeper.exe`; and builds the
-Inno Setup installer.
+`installer/ContextKeeper.iss`, release documentation, and `ISCC.exe`; cleans
+prior generated artifacts; runs PyInstaller; verifies `dist/ContextKeeper.exe`;
+builds the Inno Setup installer; and copies user-facing release files into
+`dist/`.
 
 For manual installer-only builds, open `ContextKeeper.iss` in Inno Setup
 Compiler and build the script, or run:
@@ -34,6 +35,8 @@ The release script writes:
 ```text
 dist/ContextKeeper.exe
 dist/installer/ContextKeeperSetup.exe
+dist/README.md
+dist/LICENSE.txt
 ```
 
 ## Notes

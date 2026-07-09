@@ -96,3 +96,26 @@ server:
 
     assert settings.server.host == "127.0.0.1"
     assert settings.server.port == 11675
+
+
+@pytest.mark.parametrize(
+    ("yaml_text", "message"),
+    [
+        ("server:\n  port: 70000\n", "server.port: server.port must be between 1 and 65535."),
+        ("dashboard:\n  refresh_interval_ms: 0\n", "dashboard.refresh_interval_ms: dashboard.refresh_interval_ms must be greater than 0."),
+        ("context:\n  warning_threshold_percent: 90\n  compression_threshold_percent: 80\n", "context: context.warning_threshold_percent must be less than or equal to compression_threshold_percent."),
+        ("context:\n  warning_threshold_percent: 101\n", "context.warning_threshold_percent: context threshold percentages must be between 0 and 100."),
+        ("ollama:\n  base_url: ollama.local:11434\n", "ollama.base_url: ollama.base_url must start with http:// or https://."),
+        ("logging:\n  level: TRACE\n", "logging.level: logging.level must be one of OFF, DEBUG, INFO, WARNING, ERROR, or CRITICAL."),
+    ],
+)
+def test_invalid_config_values_raise_actionable_errors(
+    tmp_path: Path,
+    yaml_text: str,
+    message: str,
+) -> None:
+    config_path = tmp_path / "contextkeeper.yaml"
+    config_path.write_text(yaml_text, encoding="utf-8")
+
+    with pytest.raises(ConfigError, match=message.replace(".", r"\.")):
+        load_config(config_path)

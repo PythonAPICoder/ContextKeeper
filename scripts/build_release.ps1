@@ -16,6 +16,26 @@ $DistDir = Join-Path $ProjectRoot "dist"
 $ExecutablePath = Join-Path $DistDir "ContextKeeper.exe"
 $InstallerPath = Join-Path $DistDir "installer\ContextKeeperSetup.exe"
 $InstallerScript = Join-Path $ProjectRoot "installer\ContextKeeper.iss"
+$PyInstallerSpec = Join-Path $ProjectRoot "contextkeeper.spec"
+
+function Write-Section {
+    param([Parameter(Mandatory = $true)][string]$Title)
+
+    Write-Host ""
+    Write-Host "== $Title =="
+}
+
+function Test-RequiredFile {
+    param(
+        [Parameter(Mandatory = $true)][string]$Path,
+        [Parameter(Mandatory = $true)][string]$Description
+    )
+
+    if (-not (Test-Path $Path)) {
+        Write-Error "$Description was not found: $Path"
+        exit 1
+    }
+}
 
 function Remove-GeneratedArtifacts {
     Write-Host "Cleaning previous generated build artifacts..."
@@ -57,22 +77,31 @@ function Find-InnoSetupCompiler {
 
 Set-Location $ProjectRoot
 
+Write-Section "Preflight"
+Test-RequiredFile -Path $PyInstallerSpec -Description "PyInstaller spec file"
+Test-RequiredFile -Path $InstallerScript -Description "Inno Setup installer script"
+$InnoSetupCompiler = Find-InnoSetupCompiler
+if (-not $InnoSetupCompiler) {
+    Write-Error "Inno Setup compiler (ISCC.exe) was not found. Install Inno Setup and ensure ISCC.exe is on PATH or installed in the default location."
+    exit 1
+}
+Write-Host "PyInstaller spec: $PyInstallerSpec"
+Write-Host "Inno Setup script: $InstallerScript"
+Write-Host "Inno Setup compiler: $InnoSetupCompiler"
+
+Write-Section "Cleanup"
 Remove-GeneratedArtifacts
 
+Write-Section "Executable"
 Write-Host "Building ContextKeeper executable with PyInstaller..."
-pyinstaller contextkeeper.spec
+pyinstaller $PyInstallerSpec
 
 if (-not (Test-Path $ExecutablePath)) {
     Write-Error "Expected executable was not created: $ExecutablePath"
     exit 1
 }
 
-$InnoSetupCompiler = Find-InnoSetupCompiler
-if (-not $InnoSetupCompiler) {
-    Write-Error "Inno Setup compiler (ISCC.exe) was not found. Install Inno Setup and ensure ISCC.exe is on PATH or installed in the default location."
-    exit 1
-}
-
+Write-Section "Installer"
 Write-Host "Building ContextKeeper installer with Inno Setup..."
 & $InnoSetupCompiler $InstallerScript
 
@@ -81,7 +110,7 @@ if (-not (Test-Path $InstallerPath)) {
     exit 1
 }
 
-Write-Host ""
+Write-Section "Summary"
 Write-Host "Release build complete."
 Write-Host "Executable: $ExecutablePath"
 Write-Host "Installer:   $InstallerPath"

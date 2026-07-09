@@ -15,9 +15,10 @@ The recommended way to build a release is to run:
 .\scripts\build_release.ps1
 ```
 
-The script cleans prior generated artifacts, runs PyInstaller, verifies
-`dist/ContextKeeper.exe`, locates `ISCC.exe`, and builds the Inno Setup
-installer.
+The script runs preflight checks for `contextkeeper.spec`,
+`installer/ContextKeeper.iss`, and `ISCC.exe`; cleans prior generated
+artifacts; runs PyInstaller; verifies `dist/ContextKeeper.exe`; and builds the
+Inno Setup installer.
 
 For manual installer-only builds, open `ContextKeeper.iss` in Inno Setup
 Compiler and build the script, or run:

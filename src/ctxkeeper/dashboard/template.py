@@ -144,6 +144,23 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
 .flow-heading {{ display:flex; align-items:center; gap:9px; }}
 .flow-heading svg {{ width:17px; height:17px; stroke:var(--accent); fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }}
 .flow-stage {{ position:relative; display:grid; grid-template-columns:minmax(150px,1fr) 44px minmax(150px,1fr) 44px minmax(150px,1fr) 44px minmax(150px,1fr); gap:10px; align-items:center; min-width:0; min-height:0; }}
+.flow-svg-layer {{ position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:0; overflow:visible; }}
+.flow-stage > .flow-node,.flow-stage > .pipe {{ position:relative; z-index:1; }}
+.flow-svg-line {{ fill:none; stroke:rgba(148,163,184,.22); stroke-width:2; stroke-linecap:round; vector-effect:non-scaling-stroke; }}
+.flow-svg-line.flow-line-active {{ stroke:rgba(56,189,248,.72); filter:drop-shadow(0 0 5px rgba(56,189,248,.28)); }}
+.flow-svg-line.flow-line-waiting {{ stroke:rgba(245,158,11,.42); stroke-dasharray:5 8; }}
+.flow-svg-line.flow-line-offline {{ stroke:rgba(239,68,68,.36); stroke-dasharray:3 8; }}
+.flow-svg-packet {{ fill:var(--accent); opacity:0; filter:drop-shadow(0 0 8px rgba(56,189,248,.55)); }}
+.flow-svg-packet {{ offset-path:path("M 55 90 C 180 90 200 90 325 90 C 450 90 470 90 595 90 C 720 90 740 90 945 90"); offset-rotate:0deg; }}
+.flow-panel.flow-active .flow-svg-packet {{ opacity:.86; animation:flowPacket 3.8s ease-in-out infinite; }}
+.flow-panel.flow-waiting .flow-svg-packet {{ fill:var(--warn); opacity:.34; animation:flowPacket 6s ease-in-out infinite; }}
+.flow-panel.flow-offline .flow-svg-packet {{ opacity:0; animation:none; }}
+.flow-panel.request-pulse .flow-svg-packet {{ animation:flowPacketPulse 900ms ease-out 1; opacity:1; }}
+.flow-panel.request-pulse .flow-node {{ border-color:rgba(56,189,248,.34); box-shadow:0 18px 42px rgba(2,6,23,.3),0 0 0 1px rgba(56,189,248,.08); }}
+.flow-node.status-pulse {{ animation:nodeStatusPulse 700ms ease-out 1; }}
+@keyframes flowPacket {{ 0% {{ offset-distance:0%; opacity:0; }} 10% {{ opacity:.72; }} 86% {{ opacity:.72; }} 100% {{ offset-distance:100%; opacity:0; }} }}
+@keyframes flowPacketPulse {{ 0% {{ offset-distance:0%; opacity:0; }} 12% {{ opacity:1; }} 82% {{ opacity:1; }} 100% {{ offset-distance:100%; opacity:0; }} }}
+@keyframes nodeStatusPulse {{ 0% {{ transform:translateY(0); }} 35% {{ transform:translateY(-1px); border-color:rgba(56,189,248,.38); }} 100% {{ transform:translateY(0); }} }}
 .flow-note {{ color:var(--muted); font-size:12px; }}
 .node {{ position:relative; background:radial-gradient(circle at 50% 0%,rgba(56,189,248,.13),transparent 46%),rgba(15,23,42,.92); border:1px solid rgba(255,255,255,.1); border-radius:8px; padding:14px; min-width:0; min-height:142px; box-shadow:var(--shadow); transition:border-color .18s ease, transform .18s ease, background .18s ease; }}
 .node::before {{ content:""; display:block; width:46px; height:46px; margin:0 auto 10px; border-radius:50%; border:1px solid rgba(56,189,248,.32); background:rgba(2,6,23,.44); box-shadow:0 0 0 8px rgba(56,189,248,.06); }}
@@ -169,6 +186,7 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
 .pipe {{ position:relative; height:2px; background:linear-gradient(90deg,rgba(45,58,79,.35),rgba(56,189,248,.85),rgba(45,58,79,.35)); border-radius:99px; opacity:.9; }}
 .pipe::before {{ content:""; position:absolute; inset:-12px 0; border-top:1px dashed rgba(148,163,184,.22); top:50%; }}
 .pipe::after {{ content:""; position:absolute; left:50%; top:50%; width:10px; height:10px; border-radius:50%; transform:translate(-50%,-50%); background:rgba(56,189,248,.5); box-shadow:0 0 18px rgba(56,189,248,.42); }}
+@media (prefers-reduced-motion: reduce) {{ .flow-panel.flow-active .flow-svg-packet,.flow-panel.flow-waiting .flow-svg-packet,.flow-panel.request-pulse .flow-svg-packet,.flow-node.status-pulse,.dot {{ animation:none; }} .flow-svg-packet {{ opacity:0; }} }}
 .small {{ font-size:12px; color:var(--muted); overflow-wrap:anywhere; }}
 .traffic-panel {{ display:grid; grid-template-rows:auto auto 1fr; gap:10px; }}
 .traffic-stats {{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }}
@@ -233,14 +251,15 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
   .action-panel .panel-item {{ padding:5px 7px; font-size:12px; }}
   .flow-panel {{ padding:10px; gap:6px; }}
   .flow-panel::before {{ inset:36px 10px 10px; }}
+  .flow-svg-layer {{ display:none; }}
   .flow-stage {{ grid-template-columns:minmax(126px,1fr) 28px minmax(126px,1fr); grid-auto-rows:auto; gap:8px; }}
-  .flow-stage > :nth-child(1) {{ grid-column:1; grid-row:1; }}
-  .flow-stage > :nth-child(2) {{ grid-column:2; grid-row:1; }}
-  .flow-stage > :nth-child(3) {{ grid-column:3; grid-row:1; }}
-  .flow-stage > :nth-child(4) {{ grid-column:3; grid-row:2; width:4px; height:18px; justify-self:center; align-self:center; }}
-  .flow-stage > :nth-child(5) {{ grid-column:3; grid-row:3; }}
-  .flow-stage > :nth-child(6) {{ grid-column:2; grid-row:3; }}
-  .flow-stage > :nth-child(7) {{ grid-column:1; grid-row:3; }}
+  .flow-stage > :nth-child(2) {{ grid-column:1; grid-row:1; }}
+  .flow-stage > :nth-child(3) {{ grid-column:2; grid-row:1; }}
+  .flow-stage > :nth-child(4) {{ grid-column:3; grid-row:1; }}
+  .flow-stage > :nth-child(5) {{ grid-column:3; grid-row:2; width:4px; height:18px; justify-self:center; align-self:center; }}
+  .flow-stage > :nth-child(6) {{ grid-column:3; grid-row:3; }}
+  .flow-stage > :nth-child(7) {{ grid-column:2; grid-row:3; }}
+  .flow-stage > :nth-child(8) {{ grid-column:1; grid-row:3; }}
   .node {{ min-height:78px; padding:7px; }}
   .flow-node {{ min-height:84px; padding:8px; gap:6px; }}
   .flow-node-icon {{ width:24px; height:24px; border-radius:7px; }}
@@ -329,7 +348,7 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
   .flow-panel .health-title h2 {{ margin:0; }}
   .flow-note {{ font-size:10px; }}
   .flow-stage {{ grid-template-columns:minmax(104px,1fr) 20px minmax(104px,1fr); gap:5px; }}
-  .flow-stage > :nth-child(4) {{ height:12px; }}
+  .flow-stage > :nth-child(5) {{ height:12px; }}
   .node {{ min-height:56px; padding:5px; }}
   .flow-node {{ min-height:64px; padding:6px; gap:4px; }}
   .flow-node-head {{ gap:6px; }}
@@ -467,6 +486,12 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
       <span class="flow-note">Static topology now; connector placeholders are reserved for animated traffic flow.</span>
     </div>
     <div class="flow-stage">
+      <svg class="flow-svg-layer" viewBox="0 0 1000 180" preserveAspectRatio="none" aria-hidden="true">
+        <path id="flowLineClientProxy" class="flow-svg-line" d="M 55 90 C 180 90 200 90 325 90"></path>
+        <path id="flowLineProxyOllama" class="flow-svg-line" d="M 325 90 C 450 90 470 90 595 90"></path>
+        <path id="flowLineOllamaModel" class="flow-svg-line" d="M 595 90 C 720 90 740 90 945 90"></path>
+        <circle id="flowPacket" class="flow-svg-packet" r="5" cx="0" cy="0"></circle>
+      </svg>
       <div class="node flow-node">
         <div class="flow-node-head"><div class="flow-node-title"><span id="clientDot" class="dot waiting"></span>Client</div><div class="flow-node-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"></rect><path d="M8 20h8"></path><path d="M12 16v4"></path></svg></div></div>
         <div class="flow-node-main"><div id="clientText" class="value">Waiting</div><div id="clientSub" class="small">No clients seen yet</div></div>
@@ -578,6 +603,8 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
 </div>
 <script>
 const DASHBOARD_REFRESH_INTERVAL_MS = {settings.dashboard.refresh_interval_ms or 1000};
+let lastTopologyRequestCount = null;
+let topologyPulseTimer = null;
 function byId(id) {{
   return document.getElementById(id);
 }}
@@ -609,8 +636,17 @@ function setText(id, value) {{
 function setStatusBadge(id, value) {{
   const el = byId(id);
   if (!el) return;
-  el.className = 'badge ' + safeClass(value);
+  const extraClass = el.classList.contains('flow-status') ? ' flow-status' : '';
+  const nextClass = 'badge ' + safeClass(value) + extraClass;
+  const changed = el.className !== nextClass;
+  el.className = nextClass;
   setText(id, titleCase(value || 'unknown'));
+  const node = el.closest ? el.closest('.flow-node') : null;
+  if (changed && node) {{
+    node.classList.remove('status-pulse');
+    void node.offsetWidth;
+    node.classList.add('status-pulse');
+  }}
 }}
 function setHtml(id, html) {{
   const el = byId(id);
@@ -643,6 +679,44 @@ function healthGaugeValue(status) {{
 function latencyGaugeValue(latencyMs) {{
   const latency = Math.max(0, Number(latencyMs) || 0);
   return Math.max(0, 100 - Math.min(100, latency / 50));
+}}
+function connectorClass(status) {{
+  const normalized = safeClass(status);
+  if (normalized === 'offline' || normalized === 'error' || normalized === 'critical') return 'flow-svg-line flow-line-offline';
+  if (normalized === 'online' || normalized === 'active' || normalized === 'healthy' || normalized === 'running') return 'flow-svg-line flow-line-active';
+  return 'flow-svg-line flow-line-waiting';
+}}
+function setConnectorState(id, status) {{
+  const line = byId(id);
+  if (line) line.setAttribute('class', connectorClass(status));
+}}
+function updateTopologyState(connections) {{
+  const panel = byId('connections');
+  if (!panel || !connections) return;
+  const clientStatus = connections.client?.status || 'waiting';
+  const proxyStatus = connections.proxy?.status || 'online';
+  const ollamaStatus = connections.ollama?.status || 'waiting';
+  const modelStatus = connections.model?.status || 'waiting';
+  setConnectorState('flowLineClientProxy', clientStatus === 'online' && proxyStatus === 'online' ? 'online' : clientStatus);
+  setConnectorState('flowLineProxyOllama', ollamaStatus);
+  setConnectorState('flowLineOllamaModel', ollamaStatus === 'online' && modelStatus === 'active' ? 'active' : modelStatus === 'offline' ? 'offline' : 'waiting');
+  const flowState = ollamaStatus === 'offline' || proxyStatus === 'offline' ? 'flow-offline' : ollamaStatus === 'online' ? 'flow-active' : 'flow-waiting';
+  panel.classList.remove('flow-active', 'flow-waiting', 'flow-offline');
+  panel.classList.add(flowState);
+}}
+function triggerTopologyPulse(totalRequests) {{
+  const count = Number(totalRequests);
+  if (!Number.isFinite(count)) return;
+  const panel = byId('connections');
+  if (!panel) return;
+  if (lastTopologyRequestCount !== null && count > lastTopologyRequestCount) {{
+    panel.classList.remove('request-pulse');
+    void panel.offsetWidth;
+    panel.classList.add('request-pulse');
+    clearTimeout(topologyPulseTimer);
+    topologyPulseTimer = setTimeout(() => panel.classList.remove('request-pulse'), 950);
+  }}
+  lastTopologyRequestCount = count;
 }}
 function renderSparkline(requests) {{
   const line = byId('requestSparkline');
@@ -708,6 +782,7 @@ async function refreshHealth() {{
   setText('opsLastRefreshDetail', 'Every ' + DASHBOARD_REFRESH_INTERVAL_MS + ' ms');
   setStatusBadge('opsLastRefreshStatus', 'running');
   setText('opsLastRefreshStatus', new Date().toLocaleTimeString());
+  updateTopologyState(c);
 }}
 async function refreshMetrics() {{
   const res = await fetch('/metrics');
@@ -715,6 +790,7 @@ async function refreshMetrics() {{
   const r = data.requests;
   const s = data.system;
   setText('req', r.total_requests);
+  triggerTopologyPulse(r.total_requests);
   setText('err', r.total_errors);
   setText('cpu', s.cpu_percent + '%');
   setWidth('cpuBar', s.cpu_percent + '%');

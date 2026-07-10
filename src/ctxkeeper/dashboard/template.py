@@ -14,12 +14,12 @@ def render_dashboard_html(settings: Settings) -> str:
 <style>
 :root {{ --bg:#090e1a; --sidebar:#0d1424; --panel:#111827; --card:#182132; --card-strong:#1f2937; --text:#e5e7eb; --muted:#94a3b8; --soft:#cbd5e1; --good:#22c55e; --warn:#f59e0b; --bad:#ef4444; --accent:#38bdf8; --accent-2:#818cf8; --line:#2d3a4f; --glass:rgba(15,23,42,.66); --glass-strong:rgba(24,33,50,.88); --shadow:0 18px 46px rgba(0,0,0,.28); --shadow-soft:0 10px 24px rgba(0,0,0,.2); }}
 * {{ box-sizing:border-box; }}
-html {{ scroll-behavior:smooth; }}
-body {{ margin:0; min-width:320px; font-family:"Segoe UI Variable", Segoe UI, Arial, sans-serif; background:var(--bg); color:var(--text); }}
+html {{ height:100%; overflow:hidden; scroll-behavior:smooth; }}
+body {{ margin:0; width:100%; height:100%; min-width:320px; overflow:hidden; font-family:"Segoe UI Variable", Segoe UI, Arial, sans-serif; background:var(--bg); color:var(--text); }}
 body::before {{ content:""; position:fixed; inset:0; z-index:-1; pointer-events:none; background:radial-gradient(circle at 18% 8%,rgba(56,189,248,.16),transparent 28%),radial-gradient(circle at 84% 18%,rgba(129,140,248,.12),transparent 30%),linear-gradient(135deg,#070b14,#0b1220 45%,#101827); }}
 a {{ color:inherit; text-decoration:none; }}
-.app-shell {{ min-height:100vh; display:grid; grid-template-columns:240px minmax(0,1fr); background:linear-gradient(90deg,rgba(13,20,36,.72),transparent 38%); }}
-.sidebar {{ position:sticky; top:0; height:100vh; display:flex; flex-direction:column; gap:26px; padding:20px 16px; background:linear-gradient(180deg,rgba(13,20,36,.94),rgba(9,14,26,.9)); border-right:1px solid rgba(203,213,225,.09); box-shadow:8px 0 34px rgba(0,0,0,.18); backdrop-filter:blur(18px); }}
+.app-shell {{ height:100vh; min-height:0; overflow:hidden; display:grid; grid-template-columns:240px minmax(0,1fr); background:linear-gradient(90deg,rgba(13,20,36,.72),transparent 38%); }}
+.sidebar {{ position:relative; top:0; height:100vh; min-height:0; overflow:hidden; display:flex; flex-direction:column; gap:26px; padding:20px 16px; background:linear-gradient(180deg,rgba(13,20,36,.94),rgba(9,14,26,.9)); border-right:1px solid rgba(203,213,225,.09); box-shadow:8px 0 34px rgba(0,0,0,.18); backdrop-filter:blur(18px); }}
 .brand {{ display:flex; align-items:center; gap:12px; padding:6px 6px 14px; border-bottom:1px solid rgba(203,213,225,.09); }}
 .brand-mark {{ display:grid; place-items:center; width:38px; height:38px; border-radius:8px; background:linear-gradient(135deg,var(--accent),var(--accent-2)); color:#020617; font-weight:900; box-shadow:0 10px 24px rgba(56,189,248,.18); }}
 .brand-name {{ font-weight:800; letter-spacing:.01em; }}
@@ -30,26 +30,26 @@ a {{ color:inherit; text-decoration:none; }}
 .nav a.active {{ background:linear-gradient(90deg,rgba(56,189,248,.18),rgba(129,140,248,.08)); border-color:rgba(56,189,248,.26); color:#fff; box-shadow:inset 3px 0 0 var(--accent),0 8px 20px rgba(2,6,23,.18); }}
 .nav-kicker {{ color:var(--muted); font-size:11px; text-transform:uppercase; font-weight:800; letter-spacing:.08em; margin:4px 10px; }}
 .sidebar-footer {{ margin-top:auto; color:var(--muted); font-size:12px; line-height:1.5; padding:12px 10px; border-top:1px solid rgba(203,213,225,.09); }}
-.workspace {{ min-width:0; display:grid; grid-template-rows:auto 1fr; }}
-.topbar {{ position:sticky; top:0; z-index:5; display:flex; justify-content:space-between; align-items:center; gap:18px; margin:12px 14px 0; padding:12px 16px; background:linear-gradient(135deg,rgba(15,23,42,.84),rgba(24,33,50,.72)); backdrop-filter:blur(20px); border:1px solid rgba(203,213,225,.11); border-radius:12px; box-shadow:var(--shadow-soft); }}
+.workspace {{ min-width:0; height:100vh; min-height:0; overflow:hidden; display:grid; grid-template-rows:auto minmax(0,1fr); }}
+.topbar {{ position:relative; z-index:5; display:flex; justify-content:space-between; align-items:center; gap:18px; margin:8px 12px 0; padding:10px 14px; background:linear-gradient(135deg,rgba(15,23,42,.84),rgba(24,33,50,.72)); backdrop-filter:blur(20px); border:1px solid rgba(203,213,225,.11); border-radius:12px; box-shadow:var(--shadow-soft); }}
 .topbar-left {{ min-width:0; display:flex; align-items:center; gap:14px; }}
 .topbar-title {{ min-width:0; }}
 .topbar-status {{ display:inline-flex; align-items:center; gap:8px; min-height:28px; padding:4px 9px; border:1px solid rgba(34,197,94,.2); border-radius:999px; background:rgba(34,197,94,.09); color:#86efac; font-size:12px; font-weight:800; text-transform:uppercase; }}
 .topbar-status-dot {{ width:8px; height:8px; border-radius:50%; background:var(--good); box-shadow:0 0 14px rgba(34,197,94,.7); }}
 .topbar-actions {{ display:flex; flex-wrap:wrap; justify-content:flex-end; gap:10px; color:var(--muted); font-size:13px; }}
 .topbar-pill {{ display:inline-flex; align-items:center; min-height:30px; padding:5px 10px; border:1px solid rgba(203,213,225,.1); border-radius:999px; background:rgba(15,23,42,.7); box-shadow:inset 0 1px 0 rgba(255,255,255,.04); }}
-.dashboard-main {{ min-height:calc(100vh - 87px); min-width:0; padding:14px 16px 18px; }}
+.dashboard-main {{ height:100%; min-height:0; min-width:0; overflow:hidden; padding:10px 14px 14px; }}
 h1 {{ margin:0; font-size:25px; }}
 .sub {{ color:var(--muted); margin-top:3px; }}
 .page {{ display:none; }}
-.page.active {{ display:grid; gap:10px; }}
+.page.active {{ height:100%; min-height:0; overflow-y:auto; overflow-x:hidden; display:grid; gap:8px; }}
 .page-header {{ display:flex; justify-content:space-between; align-items:end; gap:18px; }}
 .page-title {{ margin:0; font-size:22px; }}
 .page-sub {{ color:var(--muted); margin-top:4px; }}
 .command-meta {{ display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }}
-.operations-page {{ grid-template-rows:auto auto auto; min-height:calc(100vh - 91px); overflow:visible; }}
-.ops-hero {{ display:grid; grid-template-columns:minmax(360px,1.35fr) minmax(280px,.65fr); grid-template-areas:"hero actions" "stats stats"; gap:10px; align-items:stretch; min-width:0; }}
-.hero-status {{ position:relative; overflow:hidden; min-height:104px; min-width:0; display:grid; align-content:center; padding:14px 18px; background:linear-gradient(135deg,rgba(15,23,42,.96),rgba(17,24,39,.92)); border-left:5px solid var(--accent); }}
+.operations-page {{ height:100%; min-height:0; overflow:hidden; grid-template-rows:minmax(250px,42fr) minmax(140px,30fr) minmax(174px,28fr); }}
+.ops-hero {{ min-height:0; overflow:hidden; display:grid; grid-template-columns:minmax(360px,1.35fr) minmax(280px,.65fr); grid-template-areas:"hero actions" "stats stats"; gap:8px; align-items:stretch; min-width:0; }}
+.hero-status {{ position:relative; overflow:hidden; min-height:92px; min-width:0; display:grid; align-content:start; padding:12px 16px; background:linear-gradient(135deg,rgba(15,23,42,.96),rgba(17,24,39,.92)); border-left:5px solid var(--accent); }}
 .ops-hero > .hero-status {{ grid-area:hero; }}
 .hero-status::after {{ content:""; position:absolute; inset:auto -22% -70% 38%; height:180px; background:radial-gradient(circle,rgba(56,189,248,.18),transparent 68%); pointer-events:none; }}
 .hero-status.healthy {{ border-left-color:var(--good); }} .hero-status.warning,.hero-status.busy {{ border-left-color:var(--warn); }} .hero-status.critical,.hero-status.offline {{ border-left-color:var(--bad); }}
@@ -58,38 +58,39 @@ h1 {{ margin:0; font-size:25px; }}
 .hero-title span:last-child {{ min-width:0; overflow:hidden; text-overflow:ellipsis; }}
 .hero-icon {{ font-size:20px; }}
 .hero-copy {{ max-width:780px; margin-top:5px; color:var(--soft); font-size:13px; line-height:1.3; }}
-.hero-status #systemHealthCard {{ position:relative; z-index:1; margin-top:10px; min-height:0; padding:12px; background:linear-gradient(145deg,rgba(15,23,42,.72),rgba(30,41,59,.58)); box-shadow:none; }}
-.ops-health-panel {{ display:grid; gap:12px; }}
+.hero-status #systemHealthCard {{ position:relative; z-index:1; margin-top:8px; min-height:0; padding:10px; background:linear-gradient(145deg,rgba(15,23,42,.72),rgba(30,41,59,.58)); box-shadow:none; }}
+.ops-health-panel {{ display:grid; grid-template-rows:auto auto minmax(min-content,1fr); gap:8px; }}
 .ops-health-panel::before {{ content:""; position:absolute; inset:0; background:radial-gradient(circle at 86% 10%,rgba(56,189,248,.14),transparent 38%); pointer-events:none; }}
 .ops-health-panel > * {{ position:relative; z-index:1; }}
 .ops-health-heading {{ display:flex; align-items:center; gap:8px; }}
 .ops-health-heading svg,.ops-health-row svg {{ width:16px; height:16px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; color:var(--accent); }}
-.ops-health-body {{ display:grid; grid-template-columns:minmax(0,1fr) 70px; gap:12px; align-items:center; }}
-.ops-health-primary {{ display:grid; gap:5px; min-width:0; }}
-.ops-health-status {{ font-size:24px; line-height:1; font-weight:850; }}
-.ops-health-message {{ font-size:12px; line-height:1.28; color:var(--soft); }}
+.ops-health-body {{ display:grid; grid-template-columns:minmax(0,1fr) 54px; gap:10px; align-items:center; }}
+.ops-health-primary {{ display:grid; gap:4px; min-width:0; }}
+.ops-health-status {{ font-size:22px; line-height:1; font-weight:850; }}
+.ops-health-message {{ font-size:11px; line-height:1.22; color:var(--soft); display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden; }}
 .ops-health-gauge {{ display:grid; justify-items:center; gap:3px; }}
-.ops-health-gauge .gauge {{ width:58px; height:58px; }}
+.ops-health-gauge .gauge {{ width:48px; height:48px; }}
 .ops-health-gauge-label {{ color:var(--muted); font-size:10px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }}
-.ops-health-details {{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; }}
-.ops-health-row {{ display:grid; grid-template-columns:18px minmax(0,1fr) auto; gap:7px; align-items:center; min-height:34px; padding:7px 8px; border:1px solid rgba(203,213,225,.09); border-radius:8px; background:rgba(2,6,23,.2); }}
+.ops-health-details {{ display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:5px; }}
+.ops-health-row {{ display:grid; grid-template-columns:16px minmax(0,1fr); gap:6px; align-items:center; min-height:30px; padding:5px 6px; border:1px solid rgba(203,213,225,.09); border-radius:8px; background:rgba(2,6,23,.2); }}
 .ops-health-row-main {{ min-width:0; }}
-.ops-health-row-label {{ color:var(--soft); font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; }}
-.ops-health-row-detail {{ color:var(--muted); font-size:11px; line-height:1.2; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }}
+.ops-health-row-label {{ color:var(--soft); font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; }}
+.ops-health-row-detail {{ color:var(--muted); font-size:10px; line-height:1.15; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }}
+.ops-health-row .badge {{ grid-column:1/-1; justify-self:start; min-height:18px; padding:1px 6px; font-size:9px; }}
 .ops-hero > .action-panel {{ grid-area:actions; }}
-.hero-stats-grid {{ grid-area:stats; display:grid; grid-template-columns:repeat(4,minmax(160px,1fr)); gap:10px; min-width:0; }}
-.hero-stat-card {{ position:relative; overflow:hidden; min-height:112px; display:grid; align-content:space-between; gap:10px; padding:14px; }}
+.hero-stats-grid {{ grid-area:stats; display:grid; grid-template-columns:repeat(4,minmax(160px,1fr)); gap:8px; min-width:0; }}
+.hero-stat-card {{ position:relative; overflow:hidden; min-height:88px; display:grid; align-content:space-between; gap:7px; padding:11px 12px; }}
 .hero-stat-card::before {{ content:""; position:absolute; inset:0; background:linear-gradient(135deg,rgba(56,189,248,.1),transparent 42%); opacity:.82; pointer-events:none; }}
 .hero-stat-card > * {{ position:relative; z-index:1; }}
 .hero-stat-card:hover .hero-stat-icon {{ transform:translateY(-1px); border-color:rgba(56,189,248,.34); }}
 .hero-stat-top {{ display:flex; align-items:center; justify-content:space-between; gap:10px; }}
 .hero-stat-label {{ color:var(--soft); font-size:12px; font-weight:850; letter-spacing:.08em; text-transform:uppercase; }}
-.hero-stat-icon {{ display:grid; place-items:center; width:34px; height:34px; border-radius:9px; color:var(--accent); background:rgba(56,189,248,.1); border:1px solid rgba(56,189,248,.2); transition:transform .18s ease,border-color .18s ease; }}
+.hero-stat-icon {{ display:grid; place-items:center; width:30px; height:30px; border-radius:9px; color:var(--accent); background:rgba(56,189,248,.1); border:1px solid rgba(56,189,248,.2); transition:transform .18s ease,border-color .18s ease; }}
 .hero-stat-icon svg {{ width:18px; height:18px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }}
-.hero-stat-value {{ font-size:clamp(30px,2.1vw,40px); line-height:.95; font-weight:850; letter-spacing:0; overflow-wrap:anywhere; }}
-.hero-stat-desc {{ color:var(--muted); font-size:12px; line-height:1.25; }}
+.hero-stat-value {{ font-size:clamp(26px,1.85vw,34px); line-height:.95; font-weight:850; letter-spacing:0; overflow-wrap:anywhere; }}
+.hero-stat-desc {{ color:var(--muted); font-size:11px; line-height:1.18; }}
 .hero-stat-hidden-binding {{ display:none; }}
-.operations-lower {{ display:grid; grid-template-columns:minmax(300px,.82fr) minmax(360px,1fr) minmax(340px,1fr); gap:14px; min-height:0; min-width:0; }}
+.operations-lower {{ display:grid; grid-template-columns:minmax(300px,.82fr) minmax(360px,1fr) minmax(340px,1fr); gap:10px; min-height:0; min-width:0; overflow:hidden; }}
 .grid {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px; }}
 .card {{ background:linear-gradient(180deg,rgba(24,33,50,.82),rgba(15,23,42,.76)); border:1px solid rgba(203,213,225,.1); border-radius:10px; padding:12px; box-shadow:var(--shadow); backdrop-filter:blur(18px); transition:border-color .18s ease, transform .18s ease, background .18s ease,box-shadow .18s ease; }}
 .card:hover,.node:hover {{ border-color:rgba(56,189,248,.24); transform:translateY(-1px); background:linear-gradient(180deg,rgba(30,41,59,.88),rgba(15,23,42,.8)); box-shadow:0 20px 46px rgba(0,0,0,.3); }}
@@ -126,7 +127,7 @@ h1 {{ margin:0; font-size:25px; }}
 .panel-list > .muted,.timeline-list > .muted,#activeRecentMessages > .muted {{ min-height:48px; display:grid; place-items:center; text-align:center; border:1px dashed rgba(148,163,184,.28); border-radius:8px; background:rgba(15,23,42,.32); color:#aebbd0; }}
 .action-panel .panel-list {{ max-height:58px; overflow:hidden; }}
 .action-panel .small {{ display:none; }}
-.activity-card {{ overflow:auto; }}
+.activity-card {{ overflow-y:auto; overflow-x:hidden; }}
 .activity-card tbody:empty::after {{ content:"No request activity yet."; display:block; padding:18px; color:var(--muted); }}
 .risk-row {{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }}
 .value {{ font-size:28px; font-weight:750; overflow-wrap:anywhere; }}
@@ -137,13 +138,13 @@ h1 {{ margin:0; font-size:25px; }}
 table {{ width:100%; border-collapse:collapse; font-size:13px; }}
 th,td {{ text-align:left; padding:7px 8px; border-bottom:1px solid rgba(255,255,255,.08); }}
 th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.06em; }}
-.flow-panel {{ position:relative; display:grid; grid-template-rows:auto 1fr; gap:14px; min-height:0; overflow:visible; padding:18px; background:linear-gradient(145deg,rgba(15,23,42,.96),rgba(24,33,50,.86)); }}
-.flow-panel::before {{ content:""; position:absolute; inset:58px 18px 18px; border:1px solid rgba(56,189,248,.08); border-radius:10px; pointer-events:none; }}
+.flow-panel {{ position:relative; display:grid; grid-template-rows:auto minmax(min-content,1fr); gap:10px; min-height:0; overflow:hidden; padding:13px 14px; background:linear-gradient(145deg,rgba(15,23,42,.96),rgba(24,33,50,.86)); }}
+.flow-panel::before {{ content:""; position:absolute; inset:46px 14px 14px; border:1px solid rgba(56,189,248,.08); border-radius:10px; pointer-events:none; }}
 .flow-panel::after {{ content:""; position:absolute; inset:0; background:radial-gradient(circle at 50% 0%,rgba(56,189,248,.11),transparent 42%); pointer-events:none; }}
 .flow-panel > * {{ position:relative; z-index:1; }}
 .flow-heading {{ display:flex; align-items:center; gap:9px; }}
 .flow-heading svg {{ width:17px; height:17px; stroke:var(--accent); fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }}
-.flow-stage {{ position:relative; display:grid; grid-template-columns:minmax(150px,1fr) 44px minmax(150px,1fr) 44px minmax(150px,1fr) 44px minmax(150px,1fr); gap:10px; align-items:center; min-width:0; min-height:0; }}
+.flow-stage {{ position:relative; display:grid; grid-template-columns:minmax(150px,1fr) 38px minmax(150px,1fr) 38px minmax(150px,1fr) 38px minmax(150px,1fr); gap:8px; align-items:stretch; min-width:0; min-height:0; }}
 .flow-svg-layer {{ position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:0; overflow:visible; }}
 .flow-stage > .flow-node,.flow-stage > .pipe {{ position:relative; z-index:1; }}
 .flow-svg-line {{ fill:none; stroke:rgba(148,163,184,.22); stroke-width:2; stroke-linecap:round; vector-effect:non-scaling-stroke; }}
@@ -162,19 +163,19 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
 @keyframes flowPacketPulse {{ 0% {{ offset-distance:0%; opacity:0; }} 12% {{ opacity:1; }} 82% {{ opacity:1; }} 100% {{ offset-distance:100%; opacity:0; }} }}
 @keyframes nodeStatusPulse {{ 0% {{ transform:translateY(0); }} 35% {{ transform:translateY(-1px); border-color:rgba(56,189,248,.38); }} 100% {{ transform:translateY(0); }} }}
 .flow-note {{ color:var(--muted); font-size:12px; }}
-.node {{ position:relative; background:radial-gradient(circle at 50% 0%,rgba(56,189,248,.13),transparent 46%),rgba(15,23,42,.92); border:1px solid rgba(255,255,255,.1); border-radius:8px; padding:14px; min-width:0; min-height:142px; box-shadow:var(--shadow); transition:border-color .18s ease, transform .18s ease, background .18s ease; }}
+.node {{ position:relative; background:radial-gradient(circle at 50% 0%,rgba(56,189,248,.13),transparent 46%),rgba(15,23,42,.92); border:1px solid rgba(255,255,255,.1); border-radius:8px; padding:12px; min-width:0; min-height:118px; box-shadow:var(--shadow); transition:border-color .18s ease, transform .18s ease, background .18s ease; }}
 .node::before {{ content:""; display:block; width:46px; height:46px; margin:0 auto 10px; border-radius:50%; border:1px solid rgba(56,189,248,.32); background:rgba(2,6,23,.44); box-shadow:0 0 0 8px rgba(56,189,248,.06); }}
 .node .node-title,.node .value,.node .small {{ position:relative; text-align:center; }}
-.flow-node {{ display:grid; grid-template-rows:auto 1fr auto; gap:10px; min-height:148px; padding:14px; border-radius:10px; background:linear-gradient(180deg,rgba(30,41,59,.72),rgba(15,23,42,.9)); }}
+.flow-node {{ display:grid; grid-template-rows:auto 1fr auto; gap:7px; min-height:118px; padding:10px; border-radius:10px; background:linear-gradient(180deg,rgba(30,41,59,.72),rgba(15,23,42,.9)); }}
 .flow-node::before {{ display:none; }}
 .flow-node-head {{ display:flex; align-items:center; justify-content:space-between; gap:10px; }}
 .flow-node-title {{ display:flex; align-items:center; gap:8px; min-width:0; color:var(--soft); font-size:12px; font-weight:850; letter-spacing:.08em; text-transform:uppercase; }}
-.flow-node-icon {{ display:grid; place-items:center; width:32px; height:32px; border-radius:9px; color:var(--accent); background:rgba(56,189,248,.1); border:1px solid rgba(56,189,248,.18); }}
-.flow-node-icon svg {{ width:17px; height:17px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }}
+.flow-node-icon {{ display:grid; place-items:center; width:28px; height:28px; border-radius:8px; color:var(--accent); background:rgba(56,189,248,.1); border:1px solid rgba(56,189,248,.18); }}
+.flow-node-icon svg {{ width:15px; height:15px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }}
 .flow-node-main {{ display:grid; align-content:center; gap:5px; min-width:0; }}
-.flow-node-main .value {{ font-size:clamp(21px,1.45vw,28px); line-height:1; font-weight:850; text-align:left; }}
-.flow-node-main .small {{ text-align:left; line-height:1.25; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }}
-.flow-node-foot {{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding-top:8px; border-top:1px solid rgba(203,213,225,.08); }}
+.flow-node-main .value {{ font-size:clamp(19px,1.25vw,24px); line-height:1; font-weight:850; text-align:left; }}
+.flow-node-main .small {{ text-align:left; line-height:1.18; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }}
+.flow-node-foot {{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding-top:6px; border-top:1px solid rgba(203,213,225,.08); }}
 .flow-endpoint {{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--muted); font-size:11px; }}
 .flow-status {{ flex:0 0 auto; }}
 .signal-node {{ display:flex; flex-direction:column; justify-content:space-between; background:linear-gradient(180deg,rgba(30,41,59,.96),rgba(15,23,42,.92)); }}
@@ -208,34 +209,34 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
 .message {{ background:rgba(15,23,42,.46); border:1px solid rgba(255,255,255,.08); border-radius:10px; padding:10px 12px; }}
 .message-role {{ color:var(--accent); font-size:12px; font-weight:700; text-transform:uppercase; }}
 .message-content {{ margin-top:4px; white-space:pre-wrap; }}
-@media (min-width: 1901px) {{ .operations-page {{ gap:14px; }} }}
+@media (min-width: 1901px) {{ .operations-page {{ gap:14px; grid-template-rows:minmax(230px,40fr) minmax(132px,27fr) minmax(198px,33fr); }} }}
 @media (max-width: 1900px) {{
   .app-shell {{ grid-template-columns:220px minmax(0,1fr); }}
   .sidebar {{ padding:18px 14px; }}
-  .topbar {{ padding:10px 18px; }}
+  .topbar {{ padding:8px 14px; }}
   .topbar-pill {{ min-height:26px; padding:3px 8px; }}
-  .dashboard-main {{ padding:8px 12px 14px; }}
-  .page.active {{ gap:8px; }}
+  .dashboard-main {{ padding:6px 12px 12px; }}
+  .page.active {{ gap:6px; }}
   .ops-hero {{ grid-template-columns:minmax(280px,1.15fr) minmax(240px,.85fr); gap:8px; }}
-  .hero-stats-grid {{ grid-template-columns:repeat(4,minmax(132px,1fr)); gap:8px; }}
-  .hero-stat-card {{ min-height:92px; padding:11px; gap:7px; }}
+  .hero-stats-grid {{ grid-template-columns:repeat(4,minmax(132px,1fr)); gap:6px; }}
+  .hero-stat-card {{ min-height:74px; padding:8px 10px; gap:5px; }}
   .hero-stat-icon {{ width:30px; height:30px; }}
-  .hero-stat-value {{ font-size:28px; }}
-  .hero-stat-desc {{ font-size:11px; }}
-  .hero-status {{ grid-column:1; grid-row:1; min-height:74px; padding:10px 14px; }}
+  .hero-stat-value {{ font-size:24px; }}
+  .hero-stat-desc {{ font-size:10px; line-height:1.12; }}
+  .hero-status {{ grid-column:1; grid-row:1; min-height:68px; padding:8px 12px; }}
   .hero-title {{ font-size:18px; white-space:nowrap; margin-top:3px; }}
   .hero-icon {{ font-size:17px; }}
   .hero-copy {{ max-width:none; margin-top:3px; font-size:11px; line-height:1.22; display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden; }}
   .hero-kicker {{ font-size:10px; }}
   .hero-status .command-meta {{ display:none; }}
-  .hero-status #systemHealthCard {{ margin-top:6px; padding:8px; }}
-  .ops-health-panel {{ gap:8px; }}
-  .ops-health-body {{ grid-template-columns:minmax(0,1fr) 52px; gap:8px; }}
-  .ops-health-status {{ font-size:20px; }}
+  .hero-status #systemHealthCard {{ margin-top:5px; padding:7px; }}
+  .ops-health-panel {{ gap:6px; }}
+  .ops-health-body {{ grid-template-columns:minmax(0,1fr) 44px; gap:6px; }}
+  .ops-health-status {{ font-size:18px; }}
   .ops-health-message {{ font-size:11px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }}
-  .ops-health-gauge .gauge {{ width:48px; height:48px; }}
-  .ops-health-details {{ gap:5px; }}
-  .ops-health-row {{ min-height:30px; padding:5px 6px; }}
+  .ops-health-gauge .gauge {{ width:40px; height:40px; }}
+  .ops-health-details {{ grid-template-columns:repeat(5,minmax(0,1fr)); gap:4px; }}
+  .ops-health-row {{ min-height:26px; padding:4px 5px; }}
   .ops-health-row-detail {{ font-size:10px; }}
   .command-meta {{ margin-top:5px; }}
   .action-panel {{ grid-area:actions; }}
@@ -249,23 +250,23 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
   .action-panel .health-title {{ margin-bottom:4px; }}
   .action-panel .panel-list {{ max-height:36px; }}
   .action-panel .panel-item {{ padding:5px 7px; font-size:12px; }}
-  .flow-panel {{ padding:10px; gap:6px; }}
-  .flow-panel::before {{ inset:36px 10px 10px; }}
+  .flow-panel {{ padding:8px 9px; gap:5px; }}
+  .flow-panel::before {{ inset:32px 9px 9px; }}
   .flow-svg-layer {{ display:none; }}
-  .flow-stage {{ grid-template-columns:minmax(126px,1fr) 28px minmax(126px,1fr); grid-auto-rows:auto; gap:8px; }}
+  .flow-stage {{ grid-template-columns:minmax(126px,1fr) 24px minmax(126px,1fr); grid-auto-rows:auto; gap:6px; }}
   .flow-stage > :nth-child(2) {{ grid-column:1; grid-row:1; }}
   .flow-stage > :nth-child(3) {{ grid-column:2; grid-row:1; }}
   .flow-stage > :nth-child(4) {{ grid-column:3; grid-row:1; }}
-  .flow-stage > :nth-child(5) {{ grid-column:3; grid-row:2; width:4px; height:18px; justify-self:center; align-self:center; }}
+  .flow-stage > :nth-child(5) {{ grid-column:3; grid-row:2; width:4px; height:12px; justify-self:center; align-self:center; }}
   .flow-stage > :nth-child(6) {{ grid-column:3; grid-row:3; }}
   .flow-stage > :nth-child(7) {{ grid-column:2; grid-row:3; }}
   .flow-stage > :nth-child(8) {{ grid-column:1; grid-row:3; }}
   .node {{ min-height:78px; padding:7px; }}
-  .flow-node {{ min-height:84px; padding:8px; gap:6px; }}
+  .flow-node {{ min-height:70px; padding:6px; gap:4px; }}
   .flow-node-icon {{ width:24px; height:24px; border-radius:7px; }}
   .flow-node-icon svg {{ width:14px; height:14px; }}
   .flow-node-title {{ font-size:10px; letter-spacing:.05em; }}
-  .flow-node-main .value {{ font-size:18px; }}
+  .flow-node-main .value {{ font-size:16px; }}
   .flow-node-main .small {{ font-size:10px; line-height:1.16; }}
   .flow-node-foot {{ padding-top:5px; }}
   .flow-endpoint {{ font-size:9px; }}
@@ -288,10 +289,10 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
 @media (max-width: 1500px) {{
   .ops-hero {{ grid-template-columns:minmax(250px,1fr) minmax(220px,.78fr); gap:7px; }}
   .hero-stats-grid {{ grid-template-columns:repeat(2,minmax(160px,1fr)); gap:7px; }}
-  .hero-stat-card {{ min-height:84px; }}
+  .hero-stat-card {{ min-height:68px; }}
   .hero-title {{ white-space:normal; }}
   .hero-title span:last-child {{ overflow:visible; text-overflow:clip; }}
-  .operations-lower {{ grid-template-columns:minmax(250px,.85fr) minmax(270px,1fr); }}
+  .operations-lower {{ grid-template-columns:minmax(250px,.85fr) minmax(270px,1fr); gap:6px; }}
   .flow-stage {{ grid-template-columns:minmax(118px,1fr) 24px minmax(118px,1fr); gap:8px; }}
   .resource-stack {{ grid-template-columns:repeat(auto-fit,minmax(96px,1fr)); }}
 }}
@@ -304,12 +305,12 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
   .topbar-pill {{ min-height:24px; padding:2px 7px; font-size:12px; }}
   h1 {{ font-size:22px; }}
   .sub {{ display:none; }}
-  .dashboard-main {{ min-height:calc(100vh - 47px); padding:6px 10px 12px; }}
+  .dashboard-main {{ padding:6px 10px 12px; }}
   .page.active {{ gap:6px; }}
-  .operations-page {{ min-height:calc(100vh - 59px); }}
+  .operations-page {{ min-height:0; }}
   .ops-hero {{ grid-template-columns:minmax(220px,.9fr) minmax(200px,.72fr); grid-template-rows:auto auto; gap:6px; }}
   .hero-stats-grid {{ grid-template-columns:repeat(2,minmax(132px,1fr)); }}
-  .hero-stat-card {{ min-height:70px; padding:8px 10px; gap:5px; }}
+  .hero-stat-card {{ min-height:62px; padding:7px 9px; gap:4px; }}
   .hero-stat-label {{ font-size:10px; letter-spacing:.06em; }}
   .hero-stat-icon {{ width:26px; height:26px; border-radius:7px; }}
   .hero-stat-icon svg {{ width:15px; height:15px; }}
@@ -343,14 +344,14 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
   .gauge {{ width:38px; height:38px; }}
   .mini-chart {{ height:18px; margin-top:1px; }}
   .muted,.small {{ font-size:11px; line-height:1.2; }}
-  .flow-panel {{ padding:8px; gap:4px; }}
-  .flow-panel::before {{ inset:30px 8px 8px; }}
+  .flow-panel {{ padding:7px; gap:4px; }}
+  .flow-panel::before {{ inset:28px 7px 7px; }}
   .flow-panel .health-title h2 {{ margin:0; }}
   .flow-note {{ font-size:10px; }}
   .flow-stage {{ grid-template-columns:minmax(104px,1fr) 20px minmax(104px,1fr); gap:5px; }}
   .flow-stage > :nth-child(5) {{ height:12px; }}
   .node {{ min-height:56px; padding:5px; }}
-  .flow-node {{ min-height:64px; padding:6px; gap:4px; }}
+  .flow-node {{ min-height:58px; padding:5px; gap:3px; }}
   .flow-node-head {{ gap:6px; }}
   .flow-node-icon {{ width:20px; height:20px; }}
   .flow-node-title {{ font-size:9px; }}
@@ -381,7 +382,7 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
   .conversation-compact .summary {{ max-height:32px; padding:8px; }}
 }}
 @media (max-width: 1000px) {{ .app-shell {{ grid-template-columns:220px minmax(0,1fr); }} .dashboard-main {{ padding:14px 16px 18px; }} .ops-hero,.operations-lower {{ grid-template-columns:1fr; }} .hero-title {{ white-space:normal; }} .hero-title span:last-child {{ overflow:visible; text-overflow:clip; }} .flow-stage {{ grid-template-columns:1fr; }} .pipe {{ height:20px; width:4px; justify-self:center; }} .resource-stack {{ grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); }} }}
-@media (max-width: 1000px) {{ .app-shell {{ grid-template-columns:1fr; }} .sidebar {{ position:relative; height:auto; gap:14px; }} .nav {{ grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); }} .sidebar-footer {{ display:none; }} .topbar {{ position:relative; align-items:flex-start; flex-direction:column; }} .dashboard-main {{ padding:18px; }} .page.active,.ops-hero,.operations-lower {{ grid-template-columns:1fr; }} .ops-hero {{ grid-template-areas:"hero" "actions" "stats"; }} .hero-stats-grid {{ grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); }} .operations-page {{ min-height:auto; }} .timeline-item {{ grid-template-columns:1fr; }} }}
+@media (max-width: 1000px) {{ .app-shell {{ height:100vh; overflow-y:auto; overflow-x:hidden; grid-template-columns:1fr; }} .workspace {{ height:auto; min-height:0; overflow:visible; }} .sidebar {{ position:relative; height:auto; gap:14px; }} .nav {{ grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); }} .sidebar-footer {{ display:none; }} .topbar {{ position:relative; align-items:flex-start; flex-direction:column; }} .dashboard-main {{ height:auto; overflow:visible; padding:18px; }} .page.active,.ops-hero,.operations-lower {{ height:auto; overflow:visible; grid-template-columns:1fr; }} .ops-hero {{ grid-template-areas:"hero" "actions" "stats"; }} .hero-stats-grid {{ grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); }} .operations-page {{ min-height:auto; grid-template-rows:none; }} .timeline-item {{ grid-template-columns:1fr; }} }}
 </style>
 </head>
 <body>

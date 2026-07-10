@@ -18,8 +18,8 @@ html {{ height:100%; overflow:hidden; scroll-behavior:smooth; }}
 body {{ margin:0; width:100%; height:100%; min-width:320px; overflow:hidden; font-family:"Segoe UI Variable", Segoe UI, Arial, sans-serif; background:var(--bg); color:var(--text); }}
 body::before {{ content:""; position:fixed; inset:0; z-index:-1; pointer-events:none; background:radial-gradient(circle at 18% 8%,rgba(56,189,248,.16),transparent 28%),radial-gradient(circle at 84% 18%,rgba(129,140,248,.12),transparent 30%),linear-gradient(135deg,#070b14,#0b1220 45%,#101827); }}
 a {{ color:inherit; text-decoration:none; }}
-.app-shell {{ height:100vh; min-height:0; overflow:hidden; display:grid; grid-template-columns:240px minmax(0,1fr); background:linear-gradient(90deg,rgba(13,20,36,.72),transparent 38%); }}
-.sidebar {{ position:relative; top:0; height:100vh; min-height:0; overflow:hidden; display:flex; flex-direction:column; gap:26px; padding:20px 16px; background:linear-gradient(180deg,rgba(13,20,36,.94),rgba(9,14,26,.9)); border-right:1px solid rgba(203,213,225,.09); box-shadow:8px 0 34px rgba(0,0,0,.18); backdrop-filter:blur(18px); }}
+.app-shell {{ height:100vh; height:100dvh; min-height:0; overflow:hidden; display:grid; grid-template-columns:240px minmax(0,1fr); background:linear-gradient(90deg,rgba(13,20,36,.72),transparent 38%); }}
+.sidebar {{ position:relative; top:0; height:100%; min-height:0; overflow:hidden; display:flex; flex-direction:column; gap:26px; padding:20px 16px; background:linear-gradient(180deg,rgba(13,20,36,.94),rgba(9,14,26,.9)); border-right:1px solid rgba(203,213,225,.09); box-shadow:8px 0 34px rgba(0,0,0,.18); backdrop-filter:blur(18px); }}
 .brand {{ display:flex; align-items:center; gap:12px; padding:6px 6px 14px; border-bottom:1px solid rgba(203,213,225,.09); }}
 .brand-mark {{ display:grid; place-items:center; width:38px; height:38px; border-radius:8px; background:linear-gradient(135deg,var(--accent),var(--accent-2)); color:#020617; font-weight:900; box-shadow:0 10px 24px rgba(56,189,248,.18); }}
 .brand-name {{ font-weight:800; letter-spacing:.01em; }}
@@ -30,7 +30,7 @@ a {{ color:inherit; text-decoration:none; }}
 .nav a.active {{ background:linear-gradient(90deg,rgba(56,189,248,.18),rgba(129,140,248,.08)); border-color:rgba(56,189,248,.26); color:#fff; box-shadow:inset 3px 0 0 var(--accent),0 8px 20px rgba(2,6,23,.18); }}
 .nav-kicker {{ color:var(--muted); font-size:11px; text-transform:uppercase; font-weight:800; letter-spacing:.08em; margin:4px 10px; }}
 .sidebar-footer {{ margin-top:auto; color:var(--muted); font-size:12px; line-height:1.5; padding:12px 10px; border-top:1px solid rgba(203,213,225,.09); }}
-.workspace {{ min-width:0; height:100vh; min-height:0; overflow:hidden; display:grid; grid-template-rows:auto minmax(0,1fr); }}
+.workspace {{ min-width:0; height:100%; min-height:0; overflow:hidden; display:grid; grid-template-rows:auto minmax(0,1fr); }}
 .topbar {{ position:relative; z-index:5; display:flex; justify-content:space-between; align-items:center; gap:18px; margin:8px 12px 0; padding:10px 14px; background:linear-gradient(135deg,rgba(15,23,42,.84),rgba(24,33,50,.72)); backdrop-filter:blur(20px); border:1px solid rgba(203,213,225,.11); border-radius:12px; box-shadow:var(--shadow-soft); }}
 .topbar-left {{ min-width:0; display:flex; align-items:center; gap:14px; }}
 .topbar-title {{ min-width:0; }}
@@ -38,48 +38,58 @@ a {{ color:inherit; text-decoration:none; }}
 .topbar-status-dot {{ width:8px; height:8px; border-radius:50%; background:var(--good); box-shadow:0 0 14px rgba(34,197,94,.7); }}
 .topbar-actions {{ display:flex; flex-wrap:wrap; justify-content:flex-end; gap:10px; color:var(--muted); font-size:13px; }}
 .topbar-pill {{ display:inline-flex; align-items:center; min-height:30px; padding:5px 10px; border:1px solid rgba(203,213,225,.1); border-radius:999px; background:rgba(15,23,42,.7); box-shadow:inset 0 1px 0 rgba(255,255,255,.04); }}
-.dashboard-main {{ height:100%; min-height:0; min-width:0; overflow:hidden; padding:10px 14px 14px; }}
+.dashboard-main {{ height:100%; min-height:0; min-width:0; overflow-y:hidden; overflow-x:hidden; padding:10px 14px 14px; }}
+.dashboard-main.has-vertical-overflow {{ overflow-y:auto; }}
 h1 {{ margin:0; font-size:25px; }}
 .sub {{ color:var(--muted); margin-top:3px; }}
 .page {{ display:none; }}
-.page.active {{ height:100%; min-height:0; overflow-y:auto; overflow-x:hidden; display:grid; gap:8px; }}
+.page.active {{ height:auto; min-height:calc(100% - 2px); min-width:0; overflow:visible; display:grid; align-content:start; gap:8px; }}
 .page-header {{ display:flex; justify-content:space-between; align-items:end; gap:18px; }}
 .page-title {{ margin:0; font-size:22px; }}
 .page-sub {{ color:var(--muted); margin-top:4px; }}
 .command-meta {{ display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }}
-.operations-page {{ height:100%; min-height:0; overflow:hidden; grid-template-rows:minmax(250px,42fr) minmax(140px,30fr) minmax(174px,28fr); }}
-.ops-hero {{ min-height:0; overflow:hidden; display:grid; grid-template-columns:minmax(360px,1.35fr) minmax(280px,.65fr); grid-template-areas:"hero actions" "stats stats"; gap:8px; align-items:stretch; min-width:0; }}
-.hero-status {{ position:relative; overflow:hidden; min-height:92px; min-width:0; display:grid; align-content:start; padding:12px 16px; background:linear-gradient(135deg,rgba(15,23,42,.96),rgba(17,24,39,.92)); border-left:5px solid var(--accent); }}
+.operations-page {{ height:auto; min-height:calc(100% - 2px); overflow:visible; grid-template-rows:auto auto auto; align-content:start; }}
+.ops-hero {{ min-height:0; overflow:visible; display:grid; grid-template-columns:minmax(360px,1.35fr) minmax(280px,.65fr); grid-template-areas:"hero actions" "stats stats"; gap:8px; align-items:stretch; min-width:0; }}
+.hero-status {{ position:relative; overflow:hidden; min-height:68px; min-width:0; display:grid; align-content:start; padding:8px 12px; background:linear-gradient(135deg,rgba(15,23,42,.96),rgba(17,24,39,.92)); border-left:5px solid var(--accent); }}
 .ops-hero > .hero-status {{ grid-area:hero; }}
 .hero-status::after {{ content:""; position:absolute; inset:auto -22% -70% 38%; height:180px; background:radial-gradient(circle,rgba(56,189,248,.18),transparent 68%); pointer-events:none; }}
 .hero-status.healthy {{ border-left-color:var(--good); }} .hero-status.warning,.hero-status.busy {{ border-left-color:var(--warn); }} .hero-status.critical,.hero-status.offline {{ border-left-color:var(--bad); }}
 .hero-kicker {{ color:var(--muted); font-size:11px; font-weight:800; letter-spacing:.11em; text-transform:uppercase; }}
-.hero-title {{ display:flex; align-items:center; gap:10px; margin-top:5px; font-size:clamp(20px,1.25vw,26px); line-height:1.05; font-weight:850; text-transform:uppercase; white-space:nowrap; }}
+.hero-title {{ display:flex; align-items:center; gap:10px; margin-top:3px; font-size:18px; line-height:1.05; font-weight:850; text-transform:uppercase; white-space:nowrap; }}
 .hero-title span:last-child {{ min-width:0; overflow:hidden; text-overflow:ellipsis; }}
-.hero-icon {{ font-size:20px; }}
-.hero-copy {{ max-width:780px; margin-top:5px; color:var(--soft); font-size:13px; line-height:1.3; }}
-.hero-status #systemHealthCard {{ position:relative; z-index:1; margin-top:8px; min-height:0; padding:10px; background:linear-gradient(145deg,rgba(15,23,42,.72),rgba(30,41,59,.58)); box-shadow:none; }}
+.hero-icon {{ font-size:17px; }}
+.hero-copy {{ max-width:none; margin-top:3px; color:var(--soft); font-size:11px; line-height:1.22; }}
+.hero-status .command-meta {{ gap:5px; margin-top:4px; }}
+.hero-status .command-meta .badge {{ min-height:18px; padding:1px 6px; font-size:10px; }}
+.hero-status #systemHealthCard {{ position:relative; z-index:1; margin-top:5px; min-height:0; padding:7px; background:linear-gradient(145deg,rgba(15,23,42,.72),rgba(30,41,59,.58)); box-shadow:none; }}
 .ops-health-panel {{ display:grid; grid-template-rows:auto auto minmax(min-content,1fr); gap:8px; }}
 .ops-health-panel::before {{ content:""; position:absolute; inset:0; background:radial-gradient(circle at 86% 10%,rgba(56,189,248,.14),transparent 38%); pointer-events:none; }}
 .ops-health-panel > * {{ position:relative; z-index:1; }}
 .ops-health-heading {{ display:flex; align-items:center; gap:8px; }}
 .ops-health-heading svg,.ops-health-row svg {{ width:16px; height:16px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; color:var(--accent); }}
-.ops-health-body {{ display:grid; grid-template-columns:minmax(0,1fr) 54px; gap:10px; align-items:center; }}
+.ops-health-row svg {{ grid-column:1; grid-row:1; align-self:center; width:14px; height:14px; }}
+.ops-health-body {{ display:grid; grid-template-columns:minmax(0,1fr) 56px; gap:6px; align-items:center; }}
 .ops-health-primary {{ display:grid; gap:4px; min-width:0; }}
-.ops-health-status {{ font-size:22px; line-height:1; font-weight:850; }}
-.ops-health-message {{ font-size:11px; line-height:1.22; color:var(--soft); display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden; }}
+.ops-health-status {{ font-size:18px; line-height:1; font-weight:850; }}
+.ops-health-message {{ font-size:11px; line-height:1.22; color:var(--soft); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }}
 .ops-health-gauge {{ display:grid; justify-items:center; gap:3px; }}
-.ops-health-gauge .gauge {{ width:48px; height:48px; }}
+.ops-health-gauge .gauge {{ width:40px; height:40px; }}
 .ops-health-gauge-label {{ color:var(--muted); font-size:10px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }}
-.ops-health-details {{ display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:5px; }}
-.ops-health-row {{ display:grid; grid-template-columns:16px minmax(0,1fr); gap:6px; align-items:center; min-height:30px; padding:5px 6px; border:1px solid rgba(203,213,225,.09); border-radius:8px; background:rgba(2,6,23,.2); }}
-.ops-health-row-main {{ min-width:0; }}
-.ops-health-row-label {{ color:var(--soft); font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; }}
-.ops-health-row-detail {{ color:var(--muted); font-size:10px; line-height:1.15; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }}
-.ops-health-row .badge {{ grid-column:1/-1; justify-self:start; min-height:18px; padding:1px 6px; font-size:9px; }}
+.ops-health-details {{ display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:4px; align-items:stretch; min-height:0; }}
+.ops-health-row {{ position:relative; display:grid; grid-template-columns:16px minmax(0,1fr) auto; grid-template-rows:minmax(2.1em,auto); column-gap:5px; row-gap:0; align-items:start; min-width:0; min-height:0; height:54px; padding:1px 5px 21px; border:1px solid rgba(203,213,225,.09); border-radius:8px; background:linear-gradient(180deg,rgba(15,23,42,.42),rgba(2,6,23,.24)); }}
+.ops-health-row-main {{ display:contents; min-width:0; }}
+.ops-health-row-label {{ grid-column:2/4; grid-row:1; min-width:0; min-height:2.1em; color:var(--soft); font-size:9px; line-height:1.05; font-weight:800; text-transform:uppercase; letter-spacing:.035em; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; text-overflow:clip; white-space:normal; }}
+.ops-health-row-detail {{ position:absolute; left:5px; right:5px; bottom:23px; min-width:0; color:var(--muted); font-size:9px; line-height:10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }}
+.ops-health-row::after {{ position:absolute; left:5px; right:5px; bottom:15px; min-width:0; color:var(--muted); font-size:7px; line-height:1; font-weight:800; letter-spacing:.04em; text-transform:uppercase; overflow:visible; text-overflow:clip; white-space:nowrap; }}
+.ops-health-row:nth-child(1)::after {{ content:"Proxy"; }}
+.ops-health-row:nth-child(2)::after {{ content:"API"; }}
+.ops-health-row:nth-child(3)::after {{ content:"Model"; }}
+.ops-health-row:nth-child(4)::after {{ content:"Runtime"; }}
+.ops-health-row:nth-child(5)::after {{ content:"Poll"; }}
+.ops-health-row .badge {{ position:absolute; left:5px; bottom:2px; max-width:calc(100% - 10px); min-height:13px; padding:1px 5px; font-size:8px; line-height:1; white-space:nowrap; }}
 .ops-hero > .action-panel {{ grid-area:actions; }}
-.hero-stats-grid {{ grid-area:stats; display:grid; grid-template-columns:repeat(4,minmax(160px,1fr)); gap:8px; min-width:0; }}
-.hero-stat-card {{ position:relative; overflow:hidden; min-height:88px; display:grid; align-content:space-between; gap:7px; padding:11px 12px; }}
+.hero-stats-grid {{ grid-area:stats; display:grid; grid-template-columns:repeat(4,minmax(132px,1fr)); gap:8px; min-width:0; }}
+.hero-stat-card {{ position:relative; overflow:hidden; min-height:74px; display:grid; align-content:space-between; gap:5px; padding:8px 10px; }}
 .hero-stat-card::before {{ content:""; position:absolute; inset:0; background:linear-gradient(135deg,rgba(56,189,248,.1),transparent 42%); opacity:.82; pointer-events:none; }}
 .hero-stat-card > * {{ position:relative; z-index:1; }}
 .hero-stat-card:hover .hero-stat-icon {{ transform:translateY(-1px); border-color:rgba(56,189,248,.34); }}
@@ -87,23 +97,23 @@ h1 {{ margin:0; font-size:25px; }}
 .hero-stat-label {{ color:var(--soft); font-size:12px; font-weight:850; letter-spacing:.08em; text-transform:uppercase; }}
 .hero-stat-icon {{ display:grid; place-items:center; width:30px; height:30px; border-radius:9px; color:var(--accent); background:rgba(56,189,248,.1); border:1px solid rgba(56,189,248,.2); transition:transform .18s ease,border-color .18s ease; }}
 .hero-stat-icon svg {{ width:18px; height:18px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }}
-.hero-stat-value {{ font-size:clamp(26px,1.85vw,34px); line-height:.95; font-weight:850; letter-spacing:0; overflow-wrap:anywhere; }}
-.hero-stat-desc {{ color:var(--muted); font-size:11px; line-height:1.18; }}
+.hero-stat-value {{ font-size:24px; line-height:.95; font-weight:850; letter-spacing:0; overflow-wrap:anywhere; }}
+.hero-stat-desc {{ color:var(--muted); font-size:10px; line-height:1.12; }}
 .hero-stat-hidden-binding {{ display:none; }}
-.operations-lower {{ display:grid; grid-template-columns:minmax(300px,.82fr) minmax(360px,1fr) minmax(340px,1fr); gap:10px; min-height:0; min-width:0; overflow:hidden; }}
+.operations-lower {{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; align-items:stretch; min-height:0; min-width:0; overflow:visible; }}
 .grid {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px; }}
 .card {{ background:linear-gradient(180deg,rgba(24,33,50,.82),rgba(15,23,42,.76)); border:1px solid rgba(203,213,225,.1); border-radius:10px; padding:12px; box-shadow:var(--shadow); backdrop-filter:blur(18px); transition:border-color .18s ease, transform .18s ease, background .18s ease,box-shadow .18s ease; }}
 .card:hover,.node:hover {{ border-color:rgba(56,189,248,.24); transform:translateY(-1px); background:linear-gradient(180deg,rgba(30,41,59,.88),rgba(15,23,42,.8)); box-shadow:0 20px 46px rgba(0,0,0,.3); }}
 .card h2 {{ margin:0 0 7px; font-size:13px; letter-spacing:.02em; }}
-.ops-panel {{ min-height:0; overflow:hidden; }}
+.ops-panel {{ min-height:0; overflow:visible; }}
 .compact-card {{ min-height:0; padding:11px; }}
 .signal-card {{ min-height:112px; min-width:170px; display:flex; flex-direction:column; justify-content:space-between; background:linear-gradient(180deg,rgba(30,41,59,.96),rgba(15,23,42,.92)); }}
 .signal-card.ops-health-panel {{ display:grid; justify-content:stretch; }}
 .signal-card h2,.signal-node .node-title {{ color:var(--soft); font-size:13px; text-transform:uppercase; letter-spacing:.08em; }}
 .signal-card .value,.signal-node .value {{ font-size:29px; line-height:1; }}
-.signal-body {{ display:grid; grid-template-columns:minmax(0,1fr) 68px; gap:9px; align-items:center; }}
+.signal-body {{ display:grid; grid-template-columns:minmax(0,1fr) 46px; gap:6px; align-items:center; }}
 .signal-stack {{ display:grid; gap:5px; min-width:0; }}
-.gauge {{ width:68px; height:68px; transform:rotate(-90deg); }}
+.gauge {{ width:46px; height:46px; transform:rotate(-90deg); }}
 .gauge-track {{ fill:none; stroke:rgba(148,163,184,.18); stroke-width:10; }}
 .gauge-progress {{ fill:none; stroke:var(--accent); stroke-width:10; stroke-linecap:round; stroke-dasharray:100; stroke-dashoffset:100; transition:stroke-dashoffset .55s ease, stroke .25s ease; }}
 .health-card {{ border-left:5px solid var(--accent); }}
@@ -125,11 +135,12 @@ h1 {{ margin:0; font-size:25px; }}
 .timeline-list {{ display:grid; gap:8px; }}
 .timeline-item {{ display:grid; grid-template-columns:86px 1fr; gap:10px; align-items:start; background:rgba(15,23,42,.46); border:1px solid rgba(255,255,255,.08); border-radius:8px; padding:9px 10px; transition:border-color .18s ease, background .18s ease; }}
 .panel-list > .muted,.timeline-list > .muted,#activeRecentMessages > .muted {{ min-height:48px; display:grid; place-items:center; text-align:center; border:1px dashed rgba(148,163,184,.28); border-radius:8px; background:rgba(15,23,42,.32); color:#aebbd0; }}
-.action-panel .panel-list {{ max-height:58px; overflow:hidden; }}
+.action-panel .panel-list {{ max-height:none; overflow:visible; }}
 .action-panel .small {{ display:none; }}
 .activity-card {{ overflow-y:auto; overflow-x:hidden; }}
 .activity-card tbody:empty::after {{ content:"No request activity yet."; display:block; padding:18px; color:var(--muted); }}
 .risk-row {{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }}
+.risk-row:empty {{ display:none; }}
 .value {{ font-size:28px; font-weight:750; overflow-wrap:anywhere; }}
 .muted {{ color:var(--muted); overflow-wrap:anywhere; }}
 .ok {{ color:var(--good); }} .warn {{ color:var(--warn); }} .bad {{ color:var(--bad); }}
@@ -138,13 +149,13 @@ h1 {{ margin:0; font-size:25px; }}
 table {{ width:100%; border-collapse:collapse; font-size:13px; }}
 th,td {{ text-align:left; padding:7px 8px; border-bottom:1px solid rgba(255,255,255,.08); }}
 th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.06em; }}
-.flow-panel {{ position:relative; display:grid; grid-template-rows:auto minmax(min-content,1fr); gap:10px; min-height:0; overflow:hidden; padding:13px 14px; background:linear-gradient(145deg,rgba(15,23,42,.96),rgba(24,33,50,.86)); }}
+.flow-panel {{ position:relative; display:grid; grid-template-rows:auto auto; gap:10px; min-height:0; overflow:visible; padding:13px 14px; background:linear-gradient(145deg,rgba(15,23,42,.96),rgba(24,33,50,.86)); }}
 .flow-panel::before {{ content:""; position:absolute; inset:46px 14px 14px; border:1px solid rgba(56,189,248,.08); border-radius:10px; pointer-events:none; }}
 .flow-panel::after {{ content:""; position:absolute; inset:0; background:radial-gradient(circle at 50% 0%,rgba(56,189,248,.11),transparent 42%); pointer-events:none; }}
 .flow-panel > * {{ position:relative; z-index:1; }}
 .flow-heading {{ display:flex; align-items:center; gap:9px; }}
 .flow-heading svg {{ width:17px; height:17px; stroke:var(--accent); fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }}
-.flow-stage {{ position:relative; display:grid; grid-template-columns:minmax(150px,1fr) 38px minmax(150px,1fr) 38px minmax(150px,1fr) 38px minmax(150px,1fr); gap:8px; align-items:stretch; min-width:0; min-height:0; }}
+.flow-stage {{ position:relative; display:grid; grid-template-columns:minmax(126px,1fr) 24px minmax(126px,1fr) 24px minmax(126px,1fr) 24px minmax(126px,1fr); gap:6px; align-items:stretch; min-width:0; min-height:auto; }}
 .flow-svg-layer {{ position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:0; overflow:visible; }}
 .flow-stage > .flow-node,.flow-stage > .pipe {{ position:relative; z-index:1; }}
 .flow-svg-line {{ fill:none; stroke:rgba(148,163,184,.22); stroke-width:2; stroke-linecap:round; vector-effect:non-scaling-stroke; }}
@@ -166,16 +177,16 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
 .node {{ position:relative; background:radial-gradient(circle at 50% 0%,rgba(56,189,248,.13),transparent 46%),rgba(15,23,42,.92); border:1px solid rgba(255,255,255,.1); border-radius:8px; padding:12px; min-width:0; min-height:118px; box-shadow:var(--shadow); transition:border-color .18s ease, transform .18s ease, background .18s ease; }}
 .node::before {{ content:""; display:block; width:46px; height:46px; margin:0 auto 10px; border-radius:50%; border:1px solid rgba(56,189,248,.32); background:rgba(2,6,23,.44); box-shadow:0 0 0 8px rgba(56,189,248,.06); }}
 .node .node-title,.node .value,.node .small {{ position:relative; text-align:center; }}
-.flow-node {{ display:grid; grid-template-rows:auto 1fr auto; gap:7px; min-height:118px; padding:10px; border-radius:10px; background:linear-gradient(180deg,rgba(30,41,59,.72),rgba(15,23,42,.9)); }}
+.flow-node {{ display:grid; grid-template-rows:auto 1fr auto; gap:4px; min-height:114px; padding:6px; border-radius:10px; background:linear-gradient(180deg,rgba(30,41,59,.72),rgba(15,23,42,.9)); }}
 .flow-node::before {{ display:none; }}
 .flow-node-head {{ display:flex; align-items:center; justify-content:space-between; gap:10px; }}
-.flow-node-title {{ display:flex; align-items:center; gap:8px; min-width:0; color:var(--soft); font-size:12px; font-weight:850; letter-spacing:.08em; text-transform:uppercase; }}
-.flow-node-icon {{ display:grid; place-items:center; width:28px; height:28px; border-radius:8px; color:var(--accent); background:rgba(56,189,248,.1); border:1px solid rgba(56,189,248,.18); }}
-.flow-node-icon svg {{ width:15px; height:15px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }}
+.flow-node-title {{ display:flex; align-items:center; gap:8px; min-width:0; color:var(--soft); font-size:10px; font-weight:850; letter-spacing:.05em; text-transform:uppercase; }}
+.flow-node-icon {{ display:grid; place-items:center; width:24px; height:24px; border-radius:7px; color:var(--accent); background:rgba(56,189,248,.1); border:1px solid rgba(56,189,248,.18); }}
+.flow-node-icon svg {{ width:14px; height:14px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }}
 .flow-node-main {{ display:grid; align-content:center; gap:5px; min-width:0; }}
-.flow-node-main .value {{ font-size:clamp(19px,1.25vw,24px); line-height:1; font-weight:850; text-align:left; }}
-.flow-node-main .small {{ text-align:left; line-height:1.18; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }}
-.flow-node-foot {{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding-top:6px; border-top:1px solid rgba(203,213,225,.08); }}
+.flow-node-main .value {{ font-size:16px; line-height:1; font-weight:850; text-align:left; }}
+.flow-node-main .small {{ text-align:left; font-size:10px; line-height:1.16; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }}
+.flow-node-foot {{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding-top:5px; border-top:1px solid rgba(203,213,225,.08); }}
 .flow-endpoint {{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--muted); font-size:11px; }}
 .flow-status {{ flex:0 0 auto; }}
 .signal-node {{ display:flex; flex-direction:column; justify-content:space-between; background:linear-gradient(180deg,rgba(30,41,59,.96),rgba(15,23,42,.92)); }}
@@ -184,7 +195,7 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
 .dot {{ display:inline-block; width:12px; height:12px; border-radius:99px; background:var(--warn); margin-right:8px; box-shadow:0 0 16px currentColor; animation:statusPulse 2s ease-in-out infinite; }}
 .dot.online {{ background:var(--good); color:var(--good); }} .dot.waiting {{ background:var(--warn); color:var(--warn); }} .dot.offline {{ background:var(--bad); color:var(--bad); }}
 @keyframes statusPulse {{ 0%,100% {{ opacity:.72; }} 50% {{ opacity:1; }} }}
-.pipe {{ position:relative; height:2px; background:linear-gradient(90deg,rgba(45,58,79,.35),rgba(56,189,248,.85),rgba(45,58,79,.35)); border-radius:99px; opacity:.9; }}
+.pipe {{ position:relative; height:2px; align-self:center; background:linear-gradient(90deg,rgba(45,58,79,.35),rgba(56,189,248,.85),rgba(45,58,79,.35)); border-radius:99px; opacity:.9; }}
 .pipe::before {{ content:""; position:absolute; inset:-12px 0; border-top:1px dashed rgba(148,163,184,.22); top:50%; }}
 .pipe::after {{ content:""; position:absolute; left:50%; top:50%; width:10px; height:10px; border-radius:50%; transform:translate(-50%,-50%); background:rgba(56,189,248,.5); box-shadow:0 0 18px rgba(56,189,248,.42); }}
 @media (prefers-reduced-motion: reduce) {{ .flow-panel.flow-active .flow-svg-packet,.flow-panel.flow-waiting .flow-svg-packet,.flow-panel.request-pulse .flow-svg-packet,.flow-node.status-pulse,.dot {{ animation:none; }} .flow-svg-packet {{ opacity:0; }} }}
@@ -209,7 +220,7 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
 .message {{ background:rgba(15,23,42,.46); border:1px solid rgba(255,255,255,.08); border-radius:10px; padding:10px 12px; }}
 .message-role {{ color:var(--accent); font-size:12px; font-weight:700; text-transform:uppercase; }}
 .message-content {{ margin-top:4px; white-space:pre-wrap; }}
-@media (min-width: 1901px) {{ .operations-page {{ gap:14px; grid-template-rows:minmax(230px,40fr) minmax(132px,27fr) minmax(198px,33fr); }} }}
+@media (min-width: 1901px) {{ .operations-page {{ gap:14px; }} }}
 @media (max-width: 1900px) {{
   .app-shell {{ grid-template-columns:220px minmax(0,1fr); }}
   .sidebar {{ padding:18px 14px; }}
@@ -231,12 +242,12 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
   .hero-status .command-meta {{ display:none; }}
   .hero-status #systemHealthCard {{ margin-top:5px; padding:7px; }}
   .ops-health-panel {{ gap:6px; }}
-  .ops-health-body {{ grid-template-columns:minmax(0,1fr) 44px; gap:6px; }}
+  .ops-health-body {{ grid-template-columns:minmax(0,1fr) 56px; gap:6px; }}
   .ops-health-status {{ font-size:18px; }}
   .ops-health-message {{ font-size:11px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }}
   .ops-health-gauge .gauge {{ width:40px; height:40px; }}
   .ops-health-details {{ grid-template-columns:repeat(5,minmax(0,1fr)); gap:4px; }}
-  .ops-health-row {{ min-height:26px; padding:4px 5px; }}
+  .ops-health-row {{ min-height:26px; padding:1px 5px 21px; }}
   .ops-health-row-detail {{ font-size:10px; }}
   .command-meta {{ margin-top:5px; }}
   .action-panel {{ grid-area:actions; }}
@@ -248,19 +259,11 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
   .mini-chart {{ height:20px; margin-top:2px; }}
   .action-panel {{ min-height:0; }}
   .action-panel .health-title {{ margin-bottom:4px; }}
-  .action-panel .panel-list {{ max-height:36px; }}
+  .action-panel .panel-list {{ max-height:none; }}
   .action-panel .panel-item {{ padding:5px 7px; font-size:12px; }}
   .flow-panel {{ padding:8px 9px; gap:5px; }}
   .flow-panel::before {{ inset:32px 9px 9px; }}
-  .flow-svg-layer {{ display:none; }}
-  .flow-stage {{ grid-template-columns:minmax(126px,1fr) 24px minmax(126px,1fr); grid-auto-rows:auto; gap:6px; }}
-  .flow-stage > :nth-child(2) {{ grid-column:1; grid-row:1; }}
-  .flow-stage > :nth-child(3) {{ grid-column:2; grid-row:1; }}
-  .flow-stage > :nth-child(4) {{ grid-column:3; grid-row:1; }}
-  .flow-stage > :nth-child(5) {{ grid-column:3; grid-row:2; width:4px; height:12px; justify-self:center; align-self:center; }}
-  .flow-stage > :nth-child(6) {{ grid-column:3; grid-row:3; }}
-  .flow-stage > :nth-child(7) {{ grid-column:2; grid-row:3; }}
-  .flow-stage > :nth-child(8) {{ grid-column:1; grid-row:3; }}
+  .flow-stage {{ grid-template-columns:minmax(126px,1fr) 24px minmax(126px,1fr) 24px minmax(126px,1fr) 24px minmax(126px,1fr); gap:6px; }}
   .node {{ min-height:78px; padding:7px; }}
   .flow-node {{ min-height:70px; padding:6px; gap:4px; }}
   .flow-node-icon {{ width:24px; height:24px; border-radius:7px; }}
@@ -274,7 +277,7 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
   .node-title {{ font-size:11px; margin-bottom:3px; }}
   .node .value {{ font-size:18px; }}
   .node .small {{ font-size:10px; line-height:1.16; }}
-  .operations-lower {{ grid-template-columns:minmax(260px,.85fr) minmax(280px,1fr) minmax(280px,1fr); gap:8px; }}
+  .operations-lower {{ grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }}
   .traffic-panel {{ gap:6px; }}
   .traffic-stats {{ gap:7px; }}
   .resource-stack {{ grid-template-columns:repeat(3,minmax(78px,1fr)); gap:6px; }}
@@ -288,12 +291,12 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
 }}
 @media (max-width: 1500px) {{
   .ops-hero {{ grid-template-columns:minmax(250px,1fr) minmax(220px,.78fr); gap:7px; }}
-  .hero-stats-grid {{ grid-template-columns:repeat(2,minmax(160px,1fr)); gap:7px; }}
+  .hero-stats-grid {{ grid-template-columns:repeat(4,minmax(132px,1fr)); gap:7px; }}
   .hero-stat-card {{ min-height:68px; }}
   .hero-title {{ white-space:normal; }}
   .hero-title span:last-child {{ overflow:visible; text-overflow:clip; }}
-  .operations-lower {{ grid-template-columns:minmax(250px,.85fr) minmax(270px,1fr); gap:6px; }}
-  .flow-stage {{ grid-template-columns:minmax(118px,1fr) 24px minmax(118px,1fr); gap:8px; }}
+  .operations-lower {{ grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }}
+  .flow-stage {{ grid-template-columns:minmax(118px,1fr) 20px minmax(118px,1fr) 20px minmax(118px,1fr) 20px minmax(118px,1fr); gap:6px; }}
   .resource-stack {{ grid-template-columns:repeat(auto-fit,minmax(96px,1fr)); }}
 }}
 @media (max-width: 1350px) {{
@@ -307,9 +310,9 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
   .sub {{ display:none; }}
   .dashboard-main {{ padding:6px 10px 12px; }}
   .page.active {{ gap:6px; }}
-  .operations-page {{ min-height:0; }}
+  .operations-page {{ min-height:calc(100% - 2px); }}
   .ops-hero {{ grid-template-columns:minmax(220px,.9fr) minmax(200px,.72fr); grid-template-rows:auto auto; gap:6px; }}
-  .hero-stats-grid {{ grid-template-columns:repeat(2,minmax(132px,1fr)); }}
+  .hero-stats-grid {{ grid-template-columns:repeat(4,minmax(0,1fr)); }}
   .hero-stat-card {{ min-height:62px; padding:7px 9px; gap:4px; }}
   .hero-stat-label {{ font-size:10px; letter-spacing:.06em; }}
   .hero-stat-icon {{ width:26px; height:26px; border-radius:7px; }}
@@ -321,14 +324,14 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
   .hero-title {{ gap:7px; margin-top:2px; font-size:16px; line-height:1.05; }}
   .hero-icon {{ font-size:15px; }}
   .hero-copy {{ display:none; }}
-  .ops-health-body {{ grid-template-columns:minmax(0,1fr) 42px; }}
+  .ops-health-body {{ grid-template-columns:minmax(0,1fr) 54px; }}
   .ops-health-status {{ font-size:18px; }}
   .ops-health-gauge .gauge {{ width:40px; height:40px; }}
   .ops-health-gauge-label {{ display:none; }}
-  .ops-health-details {{ grid-template-columns:1fr; }}
-  .ops-health-row {{ grid-template-columns:16px minmax(0,1fr) auto; min-height:28px; padding:4px 6px; }}
+  .ops-health-details {{ grid-template-columns:repeat(5,minmax(0,1fr)); }}
+  .ops-health-row {{ grid-template-columns:14px minmax(0,1fr) auto; min-height:0; padding:1px 5px 21px; }}
   .ops-health-row svg {{ width:14px; height:14px; }}
-  .ops-health-row-label {{ font-size:10px; }}
+  .ops-health-row-label {{ font-size:9px; }}
   .action-panel {{ grid-area:actions; padding:8px 10px; }}
   .action-panel .health-title {{ margin-bottom:3px; }}
   .action-panel .panel-list {{ max-height:none; }}
@@ -348,8 +351,7 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
   .flow-panel::before {{ inset:28px 7px 7px; }}
   .flow-panel .health-title h2 {{ margin:0; }}
   .flow-note {{ font-size:10px; }}
-  .flow-stage {{ grid-template-columns:minmax(104px,1fr) 20px minmax(104px,1fr); gap:5px; }}
-  .flow-stage > :nth-child(5) {{ height:12px; }}
+  .flow-stage {{ grid-template-columns:minmax(104px,1fr) 18px minmax(104px,1fr) 18px minmax(104px,1fr) 18px minmax(104px,1fr); gap:5px; }}
   .node {{ min-height:56px; padding:5px; }}
   .flow-node {{ min-height:58px; padding:5px; gap:3px; }}
   .flow-node-head {{ gap:6px; }}
@@ -366,7 +368,7 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
   .node .small {{ font-size:9px; line-height:1.1; }}
   .dot {{ width:9px; height:9px; margin-right:5px; }}
   .pipe::after {{ width:7px; height:7px; }}
-  .operations-lower {{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; }}
+  .operations-lower {{ grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }}
   .traffic-panel {{ gap:4px; }}
   .traffic-stats {{ gap:5px; }}
   .resource-stack {{ grid-template-columns:repeat(3,minmax(68px,1fr)); gap:5px; }}
@@ -377,11 +379,114 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
   .speedometer-value {{ margin-top:-24px; min-height:19px; font-size:14px; }}
   .speedometer-detail {{ min-height:14px; font-size:9px; -webkit-line-clamp:1; }}
   .resource-error {{ margin-top:4px; padding-top:4px; }}
-  .conversation-compact {{ grid-column:1/-1; gap:5px; }}
-  .conversation-meta.compact {{ grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; }}
+  .conversation-compact {{ grid-column:auto; gap:5px; }}
+  .conversation-meta.compact {{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }}
   .conversation-compact .summary {{ max-height:32px; padding:8px; }}
 }}
-@media (max-width: 1000px) {{ .app-shell {{ grid-template-columns:220px minmax(0,1fr); }} .dashboard-main {{ padding:14px 16px 18px; }} .ops-hero,.operations-lower {{ grid-template-columns:1fr; }} .hero-title {{ white-space:normal; }} .hero-title span:last-child {{ overflow:visible; text-overflow:clip; }} .flow-stage {{ grid-template-columns:1fr; }} .pipe {{ height:20px; width:4px; justify-self:center; }} .resource-stack {{ grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); }} }}
+@media (min-width: 1001px) and (max-height: 900px) {{
+  .topbar {{ margin-top:4px; padding-top:6px; padding-bottom:6px; }}
+  .sub {{ display:none; }}
+  .dashboard-main {{ padding-top:4px; padding-bottom:8px; }}
+  .page.active,.operations-page {{ gap:4px; }}
+  .ops-hero {{ gap:6px; }}
+  .hero-status {{ padding-top:7px; padding-bottom:7px; }}
+  .hero-title {{ margin-top:3px; }}
+  .hero-copy {{ margin-top:3px; line-height:1.2; }}
+  .hero-status #systemHealthCard {{ margin-top:4px; padding:6px; }}
+  .ops-health-panel {{ gap:5px; }}
+  .ops-health-body {{ gap:6px; }}
+  .hero-stats-grid {{ gap:5px; }}
+  .flow-panel {{ padding-top:7px; padding-bottom:7px; gap:4px; }}
+  .flow-panel::before {{ inset:30px 9px 7px; }}
+  .flow-stage {{ gap:5px; }}
+  .operations-lower {{ gap:6px; }}
+  .traffic-panel,.conversation-compact {{ gap:5px; }}
+  .resource-stack {{ gap:5px; }}
+  .resource-error {{ margin-top:5px; padding-top:5px; }}
+}}
+@media (min-width: 1001px) and (max-height: 800px) {{
+  .topbar {{ margin:4px 10px 0; padding:5px 10px; border-radius:10px; }}
+  .topbar-status {{ min-height:24px; padding:2px 7px; }}
+  .topbar-pill {{ min-height:24px; padding:2px 8px; }}
+  .dashboard-main {{ padding:3px 10px 6px; }}
+  .page.active,.operations-page {{ gap:3px; }}
+  .ops-hero {{ gap:4px; }}
+  .hero-status {{ padding:6px 10px; }}
+  .hero-title {{ margin-top:2px; }}
+  .hero-copy {{ margin-top:2px; line-height:1.15; }}
+  .hero-status #systemHealthCard {{ margin-top:3px; padding:5px; }}
+  .ops-health-panel {{ gap:4px; }}
+  .ops-health-body {{ gap:5px; }}
+  .ops-health-details {{ gap:3px; }}
+  .ops-health-row {{ min-height:22px; padding:1px 5px 21px; }}
+  .hero-stats-grid {{ gap:4px; }}
+  .hero-stat-card {{ min-height:64px; padding:6px 8px; gap:3px; }}
+  .hero-stat-icon {{ width:24px; height:24px; border-radius:7px; }}
+  .hero-stat-icon svg {{ width:15px; height:15px; }}
+  .signal-body {{ gap:5px; }}
+  .flow-panel {{ padding:6px 7px; gap:3px; }}
+  .flow-panel::before {{ inset:26px 7px 6px; }}
+  .flow-stage {{ gap:4px; }}
+  .flow-node {{ min-height:64px; padding:5px; gap:3px; }}
+  .flow-node-head {{ gap:6px; }}
+  .flow-node-icon {{ width:20px; height:20px; border-radius:7px; }}
+  .flow-node-main {{ gap:2px; }}
+  .flow-node-foot {{ gap:5px; padding-top:3px; }}
+  .operations-lower {{ gap:5px; }}
+  .operations-lower .card {{ padding:8px; }}
+  .traffic-panel,.conversation-compact {{ gap:4px; }}
+  .traffic-stats {{ gap:5px; }}
+  .resource-stack {{ gap:4px; }}
+  .resource-error {{ margin-top:3px; padding-top:3px; }}
+  .conversation-meta.compact {{ gap:6px; }}
+}}
+@media (min-width: 1351px) and (max-width: 1500px) and (max-height: 800px) {{
+  .topbar {{ margin:1px 10px 0; padding:2px 10px; }}
+  .dashboard-main {{ padding:1px 8px; }}
+  .page.active,.operations-page {{ gap:0; }}
+  .ops-hero {{ gap:2px; }}
+  .hero-status {{ padding:5px 9px; }}
+  .hero-title {{ margin-top:1px; }}
+  .hero-copy {{ margin-top:1px; line-height:1.12; }}
+  .hero-status #systemHealthCard {{ margin-top:2px; padding:4px; }}
+  .ops-health-panel {{ gap:3px; }}
+  .ops-health-body {{ grid-template-columns:minmax(0,1fr) 56px; gap:4px; }}
+  .ops-health-details {{ gap:2px; }}
+  .ops-health-row {{ min-height:20px; padding:1px 4px 21px; }}
+  .ops-health-row .badge {{ min-height:13px; padding:1px 5px; }}
+  .hero-stats-grid {{ gap:3px; }}
+  .hero-stat-card {{ min-height:56px; padding:5px 7px; gap:2px; }}
+  .hero-stat-top {{ gap:6px; }}
+  .hero-stat-icon {{ width:22px; height:22px; }}
+  .hero-stat-icon svg {{ width:14px; height:14px; }}
+  .signal-body {{ gap:4px; }}
+  .action-panel {{ padding:8px 9px; }}
+  .action-panel .health-title {{ margin-bottom:2px; }}
+  .action-panel .panel-list {{ gap:5px; }}
+  .action-panel .panel-item {{ padding:3px 6px; font-size:11px; line-height:1.15; }}
+  .flow-panel {{ padding:4px 6px; gap:2px; }}
+  .flow-panel::before {{ inset:22px 6px 4px; }}
+  .flow-stage {{ gap:3px; }}
+  .flow-node {{ min-height:52px; padding:4px; gap:2px; }}
+  .flow-node-head {{ gap:4px; }}
+  .flow-node-icon {{ width:18px; height:18px; }}
+  .flow-node-icon svg {{ width:13px; height:13px; }}
+  .flow-node-main {{ gap:1px; }}
+  .flow-node-main .small {{ line-height:1.05; }}
+  .flow-node-foot {{ gap:4px; padding-top:2px; }}
+  .operations-lower {{ gap:4px; }}
+  .operations-lower .card {{ padding:6px; }}
+  .traffic-panel,.conversation-compact {{ gap:3px; }}
+  .traffic-stats {{ gap:4px; }}
+  .resource-stack {{ gap:3px; }}
+  .speedometer {{ gap:1px; }}
+  .resource-error {{ margin-top:2px; padding-top:2px; }}
+  .conversation-meta.compact {{ gap:4px; }}
+  .risk-row {{ margin-top:4px; gap:4px; }}
+  .conversation-compact .summary {{ padding:8px; }}
+  .badge {{ min-height:19px; padding:1px 6px; }}
+}}
+@media (max-width: 1000px) {{ .app-shell {{ grid-template-columns:220px minmax(0,1fr); }} .dashboard-main {{ padding:14px 16px 18px; }} .ops-hero,.operations-lower {{ grid-template-columns:1fr; }} .hero-title {{ white-space:normal; }} .hero-title span:last-child {{ overflow:visible; text-overflow:clip; }} .ops-health-details {{ grid-template-columns:1fr; }} .ops-health-row {{ grid-template-columns:16px minmax(0,1fr) auto; }} .flow-svg-layer {{ display:none; }} .flow-stage {{ grid-template-columns:1fr; }} .pipe {{ height:20px; width:4px; justify-self:center; }} .resource-stack {{ grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); }} }}
 @media (max-width: 1000px) {{ .app-shell {{ height:100vh; overflow-y:auto; overflow-x:hidden; grid-template-columns:1fr; }} .workspace {{ height:auto; min-height:0; overflow:visible; }} .sidebar {{ position:relative; height:auto; gap:14px; }} .nav {{ grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); }} .sidebar-footer {{ display:none; }} .topbar {{ position:relative; align-items:flex-start; flex-direction:column; }} .dashboard-main {{ height:auto; overflow:visible; padding:18px; }} .page.active,.ops-hero,.operations-lower {{ height:auto; overflow:visible; grid-template-columns:1fr; }} .ops-hero {{ grid-template-areas:"hero" "actions" "stats"; }} .hero-stats-grid {{ grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); }} .operations-page {{ min-height:auto; grid-template-rows:none; }} .timeline-item {{ grid-template-columns:1fr; }} }}
 </style>
 </head>
@@ -448,7 +553,7 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
           </div>
         </div>
         <div class="ops-health-details" aria-label="System health details">
-          <div class="ops-health-row"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16"></path><path d="M4 12h16"></path><path d="M4 18h16"></path></svg><div class="ops-health-row-main"><div class="ops-health-row-label">ContextKeeper</div><div id="opsContextKeeperDetail" class="ops-health-row-detail">Listening locally</div></div><span id="opsContextKeeperStatus" class="badge healthy">Online</span></div>
+          <div class="ops-health-row"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16"></path><path d="M4 12h16"></path><path d="M4 18h16"></path></svg><div class="ops-health-row-main"><div class="ops-health-row-label">Context<wbr>Keeper</div><div id="opsContextKeeperDetail" class="ops-health-row-detail">Listening locally</div></div><span id="opsContextKeeperStatus" class="badge healthy">Online</span></div>
           <div class="ops-health-row"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v4"></path><path d="M12 18v4"></path><path d="M4.9 4.9 7.8 7.8"></path><path d="m16.2 16.2 2.9 2.9"></path><path d="M2 12h4"></path><path d="M18 12h4"></path><circle cx="12" cy="12" r="4"></circle></svg><div class="ops-health-row-main"><div class="ops-health-row-label">Ollama</div><div id="opsOllamaDetail" class="ops-health-row-detail">Checking upstream</div></div><span id="opsOllamaStatus" class="badge">Checking</span></div>
           <div class="ops-health-row"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7h8"></path><path d="M8 12h8"></path><path d="M8 17h5"></path><rect x="4" y="3" width="16" height="18" rx="2"></rect></svg><div class="ops-health-row-main"><div class="ops-health-row-label">Active Model</div><div id="opsModelDetail" class="ops-health-row-detail">No active model yet</div></div><span id="opsModelStatus" class="badge">Waiting</span></div>
           <div class="ops-health-row"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8v5l3 2"></path><circle cx="12" cy="12" r="9"></circle></svg><div class="ops-health-row-main"><div class="ops-health-row-label">Uptime</div><div id="opsUptimeDetail" class="ops-health-row-detail">Not exposed by backend</div></div><span id="opsUptimeStatus" class="badge info">Local</span></div>
@@ -604,8 +709,10 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
 </div>
 <script>
 const DASHBOARD_REFRESH_INTERVAL_MS = {settings.dashboard.refresh_interval_ms or 1000};
+const MAIN_SCROLL_TOLERANCE_PX = 1;
 let lastTopologyRequestCount = null;
 let topologyPulseTimer = null;
+let mainScrollbarFrame = null;
 function byId(id) {{
   return document.getElementById(id);
 }}
@@ -668,6 +775,19 @@ function setWidth(id, value) {{
     return;
   }}
   el.style.width = value;
+}}
+function updateMainScrollbarState() {{
+  const main = document.querySelector('.dashboard-main');
+  if (!main) return;
+  const hasOverflow = (main.scrollHeight - main.clientHeight) > MAIN_SCROLL_TOLERANCE_PX;
+  main.classList.toggle('has-vertical-overflow', hasOverflow);
+}}
+function scheduleMainScrollbarStateUpdate() {{
+  if (mainScrollbarFrame !== null) return;
+  mainScrollbarFrame = requestAnimationFrame(() => {{
+    mainScrollbarFrame = null;
+    updateMainScrollbarState();
+  }});
 }}
 function heroStateForStatus(status) {{
   if (status === 'healthy') return {{ icon:'🟢', title:'All Systems Operational' }};
@@ -741,6 +861,7 @@ function showPage(pageName) {{
   document.querySelectorAll('[data-page]').forEach(page => page.classList.toggle('active', page.dataset.page === target));
   document.querySelectorAll('[data-page-link]').forEach(link => link.classList.toggle('active', link.dataset.pageLink === target));
   if (location.hash !== '#' + target) history.replaceState(null, '', '#' + target);
+  scheduleMainScrollbarStateUpdate();
 }}
 function initializePages() {{
   document.querySelectorAll('[data-page-link]').forEach(link => {{
@@ -901,8 +1022,18 @@ function refreshConversationRisk(risk) {{
   setHtml('conversationRiskIndicators', html);
   setHtml('opsConversationRiskIndicators', html);
 }}
-async function refresh() {{ await Promise.all([refreshHealth(), refreshMetrics(), refreshDashboardData()]); }}
+async function refresh() {{
+  try {{
+    await Promise.all([refreshHealth(), refreshMetrics(), refreshDashboardData()]);
+  }} finally {{
+    scheduleMainScrollbarStateUpdate();
+  }}
+}}
 initializePages();
+scheduleMainScrollbarStateUpdate();
+window.addEventListener('load', scheduleMainScrollbarStateUpdate);
+window.addEventListener('resize', scheduleMainScrollbarStateUpdate);
+if (window.visualViewport) window.visualViewport.addEventListener('resize', scheduleMainScrollbarStateUpdate);
 refresh(); setInterval(refresh, DASHBOARD_REFRESH_INTERVAL_MS);
 </script>
 </body>

@@ -38,17 +38,16 @@ a {{ color:inherit; text-decoration:none; }}
 .topbar-status-dot {{ width:8px; height:8px; border-radius:50%; background:var(--good); box-shadow:0 0 14px rgba(34,197,94,.7); }}
 .topbar-actions {{ display:flex; flex-wrap:wrap; justify-content:flex-end; gap:10px; color:var(--muted); font-size:13px; }}
 .topbar-pill {{ display:inline-flex; align-items:center; min-height:30px; padding:5px 10px; border:1px solid rgba(203,213,225,.1); border-radius:999px; background:rgba(15,23,42,.7); box-shadow:inset 0 1px 0 rgba(255,255,255,.04); }}
-.dashboard-main {{ height:100%; min-height:0; min-width:0; overflow-y:hidden; overflow-x:hidden; padding:10px 14px 14px; }}
-.dashboard-main.has-vertical-overflow {{ overflow-y:auto; }}
+.dashboard-main {{ height:100%; min-height:0; min-width:0; overflow:hidden; display:grid; grid-template-rows:minmax(0,1fr); padding:10px 14px 14px; }}
 h1 {{ margin:0; font-size:25px; }}
 .sub {{ color:var(--muted); margin-top:3px; }}
 .page {{ display:none; }}
-.page.active {{ height:auto; min-height:calc(100% - 2px); min-width:0; overflow:visible; display:grid; align-content:start; gap:8px; }}
+.page.active {{ height:100%; min-height:0; min-width:0; overflow:auto; display:grid; align-content:start; gap:8px; }}
 .page-header {{ display:flex; justify-content:space-between; align-items:end; gap:18px; }}
 .page-title {{ margin:0; font-size:22px; }}
 .page-sub {{ color:var(--muted); margin-top:4px; }}
 .command-meta {{ display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }}
-.operations-page {{ height:auto; min-height:calc(100% - 2px); overflow:visible; grid-template-rows:auto auto auto; align-content:start; }}
+.page.active.operations-page {{ height:100%; min-height:0; overflow:hidden; grid-template-rows:auto auto minmax(0,1fr); align-content:stretch; }}
 .ops-hero {{ min-height:0; overflow:visible; display:grid; grid-template-columns:minmax(360px,1.35fr) minmax(280px,.65fr); grid-template-areas:"hero actions" "stats stats"; gap:8px; align-items:stretch; min-width:0; }}
 .hero-status {{ position:relative; overflow:hidden; min-height:68px; min-width:0; display:grid; align-content:start; padding:8px 12px; background:linear-gradient(135deg,rgba(15,23,42,.96),rgba(17,24,39,.92)); border-left:5px solid var(--accent); }}
 .ops-hero > .hero-status {{ grid-area:hero; }}
@@ -76,17 +75,17 @@ h1 {{ margin:0; font-size:25px; }}
 .ops-health-gauge .gauge {{ width:40px; height:40px; }}
 .ops-health-gauge-label {{ color:var(--muted); font-size:10px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }}
 .ops-health-details {{ display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:4px; align-items:stretch; min-height:0; }}
-.ops-health-row {{ position:relative; display:grid; grid-template-columns:16px minmax(0,1fr) auto; grid-template-rows:minmax(2.1em,auto); column-gap:5px; row-gap:0; align-items:start; min-width:0; min-height:0; height:54px; padding:1px 5px 21px; border:1px solid rgba(203,213,225,.09); border-radius:8px; background:linear-gradient(180deg,rgba(15,23,42,.42),rgba(2,6,23,.24)); }}
+.ops-health-row {{ position:relative; display:grid; grid-template-columns:14px minmax(0,1fr) max-content; grid-template-rows:auto auto auto; column-gap:5px; row-gap:2px; align-items:center; min-width:0; min-height:54px; height:auto; overflow:hidden; padding:4px 5px; border:1px solid rgba(203,213,225,.09); border-radius:8px; background:linear-gradient(180deg,rgba(15,23,42,.42),rgba(2,6,23,.24)); }}
 .ops-health-row-main {{ display:contents; min-width:0; }}
-.ops-health-row-label {{ grid-column:2/4; grid-row:1; min-width:0; min-height:2.1em; color:var(--soft); font-size:9px; line-height:1.05; font-weight:800; text-transform:uppercase; letter-spacing:.035em; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; text-overflow:clip; white-space:normal; }}
-.ops-health-row-detail {{ position:absolute; left:5px; right:5px; bottom:23px; min-width:0; color:var(--muted); font-size:9px; line-height:10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }}
-.ops-health-row::after {{ position:absolute; left:5px; right:5px; bottom:15px; min-width:0; color:var(--muted); font-size:7px; line-height:1; font-weight:800; letter-spacing:.04em; text-transform:uppercase; overflow:visible; text-overflow:clip; white-space:nowrap; }}
+.ops-health-row-label {{ grid-column:2/4; grid-row:1; min-width:0; min-height:0; color:var(--soft); font-size:9px; line-height:1.08; font-weight:800; text-transform:uppercase; letter-spacing:.035em; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; text-overflow:clip; white-space:normal; }}
+.ops-health-row-detail {{ grid-column:1/4; grid-row:2; position:static; min-width:0; color:var(--muted); font-size:9px; line-height:1.15; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }}
+.ops-health-row::after {{ grid-column:1/3; grid-row:3; align-self:center; min-width:0; color:var(--muted); font-size:7px; line-height:1; font-weight:800; letter-spacing:.04em; text-transform:uppercase; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }}
 .ops-health-row:nth-child(1)::after {{ content:"Proxy"; }}
 .ops-health-row:nth-child(2)::after {{ content:"API"; }}
 .ops-health-row:nth-child(3)::after {{ content:"Model"; }}
 .ops-health-row:nth-child(4)::after {{ content:"Runtime"; }}
 .ops-health-row:nth-child(5)::after {{ content:"Poll"; }}
-.ops-health-row .badge {{ position:absolute; left:5px; bottom:2px; max-width:calc(100% - 10px); min-height:13px; padding:1px 5px; font-size:8px; line-height:1; white-space:nowrap; }}
+.ops-health-row .badge {{ grid-column:3; grid-row:3; justify-self:end; align-self:center; position:static; max-width:100%; min-height:13px; padding:1px 5px; font-size:8px; line-height:1; white-space:nowrap; }}
 .ops-hero > .action-panel {{ grid-area:actions; }}
 .hero-stats-grid {{ grid-area:stats; display:grid; grid-template-columns:repeat(4,minmax(132px,1fr)); gap:8px; min-width:0; }}
 .hero-stat-card {{ position:relative; overflow:hidden; min-height:74px; display:grid; align-content:space-between; gap:5px; padding:8px 10px; }}
@@ -100,12 +99,13 @@ h1 {{ margin:0; font-size:25px; }}
 .hero-stat-value {{ font-size:24px; line-height:.95; font-weight:850; letter-spacing:0; overflow-wrap:anywhere; }}
 .hero-stat-desc {{ color:var(--muted); font-size:10px; line-height:1.12; }}
 .hero-stat-hidden-binding {{ display:none; }}
-.operations-lower {{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; align-items:stretch; min-height:0; min-width:0; overflow:visible; }}
+.operations-lower {{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); grid-auto-rows:minmax(0,1fr); gap:10px; align-items:stretch; height:100%; min-height:0; min-width:0; overflow:hidden; }}
 .grid {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px; }}
 .card {{ background:linear-gradient(180deg,rgba(24,33,50,.82),rgba(15,23,42,.76)); border:1px solid rgba(203,213,225,.1); border-radius:10px; padding:12px; box-shadow:var(--shadow); backdrop-filter:blur(18px); transition:border-color .18s ease, transform .18s ease, background .18s ease,box-shadow .18s ease; }}
 .card:hover,.node:hover {{ border-color:rgba(56,189,248,.24); transform:translateY(-1px); background:linear-gradient(180deg,rgba(30,41,59,.88),rgba(15,23,42,.8)); box-shadow:0 20px 46px rgba(0,0,0,.3); }}
 .card h2 {{ margin:0 0 7px; font-size:13px; letter-spacing:.02em; }}
-.ops-panel {{ min-height:0; overflow:visible; }}
+.ops-panel {{ min-height:0; overflow:hidden; }}
+.operations-lower > .ops-panel {{ height:100%; overflow:auto; }}
 .compact-card {{ min-height:0; padding:11px; }}
 .signal-card {{ min-height:112px; min-width:170px; display:flex; flex-direction:column; justify-content:space-between; background:linear-gradient(180deg,rgba(30,41,59,.96),rgba(15,23,42,.92)); }}
 .signal-card.ops-health-panel {{ display:grid; justify-content:stretch; }}
@@ -149,7 +149,7 @@ h1 {{ margin:0; font-size:25px; }}
 table {{ width:100%; border-collapse:collapse; font-size:13px; }}
 th,td {{ text-align:left; padding:7px 8px; border-bottom:1px solid rgba(255,255,255,.08); }}
 th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.06em; }}
-.flow-panel {{ position:relative; display:grid; grid-template-rows:auto auto; gap:10px; min-height:0; overflow:visible; padding:13px 14px; background:linear-gradient(145deg,rgba(15,23,42,.96),rgba(24,33,50,.86)); }}
+.flow-panel {{ position:relative; display:grid; grid-template-rows:auto auto; gap:10px; min-height:0; overflow:hidden; padding:13px 14px; background:linear-gradient(145deg,rgba(15,23,42,.96),rgba(24,33,50,.86)); }}
 .flow-panel::before {{ content:""; position:absolute; inset:46px 14px 14px; border:1px solid rgba(56,189,248,.08); border-radius:10px; pointer-events:none; }}
 .flow-panel::after {{ content:""; position:absolute; inset:0; background:radial-gradient(circle at 50% 0%,rgba(56,189,248,.11),transparent 42%); pointer-events:none; }}
 .flow-panel > * {{ position:relative; z-index:1; }}
@@ -247,7 +247,7 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
   .ops-health-message {{ font-size:11px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }}
   .ops-health-gauge .gauge {{ width:40px; height:40px; }}
   .ops-health-details {{ grid-template-columns:repeat(5,minmax(0,1fr)); gap:4px; }}
-  .ops-health-row {{ min-height:26px; padding:1px 5px 21px; }}
+  .ops-health-row {{ min-height:54px; padding:4px 5px; }}
   .ops-health-row-detail {{ font-size:10px; }}
   .command-meta {{ margin-top:5px; }}
   .action-panel {{ grid-area:actions; }}
@@ -329,7 +329,7 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
   .ops-health-gauge .gauge {{ width:40px; height:40px; }}
   .ops-health-gauge-label {{ display:none; }}
   .ops-health-details {{ grid-template-columns:repeat(5,minmax(0,1fr)); }}
-  .ops-health-row {{ grid-template-columns:14px minmax(0,1fr) auto; min-height:0; padding:1px 5px 21px; }}
+  .ops-health-row {{ grid-template-columns:14px minmax(0,1fr) max-content; min-height:52px; padding:4px 5px; }}
   .ops-health-row svg {{ width:14px; height:14px; }}
   .ops-health-row-label {{ font-size:9px; }}
   .action-panel {{ grid-area:actions; padding:8px 10px; }}
@@ -418,7 +418,7 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
   .ops-health-panel {{ gap:4px; }}
   .ops-health-body {{ gap:5px; }}
   .ops-health-details {{ gap:3px; }}
-  .ops-health-row {{ min-height:22px; padding:1px 5px 21px; }}
+  .ops-health-row {{ min-height:50px; padding:3px 5px; }}
   .hero-stats-grid {{ gap:4px; }}
   .hero-stat-card {{ min-height:64px; padding:6px 8px; gap:3px; }}
   .hero-stat-icon {{ width:24px; height:24px; border-radius:7px; }}
@@ -452,7 +452,7 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
   .ops-health-panel {{ gap:3px; }}
   .ops-health-body {{ grid-template-columns:minmax(0,1fr) 56px; gap:4px; }}
   .ops-health-details {{ gap:2px; }}
-  .ops-health-row {{ min-height:20px; padding:1px 4px 21px; }}
+  .ops-health-row {{ min-height:48px; padding:3px 4px; }}
   .ops-health-row .badge {{ min-height:13px; padding:1px 5px; }}
   .hero-stats-grid {{ gap:3px; }}
   .hero-stat-card {{ min-height:56px; padding:5px 7px; gap:2px; }}
@@ -709,10 +709,8 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
 </div>
 <script>
 const DASHBOARD_REFRESH_INTERVAL_MS = {settings.dashboard.refresh_interval_ms or 1000};
-const MAIN_SCROLL_TOLERANCE_PX = 1;
 let lastTopologyRequestCount = null;
 let topologyPulseTimer = null;
-let mainScrollbarFrame = null;
 function byId(id) {{
   return document.getElementById(id);
 }}
@@ -775,19 +773,6 @@ function setWidth(id, value) {{
     return;
   }}
   el.style.width = value;
-}}
-function updateMainScrollbarState() {{
-  const main = document.querySelector('.dashboard-main');
-  if (!main) return;
-  const hasOverflow = (main.scrollHeight - main.clientHeight) > MAIN_SCROLL_TOLERANCE_PX;
-  main.classList.toggle('has-vertical-overflow', hasOverflow);
-}}
-function scheduleMainScrollbarStateUpdate() {{
-  if (mainScrollbarFrame !== null) return;
-  mainScrollbarFrame = requestAnimationFrame(() => {{
-    mainScrollbarFrame = null;
-    updateMainScrollbarState();
-  }});
 }}
 function heroStateForStatus(status) {{
   if (status === 'healthy') return {{ icon:'🟢', title:'All Systems Operational' }};
@@ -861,7 +846,6 @@ function showPage(pageName) {{
   document.querySelectorAll('[data-page]').forEach(page => page.classList.toggle('active', page.dataset.page === target));
   document.querySelectorAll('[data-page-link]').forEach(link => link.classList.toggle('active', link.dataset.pageLink === target));
   if (location.hash !== '#' + target) history.replaceState(null, '', '#' + target);
-  scheduleMainScrollbarStateUpdate();
 }}
 function initializePages() {{
   document.querySelectorAll('[data-page-link]').forEach(link => {{
@@ -1023,17 +1007,9 @@ function refreshConversationRisk(risk) {{
   setHtml('opsConversationRiskIndicators', html);
 }}
 async function refresh() {{
-  try {{
-    await Promise.all([refreshHealth(), refreshMetrics(), refreshDashboardData()]);
-  }} finally {{
-    scheduleMainScrollbarStateUpdate();
-  }}
+  await Promise.all([refreshHealth(), refreshMetrics(), refreshDashboardData()]);
 }}
 initializePages();
-scheduleMainScrollbarStateUpdate();
-window.addEventListener('load', scheduleMainScrollbarStateUpdate);
-window.addEventListener('resize', scheduleMainScrollbarStateUpdate);
-if (window.visualViewport) window.visualViewport.addEventListener('resize', scheduleMainScrollbarStateUpdate);
 refresh(); setInterval(refresh, DASHBOARD_REFRESH_INTERVAL_MS);
 </script>
 </body>

@@ -82,8 +82,25 @@ h1 {{ margin:0; font-size:25px; }}
 .ops-health-row svg {{ grid-column:1; grid-row:1; align-self:center; width:14px; height:14px; }}
 .ops-health-body {{ display:grid; grid-template-columns:minmax(0,1fr) 56px; gap:6px; align-items:center; }}
 .ops-health-primary {{ display:grid; gap:4px; min-width:0; }}
+.ops-state-pair {{ display:grid; grid-template-columns:minmax(0,.9fr) minmax(0,1fr); gap:6px; align-items:stretch; min-width:0; }}
+.ops-state-column {{ min-width:0; display:grid; align-content:start; gap:2px; padding:5px 6px; border:1px solid rgba(203,213,225,.08); border-radius:8px; background:rgba(15,23,42,.34); box-shadow:var(--surface-inset-highlight); }}
+.ops-state-kicker {{ color:var(--muted); font-size:9px; line-height:1; font-weight:850; letter-spacing:.08em; text-transform:uppercase; }}
 .ops-health-status {{ font-size:18px; line-height:1; font-weight:850; }}
+.ops-activity-summary {{ --activity-state-color:var(--accent); --activity-state-wash:rgba(56,189,248,.1); position:relative; overflow:hidden; border-color:rgba(56,189,248,.16); background:linear-gradient(135deg,var(--activity-state-wash),rgba(15,23,42,.34)); transition:border-color .18s ease,background .18s ease,box-shadow .18s ease; }}
+.ops-activity-summary::after {{ content:""; position:absolute; inset:auto -28% -52% 42%; height:58px; background:radial-gradient(circle,var(--activity-state-wash),transparent 68%); opacity:.8; pointer-events:none; }}
+.ops-activity-summary > * {{ position:relative; z-index:1; }}
+.ops-activity-summary .ops-health-status {{ color:var(--activity-state-color); }}
+.ops-activity-summary.starting,.ops-activity-summary.thinking,.ops-activity-summary.streaming,.ops-activity-summary.receiving,.ops-activity-summary.finalizing {{ --activity-state-color:var(--accent); --activity-state-wash:rgba(56,189,248,.12); border-color:rgba(56,189,248,.2); }}
+.ops-activity-summary.ready,.ops-activity-summary.idle {{ --activity-state-color:var(--good); --activity-state-wash:rgba(34,197,94,.09); border-color:rgba(34,197,94,.16); }}
+.ops-activity-summary.connecting {{ --activity-state-color:var(--warn); --activity-state-wash:rgba(245,158,11,.11); border-color:rgba(245,158,11,.2); }}
+.ops-activity-summary.receiving,.ops-activity-summary.finalizing {{ animation:activityStatePulse .72s ease-out 1; }}
+.ops-activity-summary.connecting .ops-health-status,.ops-activity-summary.thinking .ops-health-status {{ animation:activityStatusPulse 2.6s ease-in-out infinite; }}
+.ops-activity-summary.streaming::after {{ animation:activityFlowWash 2.4s ease-in-out infinite; }}
+@keyframes activityStatePulse {{ 0% {{ box-shadow:var(--surface-inset-highlight),0 0 0 0 rgba(56,189,248,.22); }} 100% {{ box-shadow:var(--surface-inset-highlight),0 0 0 8px rgba(56,189,248,0); }} }}
+@keyframes activityStatusPulse {{ 0%,100% {{ opacity:.82; }} 50% {{ opacity:1; }} }}
+@keyframes activityFlowWash {{ 0%,100% {{ transform:translateX(-8%); opacity:.36; }} 50% {{ transform:translateX(8%); opacity:.72; }} }}
 .ops-health-message {{ font-size:11px; line-height:1.22; color:var(--soft); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }}
+.ops-activity-details {{ font-size:10px; line-height:1.15; color:var(--muted); display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden; }}
 .ops-health-gauge {{ display:grid; justify-items:center; gap:3px; }}
 .ops-health-gauge .gauge {{ width:40px; height:40px; }}
 .ops-health-gauge-label {{ color:var(--muted); font-size:10px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }}
@@ -155,7 +172,7 @@ h1 {{ margin:0; font-size:25px; }}
 .icon-label {{ display:inline-flex; align-items:center; gap:8px; }}
 .icon-mark {{ color:var(--accent); font-size:14px; }}
 .badge {{ --badge-ring:rgba(148,163,184,.18); --badge-glow:0 0 12px rgba(148,163,184,.07); display:inline-flex; align-items:center; min-height:22px; padding:2px 7px; border-radius:999px; font-size:11px; font-weight:700; text-transform:uppercase; background:rgba(148,163,184,.16); color:var(--muted); box-shadow:inset 0 0 0 1px var(--badge-ring),var(--surface-inset-highlight),var(--badge-glow); transition:background .18s ease,box-shadow .18s ease,color .18s ease,opacity .18s ease,transform .14s ease; }}
-.badge.positive,.badge.healthy,.badge.low,.badge.online,.badge.active,.badge.running {{ --badge-ring:rgba(34,197,94,.22); --badge-glow:0 0 14px rgba(34,197,94,.1); color:var(--good); background:rgba(34,197,94,.12); }} .badge.info,.badge.busy {{ --badge-ring:rgba(56,189,248,.22); --badge-glow:0 0 14px rgba(56,189,248,.1); color:var(--accent); background:rgba(56,189,248,.12); }} .badge.warning,.badge.medium,.badge.waiting,.badge.pending {{ --badge-ring:rgba(245,158,11,.24); --badge-glow:0 0 14px rgba(245,158,11,.1); color:var(--warn); background:rgba(245,158,11,.12); }} .badge.critical,.badge.high,.badge.offline,.badge.error {{ --badge-ring:rgba(239,68,68,.24); --badge-glow:0 0 14px rgba(239,68,68,.1); color:var(--bad); background:rgba(239,68,68,.12); }}
+.badge.positive,.badge.healthy,.badge.low,.badge.online,.badge.active,.badge.running,.badge.ready,.badge.idle {{ --badge-ring:rgba(34,197,94,.22); --badge-glow:0 0 14px rgba(34,197,94,.1); color:var(--good); background:rgba(34,197,94,.12); }} .badge.info,.badge.busy,.badge.starting,.badge.receiving,.badge.thinking,.badge.streaming,.badge.finalizing {{ --badge-ring:rgba(56,189,248,.22); --badge-glow:0 0 14px rgba(56,189,248,.1); color:var(--accent); background:rgba(56,189,248,.12); }} .badge.warning,.badge.medium,.badge.waiting,.badge.pending,.badge.connecting {{ --badge-ring:rgba(245,158,11,.24); --badge-glow:0 0 14px rgba(245,158,11,.1); color:var(--warn); background:rgba(245,158,11,.12); }} .badge.critical,.badge.high,.badge.offline,.badge.error {{ --badge-ring:rgba(239,68,68,.24); --badge-glow:0 0 14px rgba(239,68,68,.1); color:var(--bad); background:rgba(239,68,68,.12); }}
 a.badge:hover {{ transform:translateY(-1px); box-shadow:inset 0 0 0 1px var(--badge-ring),var(--surface-inset-highlight),var(--badge-glow),0 0 0 3px rgba(56,189,248,.08); }}
 a.badge:active {{ transform:translateY(0); opacity:.86; }}
 a.badge:focus-visible {{ outline:2px solid rgba(56,189,248,.72); outline-offset:2px; box-shadow:inset 0 0 0 1px var(--badge-ring),var(--surface-inset-highlight),var(--badge-glow),0 0 0 3px rgba(56,189,248,.12); }}
@@ -200,6 +217,9 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
 .flow-panel.flow-active .flow-svg-packet {{ opacity:0; animation:none; }}
 .flow-panel.flow-waiting .flow-svg-packet {{ fill:var(--warn); opacity:0; animation:none; }}
 .flow-panel.flow-offline .flow-svg-packet {{ opacity:0; animation:none; }}
+.flow-panel.activity-streaming .flow-svg-packet {{ opacity:.46; animation:flowPacket 2400ms linear infinite; }}
+.flow-panel.activity-thinking .flow-svg-line.flow-line-active,.flow-panel.activity-receiving .flow-svg-line.flow-line-active {{ stroke:rgba(125,211,252,.78); filter:drop-shadow(0 0 6px rgba(56,189,248,.3)); }}
+.flow-panel.activity-finalizing .pipe::after {{ background:rgba(125,211,252,.72); box-shadow:0 0 18px rgba(56,189,248,.4); }}
 .flow-panel.request-pulse .flow-stage::after {{ animation:flowStagePulse 1300ms ease-out 1; }}
 .flow-panel.request-pulse .flow-svg-packet {{ animation:flowPacketPulse 1300ms ease-out 1; opacity:.92; }}
 .flow-panel.request-pulse .flow-svg-line.flow-line-active,.flow-panel.request-pulse .flow-svg-line.flow-line-waiting {{ stroke:rgba(125,211,252,.86); filter:drop-shadow(0 0 7px rgba(56,189,248,.36)); }}
@@ -238,7 +258,7 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
 .pipe {{ position:relative; height:2px; align-self:center; background:linear-gradient(90deg,rgba(45,58,79,.35),rgba(56,189,248,.85),rgba(45,58,79,.35)); border-radius:99px; opacity:.9; }}
 .pipe::before {{ content:""; position:absolute; inset:-12px 0; border-top:1px dashed rgba(148,163,184,.22); top:50%; }}
 .pipe::after {{ content:""; position:absolute; left:50%; top:50%; width:10px; height:10px; border-radius:50%; transform:translate(-50%,-50%); background:rgba(56,189,248,.5); box-shadow:0 0 18px rgba(56,189,248,.42); }}
-@media (prefers-reduced-motion: reduce) {{ html {{ scroll-behavior:auto; }} .flow-panel.flow-active .flow-svg-packet,.flow-panel.flow-waiting .flow-svg-packet,.flow-panel.request-pulse .flow-svg-packet,.flow-panel.request-pulse .flow-stage::after,.flow-panel.request-pulse .pipe::after,.flow-node.status-pulse,.dot,.value-pop,.badge-update {{ animation:none; }} .flow-svg-packet,.flow-stage::after {{ opacity:0; }} .nav a,.nav a::before,.topbar-status,.topbar-status-dot,.card,.node,.hero-status,.hero-status::before,.hero-status::after,.hero-stat-card,.hero-stat-icon,.hero-stat-value,.badge,.flow-svg-line,.gauge-progress,.fill,.ops-health-row,.panel-item,.timeline-item,.message {{ transition:none; }} .nav a:hover,.nav a:active,.card:hover,.node:hover,.hero-stat-card:hover,.hero-stat-card:focus-within,.hero-stat-card:focus-visible,.hero-stat-card:hover .hero-stat-icon,.hero-stat-card:focus-within .hero-stat-icon,.hero-stat-card:focus-visible .hero-stat-icon,a.badge:hover,a.badge:active,body.is-refreshing .topbar-status-dot {{ transform:none; }} }}
+@media (prefers-reduced-motion: reduce) {{ html {{ scroll-behavior:auto; }} .flow-panel.flow-active .flow-svg-packet,.flow-panel.flow-waiting .flow-svg-packet,.flow-panel.activity-streaming .flow-svg-packet,.flow-panel.request-pulse .flow-svg-packet,.flow-panel.request-pulse .flow-stage::after,.flow-panel.request-pulse .pipe::after,.flow-node.status-pulse,.dot,.value-pop,.badge-update,.ops-activity-summary,.ops-activity-summary .ops-health-status,.ops-activity-summary::after {{ animation:none; }} .flow-svg-packet,.flow-stage::after {{ opacity:0; }} .nav a,.nav a::before,.topbar-status,.topbar-status-dot,.card,.node,.hero-status,.hero-status::before,.hero-status::after,.hero-stat-card,.hero-stat-icon,.hero-stat-value,.badge,.flow-svg-line,.gauge-progress,.fill,.ops-health-row,.ops-activity-summary,.panel-item,.timeline-item,.message {{ transition:none; }} .nav a:hover,.nav a:active,.card:hover,.node:hover,.hero-stat-card:hover,.hero-stat-card:focus-within,.hero-stat-card:focus-visible,.hero-stat-card:hover .hero-stat-icon,.hero-stat-card:focus-within .hero-stat-icon,.hero-stat-card:focus-visible .hero-stat-icon,a.badge:hover,a.badge:active,body.is-refreshing .topbar-status-dot {{ transform:none; }} }}
 .small {{ font-size:12px; color:var(--muted); overflow-wrap:anywhere; }}
 .traffic-panel {{ display:grid; grid-template-rows:auto auto 1fr; gap:10px; }}
 .traffic-stats {{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }}
@@ -284,6 +304,8 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
   .ops-health-panel {{ gap:6px; }}
   .ops-health-body {{ grid-template-columns:minmax(0,1fr) 56px; gap:6px; }}
   .ops-health-status {{ font-size:18px; }}
+  .ops-state-pair {{ gap:5px; }}
+  .ops-state-column {{ padding:4px 5px; }}
   .ops-health-message {{ font-size:11px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }}
   .ops-health-gauge .gauge {{ width:40px; height:40px; }}
   .ops-health-details {{ grid-template-columns:repeat(5,minmax(0,1fr)); gap:4px; }}
@@ -366,6 +388,10 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
   .hero-copy {{ display:none; }}
   .ops-health-body {{ grid-template-columns:minmax(0,1fr) 54px; }}
   .ops-health-status {{ font-size:18px; }}
+  .ops-state-pair {{ gap:4px; }}
+  .ops-state-column {{ padding:4px 5px; gap:1px; }}
+  .ops-state-kicker {{ font-size:8px; }}
+  .ops-activity-details {{ display:none; }}
   .ops-health-gauge .gauge {{ width:40px; height:40px; }}
   .ops-health-gauge-label {{ display:none; }}
   .ops-health-details {{ grid-template-columns:repeat(5,minmax(0,1fr)); }}
@@ -581,8 +607,18 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
         </div>
         <div class="ops-health-body">
           <div class="ops-health-primary">
-            <div id="systemHealthStatus" class="ops-health-status">--</div>
+            <div class="ops-state-pair" aria-label="Health and activity states">
+              <div class="ops-state-column">
+                <div class="ops-state-kicker">System Health</div>
+                <div id="systemHealthStatus" class="ops-health-status">--</div>
+              </div>
+              <div id="currentActivitySummary" class="ops-state-column ops-activity-summary starting">
+                <div class="ops-state-kicker">Current Activity</div>
+                <div id="currentActivityStatus" class="ops-health-status">Starting</div>
+              </div>
+            </div>
             <div id="systemHealthMessage" class="ops-health-message">Dashboard intelligence is loading.</div>
+            <div id="currentActivityDetails" class="ops-activity-details">ContextKeeper is initializing.</div>
           </div>
           <div class="ops-health-gauge">
             <svg class="gauge" viewBox="0 0 120 120" aria-hidden="true">
@@ -595,8 +631,8 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
         <div class="ops-health-details" aria-label="System health details">
           <div class="ops-health-row"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16"></path><path d="M4 12h16"></path><path d="M4 18h16"></path></svg><div class="ops-health-row-main"><div class="ops-health-row-label">Context<wbr>Keeper</div><div id="opsContextKeeperDetail" class="ops-health-row-detail">Listening locally</div></div><span id="opsContextKeeperStatus" class="badge healthy">Online</span></div>
           <div class="ops-health-row"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v4"></path><path d="M12 18v4"></path><path d="M4.9 4.9 7.8 7.8"></path><path d="m16.2 16.2 2.9 2.9"></path><path d="M2 12h4"></path><path d="M18 12h4"></path><circle cx="12" cy="12" r="4"></circle></svg><div class="ops-health-row-main"><div class="ops-health-row-label">Ollama</div><div id="opsOllamaDetail" class="ops-health-row-detail">Checking upstream</div></div><span id="opsOllamaStatus" class="badge">Checking</span></div>
-          <div class="ops-health-row"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7h8"></path><path d="M8 12h8"></path><path d="M8 17h5"></path><rect x="4" y="3" width="16" height="18" rx="2"></rect></svg><div class="ops-health-row-main"><div class="ops-health-row-label">Active Model</div><div id="opsModelDetail" class="ops-health-row-detail">No active model yet</div></div><span id="opsModelStatus" class="badge">Waiting</span></div>
-          <div class="ops-health-row"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8v5l3 2"></path><circle cx="12" cy="12" r="9"></circle></svg><div class="ops-health-row-main"><div class="ops-health-row-label">Uptime</div><div id="opsUptimeDetail" class="ops-health-row-detail">Not exposed by backend</div></div><span id="opsUptimeStatus" class="badge info">Local</span></div>
+          <div class="ops-health-row"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7h8"></path><path d="M8 12h8"></path><path d="M8 17h5"></path><rect x="4" y="3" width="16" height="18" rx="2"></rect></svg><div class="ops-health-row-main"><div class="ops-health-row-label">Active Model</div><div id="opsModelDetail" class="ops-health-row-detail">No model observed yet</div></div><span id="opsModelStatus" class="badge">Waiting</span></div>
+          <div class="ops-health-row"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h4"></path><path d="M16 12h4"></path><path d="M8 12a4 4 0 0 1 8 0"></path><path d="M12 8v8"></path></svg><div class="ops-health-row-main"><div class="ops-health-row-label">Current Activity</div><div id="opsActivityDetail" class="ops-health-row-detail">ContextKeeper is initializing.</div></div><span id="opsActivityBadge" class="badge starting">Starting</span></div>
           <div class="ops-health-row"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.6-6.4"></path><path d="M21 3v6h-6"></path></svg><div class="ops-health-row-main"><div class="ops-health-row-label">Last Refresh</div><div id="opsLastRefreshDetail" class="ops-health-row-detail">Every {settings.dashboard.refresh_interval_ms or 1000} ms</div></div><span id="opsLastRefreshStatus" class="badge info">Pending</span></div>
         </div>
       </div>
@@ -658,7 +694,7 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
       <div class="pipe"></div>
       <div class="node flow-node">
         <div class="flow-node-head"><div class="flow-node-title"><span id="modelDot" class="dot waiting"></span>Model</div><div class="flow-node-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 7h8"></path><path d="M8 12h8"></path><path d="M8 17h5"></path><rect x="4" y="3" width="16" height="18" rx="2"></rect></svg></div></div>
-        <div class="flow-node-main"><div id="modelText" class="value">Waiting</div><div id="modelSub" class="small">No active model yet</div></div>
+        <div class="flow-node-main"><div id="modelText" class="value">Waiting</div><div id="modelSub" class="small">No model observed yet</div></div>
         <div class="flow-node-foot"><span class="flow-endpoint">Active model</span><span id="modelStatusBadge" class="badge waiting flow-status">Waiting</span></div>
       </div>
     </div>
@@ -751,7 +787,9 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
 const DASHBOARD_REFRESH_INTERVAL_MS = {settings.dashboard.refresh_interval_ms or 1000};
 const TOPOLOGY_PULSE_DURATION_MS = 1300;
 const REDUCED_MOTION_QUERY = window.matchMedia('(prefers-reduced-motion: reduce)');
+const ACTIVITY_TOPOLOGY_CLASSES = ['activity-starting','activity-connecting','activity-ready','activity-receiving','activity-thinking','activity-streaming','activity-finalizing','activity-idle'];
 let lastTopologyRequestCount = null;
+let lastActivityState = null;
 let topologyPulseTimer = null;
 let refreshInFlight = false;
 function byId(id) {{
@@ -857,7 +895,7 @@ function setConnectorState(id, status) {{
   const line = byId(id);
   if (line) line.setAttribute('class', connectorClass(status));
 }}
-function updateTopologyState(connections) {{
+function updateTopologyState(connections, activity) {{
   const panel = byId('connections');
   if (!panel || !connections) return;
   const clientStatus = connections.client?.status || 'waiting';
@@ -870,6 +908,20 @@ function updateTopologyState(connections) {{
   const flowState = ollamaStatus === 'offline' || proxyStatus === 'offline' ? 'flow-offline' : ollamaStatus === 'online' ? 'flow-active' : 'flow-waiting';
   panel.classList.remove('flow-active', 'flow-waiting', 'flow-offline');
   panel.classList.add(flowState);
+  updateActivityTopology(activity);
+}}
+function updateActivityTopology(activity) {{
+  const panel = byId('connections');
+  if (!panel) return;
+  const state = safeClass(activity?.state || '');
+  panel.classList.remove(...ACTIVITY_TOPOLOGY_CLASSES);
+  if (state) panel.classList.add('activity-' + state);
+  if (state === 'receiving' && lastActivityState !== 'receiving' && motionAllowed()) {{
+    restartAnimation(panel, 'request-pulse');
+    clearTimeout(topologyPulseTimer);
+    topologyPulseTimer = setTimeout(() => panel.classList.remove('request-pulse'), TOPOLOGY_PULSE_DURATION_MS);
+  }}
+  lastActivityState = state;
 }}
 function triggerTopologyPulse(totalRequests) {{
   const count = Number(totalRequests);
@@ -946,15 +998,15 @@ async function refreshHealth() {{
   setText('opsOllamaDetail', h.ollama_base_url + (c.ollama.version ? ' - v' + c.ollama.version : '') + ' - ' + c.ollama.latency_ms + ' ms');
   setDot('modelDot', c.model.status);
   setStatusBadge('modelStatusBadge', c.model.status || 'waiting');
-  setText('modelText', c.model.name ? 'Active' : 'Waiting');
-  setText('modelSub', c.model.name || 'No active model yet');
+  const modelLabel = c.model.label || c.model.name || 'No model observed yet';
+  setText('modelText', c.model.status === 'unknown' ? 'Unknown' : c.model.name ? 'Active' : 'Waiting');
+  setText('modelSub', modelLabel);
   setStatusBadge('opsModelStatus', c.model.status || 'waiting');
-  setText('opsModelDetail', c.model.name || 'No active model yet');
-  setText('opsUptimeDetail', 'Not exposed by backend');
-  setStatusBadge('opsUptimeStatus', 'info', 'Local');
+  setText('opsModelDetail', modelLabel);
   setText('opsLastRefreshDetail', 'Every ' + DASHBOARD_REFRESH_INTERVAL_MS + ' ms');
   setStatusBadge('opsLastRefreshStatus', 'running', new Date().toLocaleTimeString());
-  updateTopologyState(c);
+  refreshOperationalActivity(h.activity);
+  updateTopologyState(c, h.activity);
 }}
 async function refreshMetrics() {{
   const res = await fetch('/metrics');
@@ -987,6 +1039,7 @@ async function refreshDashboardData() {{
   const context = data.context;
   const compression = data.compression;
   const intelligence = data.intelligence || {{}};
+  const activity = data.activity || {{}};
   setText('contextUsage', context.usage_percent + '%');
   setText('contextUsageText', context.estimated_tokens + ' estimated tokens across ' + context.conversation_count + ' conversation(s)');
   setText('activeConversationCount', context.conversation_count);
@@ -994,8 +1047,23 @@ async function refreshDashboardData() {{
   setGauge('contextGaugeArc', context.usage_percent);
   setText('compressionCount', compression.count);
   setText('compressionText', compression.history.length + ' recent compression event(s)');
+  refreshOperationalActivity(activity);
   refreshIntelligence(intelligence);
   refreshActiveConversation(data.active_conversation, intelligence.conversation_risk);
+}}
+function refreshOperationalActivity(activity) {{
+  const current = activity || {{}};
+  const state = safeClass(current.state || 'starting') || 'starting';
+  const label = current.label || titleCase(state);
+  const details = current.details || 'Activity state is not available yet.';
+  const activeCount = Number(current.active_request_count || 0);
+  const summary = byId('currentActivitySummary');
+  if (summary) summary.className = 'ops-state-column ops-activity-summary ' + state;
+  setText('currentActivityStatus', label);
+  setText('currentActivityDetails', details);
+  setText('opsActivityDetail', details);
+  setStatusBadge('opsActivityBadge', state, activeCount > 0 ? activeCount + ' active' : label);
+  updateActivityTopology(current);
 }}
 function refreshIntelligence(intelligence) {{
   const health = intelligence.health || {{}};

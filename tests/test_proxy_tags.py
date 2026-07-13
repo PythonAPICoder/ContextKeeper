@@ -13,6 +13,7 @@ from fastapi.testclient import TestClient
 from ctxkeeper.config import Settings
 from ctxkeeper.context import conversation_store
 from ctxkeeper.proxy import routes
+from ctxkeeper.proxy.model_extraction import extract_request_model, inspect_request_model
 
 
 class FakeOllamaClient:
@@ -74,6 +75,69 @@ class FakeOllamaClient:
 class FakeConversationIdentityRegistry:
     def observe_request(self, **_: object) -> SimpleNamespace:
         return SimpleNamespace(conversation_id="ck_conv_proxy_test")
+
+
+class RecordingActivityManager:
+    def __init__(self) -> None:
+        self.events: list[tuple[object, ...]] = []
+
+    def accept_request(
+        self,
+        *,
+        method: str,
+        endpoint: str,
+        model: str | None,
+    ) -> str:
+        self.events.append(("accept", method, endpoint, model))
+        return "activity-1"
+
+    def mark_thinking(self, request_id: str) -> None:
+        self.events.append(("thinking", request_id))
+
+    def mark_streaming(self, request_id: str) -> None:
+        self.events.append(("streaming", request_id))
+
+    def mark_finalizing(self, request_id: str) -> None:
+        self.events.append(("finalizing", request_id))
+
+    def complete_request(self, request_id: str, *, ollama_available: bool | None = None) -> None:
+        self.events.append(("complete", request_id, ollama_available))
+
+
+class RecordingMetricsStore:
+    def __init__(self) -> None:
+        self.requests: list[dict[str, object]] = []
+
+    def record_request(self, **kwargs: object) -> None:
+        self.requests.append(kwargs)
+
+
+@pytest.mark.parametrize(
+    ("endpoint", "body"),
+    [
+        ("/api/chat", b'{"model":"llava:latest","messages":[],"stream":false}'),
+        ("/api/generate", b'{"model":"llava:latest","prompt":"hello","stream":false}'),
+        ("/v1/chat/completions", b'{"model":"llava:latest","messages":[],"stream":false}'),
+        ("/v1/completions", b'{"model":"llava:latest","prompt":"hello","stream":false}'),
+    ],
+)
+def test_request_model_extraction_supports_compatible_generation_payloads(endpoint: str, body: bytes) -> None:
+    info = inspect_request_model(body)
+
+    assert endpoint
+    assert extract_request_model(body) == "llava:latest"
+    assert info.model == "llava:latest"
+    assert info.field_path == "model"
+    assert "model" in info.top_level_keys
+
+
+def test_request_model_extraction_missing_model_returns_unknown() -> None:
+    info = inspect_request_model(b'{"messages":[],"stream":true}')
+
+    assert info.model is None
+    assert info.field_path is None
+    assert info.is_json_object is True
+    assert info.top_level_keys == ("messages", "stream")
 
 
 def test_api_tags_passthrough_uses_configured_ollama_url(
@@ -164,3 +228,123 @@ def test_api_chat_updates_conversation_store_without_changing_body(
     ]
     assert json.loads(FakeOllamaClient.requests[0]["body"].decode("utf-8"))["messages"][1]["content"] == "Say hello."
     conversation_store.clear()
+
+
+def test_generation_request_signals_operational_lifecycle(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    FakeOllamaClient.instances = []
+    FakeOllamaClient.requests = []
+    activity = RecordingActivityManager()
+    monkeypatch.setattr(routes, "OllamaClient", FakeOllamaClient)
+    monkeypatch.setattr(routes, "activity_manager", activity)
+    settings = Settings(ollama={"base_url": "http://ollama.test:11434"})
+
+    app = FastAPI()
+    app.include_router(routes.create_proxy_router(settings))
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/generate",
+        content=b'{"model":"llava:latest","prompt":"hello","stream":false}',
+        headers={"content-type": "application/json"},
+    )
+
+    assert response.status_code == 200
+    assert activity.events == [
+        ("accept", "POST", "/api/generate", "llava:latest"),
+        ("thinking", "activity-1"),
+        ("finalizing", "activity-1"),
+        ("complete", "activity-1", True),
+    ]
+
+
+@pytest.mark.parametrize(
+    ("endpoint", "body"),
+    [
+        ("/api/chat", b'{"model":"llava:latest","messages":[],"stream":false}'),
+        ("/api/generate", b'{"model":"llava:latest","prompt":"hello","stream":false}'),
+        ("/v1/chat/completions", b'{"model":"llava:latest","messages":[],"stream":false}'),
+        ("/v1/completions", b'{"model":"llava:latest","prompt":"hello","stream":false}'),
+    ],
+)
+def test_proxy_uses_central_model_extraction_for_activity_and_metrics(
+    endpoint: str,
+    body: bytes,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    FakeOllamaClient.instances = []
+    FakeOllamaClient.requests = []
+    activity = RecordingActivityManager()
+    metrics = RecordingMetricsStore()
+    monkeypatch.setattr(routes, "OllamaClient", FakeOllamaClient)
+    monkeypatch.setattr(routes, "activity_manager", activity)
+    monkeypatch.setattr(routes, "metrics_store", metrics)
+    settings = Settings(ollama={"base_url": "http://ollama.test:11434"})
+
+    app = FastAPI()
+    app.include_router(routes.create_proxy_router(settings))
+    client = TestClient(app)
+
+    response = client.post(
+        endpoint,
+        content=body,
+        headers={"content-type": "application/json"},
+    )
+
+    assert response.status_code == 200
+    assert activity.events[0] == ("accept", "POST", endpoint, "llava:latest")
+    assert metrics.requests[0]["endpoint"] == endpoint
+    assert metrics.requests[0]["model"] == "llava:latest"
+
+
+def test_proxy_does_not_assign_previous_model_when_generation_request_has_no_model(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    FakeOllamaClient.instances = []
+    FakeOllamaClient.requests = []
+    activity = RecordingActivityManager()
+    metrics = RecordingMetricsStore()
+    monkeypatch.setattr(routes, "OllamaClient", FakeOllamaClient)
+    monkeypatch.setattr(routes, "activity_manager", activity)
+    monkeypatch.setattr(routes, "metrics_store", metrics)
+    settings = Settings(ollama={"base_url": "http://ollama.test:11434"})
+
+    app = FastAPI()
+    app.include_router(routes.create_proxy_router(settings))
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/chat",
+        content=b'{"messages":[],"stream":false}',
+        headers={"content-type": "application/json"},
+    )
+
+    assert response.status_code == 200
+    assert activity.events[0] == ("accept", "POST", "/api/chat", None)
+    assert metrics.requests[0]["endpoint"] == "/api/chat"
+    assert metrics.requests[0]["model"] is None
+
+
+def test_metadata_request_does_not_signal_operational_lifecycle(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    FakeOllamaClient.instances = []
+    FakeOllamaClient.requests = []
+    activity = RecordingActivityManager()
+    monkeypatch.setattr(routes, "OllamaClient", FakeOllamaClient)
+    monkeypatch.setattr(routes, "activity_manager", activity)
+    settings = Settings(ollama={"base_url": "http://ollama.test:11434"})
+
+    app = FastAPI()
+    app.include_router(routes.create_proxy_router(settings))
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/show",
+        content=b'{"model":"llava:latest"}',
+        headers={"content-type": "application/json"},
+    )
+
+    assert response.status_code == 200
+    assert activity.events == []

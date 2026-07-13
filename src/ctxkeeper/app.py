@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from .branding import DESCRIPTION, PRODUCT_NAME, VERSION
 from .config import Settings, load_config
 from .dashboard.routes import create_dashboard_router
+from .diagnostics.activity import activity_manager
 from .logging_config import setup_logging
 from .proxy.routes import create_proxy_router
 
@@ -12,6 +13,7 @@ from .proxy.routes import create_proxy_router
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or load_config()
     setup_logging(settings)
+    activity_manager.reset()
 
     app = FastAPI(
         title=PRODUCT_NAME,

@@ -66,7 +66,7 @@ Example: `Phase 6.5F-B4.2`
 | Live dashboard and intelligence | Completed | Dashboard routes, live metrics, health, insights, recommendations, trends, and timeline implemented. |
 | Windows executable/service foundation | Completed | PyInstaller spec, executable entry point, service runner, and service placeholder present. |
 | Setup wizard and installer | Completed | First-run wizard, Inno Setup foundation, and release build script present. |
-| Dashboard modernization | Active | Current branch is `phase-6-5f-b4-2-dashboard-micro-interactions`; B4.2 is completed and B4 remains active. |
+| Dashboard modernization | Active | Current branch is `phase-6-5f-b4-3-dashboard-operational-state-machine`; B4.3 adds a dedicated operational activity state machine while B4 remains active. |
 | GitHub release preparation | Planned | Tentative Phase 7 work area. |
 | Version 1.0 release | Planned | Planned release target, not yet completed. |
 
@@ -521,8 +521,8 @@ Goal: Apply final visual polish and restrained micro-interactions without destab
 
 Current workstream:
 
-- Branch: `phase-6-5f-b4-2-dashboard-micro-interactions`.
-- Base commit: `e0228ff` (`Recover responsive dashboard layout architecture`).
+- Branch: `phase-6-5f-b4-3-dashboard-operational-state-machine`.
+- Base commit: `85dd3cf` (Phase 6.5F-B4.2 merged into `main`).
 - Overall B4 is not complete yet.
 
 #### Phase 6.5F-B4.1 — Core Surface and Status Polish
@@ -587,16 +587,125 @@ Validation:
 
 Evidence:
 
-- Current branch: `phase-6-5f-b4-2-dashboard-micro-interactions`.
+- Branch: `phase-6-5f-b4-2-dashboard-micro-interactions`.
+- Merge baseline recorded for later work: B4.2 was merged into `main` at commit `85dd3cf`.
 - Current working tree evidence at the time this history was updated: focused CSS and vanilla JavaScript changes in `src/ctxkeeper/dashboard/template.py`, dashboard active-model and model-warm-up health interpretation changes in `src/ctxkeeper/dashboard/routes.py`, focused tests in `tests/test_app.py`, plus this history update.
-- This B4.2 work was not yet represented by a committed Git revision at the time this document was updated.
+
+#### Phase 6.5F-B4.3 — Dashboard Operational State Machine
+
+Status: Implemented on the active feature branch; not yet merged
+
+This phase was renamed from the planned "Live Motion Refinement" pass to "Dashboard Operational State Machine".
+
+Principal outcomes:
+
+- Added a centralized, strongly typed operational activity manager separate from the dashboard Health Engine.
+- Introduced explicit activity states for `starting`, `connecting`, `ready`, `receiving`, `thinking`, `streaming`, `finalizing`, and `idle`.
+- Tracked generation request lifecycle events for applicable inference endpoints, including `/api/chat`, `/api/generate`, `/v1/chat/completions`, and `/v1/completions`.
+- Preserved metadata endpoints such as `/api/show`, `/api/tags`, `/api/version`, and `/api/ps` as non-activity requests.
+- Added per-request lifecycle tracking and aggregate precedence so overlapping requests do not return the global activity state to idle while another generation request remains active.
+- Added cleanup paths for upstream errors, streaming failures, client cancellation/disconnect, and request exceptions so stale active states are removed.
+- Exposed dashboard activity through an explicit `activity` API object with state, label, active request count, update timestamp, and details.
+- Updated the Operations view to distinguish System Health from Current Activity without replacing or weakening the existing Health Engine.
+- Integrated activity state into the existing connection topology so receiving can trigger an intake pulse and streaming can show restrained flow motion while idle and ready remain calm.
+- Extended reduced-motion handling so activity remains understandable without animation.
+
+Health/activity separation:
+
+- Health remains the existing assessment of whether ContextKeeper is operating normally: healthy, busy, warning, critical, or offline.
+- Activity answers what ContextKeeper is doing now: starting, connecting, ready, receiving, thinking, streaming, finalizing, or idle.
+- Valid combinations remain possible, such as Health `healthy` with Activity `streaming`, Health `busy` with Activity `thinking`, and Health `critical` with Activity `idle`.
+- Existing model warm-up health behavior remains independent from the activity state machine.
+
+Validation:
+
+- Python syntax validation: `.\.venv\Scripts\python.exe -m py_compile src\ctxkeeper\diagnostics\activity.py src\ctxkeeper\proxy\routes.py src\ctxkeeper\dashboard\routes.py src\ctxkeeper\dashboard\template.py src\ctxkeeper\app.py`.
+- Focused automated validation: `.\.venv\Scripts\python.exe -m pytest tests\test_activity.py tests\test_proxy_tags.py tests\test_app.py`, 28 tests passing.
+- Full automated suite: `.\.venv\Scripts\python.exe -m pytest`, 137 tests passing, with one existing third-party `StarletteDeprecationWarning` from FastAPI/Starlette TestClient.
+- Static rendered dashboard JavaScript syntax check: extracted the dashboard `<script>` from `render_dashboard_html(Settings())` and ran `node --check -`, passing.
+- Real Ollama availability check against configured upstream `http://192.168.0.100:11434/api/version`: HTTP 200.
+- Real generation validation through ContextKeeper using `/api/generate` and `llama3.2:latest` observed dashboard activity samples: `ready -> thinking -> streaming -> idle`.
+- The same real-generation validation confirmed activity did not remain stale after completion and health remained independently reported.
+- Real sequential model-switch validation in one app process (`llama3.2:latest` then `llava:latest`) confirmed model warm-up health still reports `Model warming` for the first successful request after switching models.
+
+Acceptance fix:
+
+- Manual AnythingLLM validation found that activity correctly returned to `idle`, but System Health could remain `critical` after a successful completed generation because dashboard health assembly still treated recent request-history length as active in-flight request load and treated full LLM generation duration as service-health latency.
+- Corrected dashboard health assembly so `DashboardMetrics.active_requests` comes from the operational activity manager's live `active_request_count`, not from `len(recent_requests)`.
+- Corrected latency-health semantics so successful full-generation `latency_ms` remains raw performance telemetry for dashboard display, trends, timelines, and request history, but is not used by itself to produce warning/critical service-health states.
+- Retained future support for explicit service-responsiveness fields such as `service_latency_ms`, `time_to_first_token_ms`, or `first_token_latency_ms` when those metrics are available.
+- Added a dashboard-health warning for recent request errors so genuine failed generation requests still affect health without relying on duration.
+- Updated pre-request model wording from "No active model yet" to "No model observed yet" without inferring models from metadata requests.
+
+Acceptance-fix validation:
+
+- Python syntax validation: `.\.venv\Scripts\python.exe -m py_compile src\ctxkeeper\dashboard\routes.py src\ctxkeeper\dashboard\template.py`.
+- Focused automated validation: `.\.venv\Scripts\python.exe -m pytest tests\test_app.py tests\test_activity.py tests\test_proxy_tags.py tests\test_dashboard_intelligence.py`, 58 tests passing.
+- Full automated suite: `.\.venv\Scripts\python.exe -m pytest`, 141 tests passing, with one existing third-party `StarletteDeprecationWarning` from FastAPI/Starlette TestClient.
+- Static rendered dashboard JavaScript syntax check: extracted the dashboard `<script>` from `render_dashboard_html(Settings())` and ran `node --check -`, passing.
+- Real successful `/api/generate` validation through ContextKeeper using `llama3.2:latest` settled to Health `healthy`, Activity `idle`, active request count `0`, Ollama `online`, errors `0`, raw last latency about `2748.94 ms`, and recommendation `no_action`.
+- Real failed `/api/generate` validation with an unavailable model returned HTTP 404 and settled to Health `warning` with reason `recent_request_errors`, while activity still cleaned up to `idle`.
+
+Model-switch acceptance fix:
+
+- Manual AnythingLLM validation found that after switching models and sending a new request, ContextKeeper processed the new request but the dashboard Active Model could remain on the previous model.
+- Initial inspection of proxy logs showed client inference traffic using `POST /api/chat` with `stream=true`; the logged model value is extracted from the inbound JSON request body.
+- Root cause: dashboard-facing model selection still depended on completed request metrics, while streaming request metrics are recorded only at stream finalization. During the active streaming request, and after later metadata requests updated raw `last_model`, the dashboard could select stale completed-request data even though the activity manager had observed the new applicable request.
+- Extended `OperationalActivityManager` to retain the latest observed applicable inference model at request acceptance and expose it in the activity snapshot.
+- Routed dashboard data, `/health`, and active conversation snapshot model selection through the same latest-observed-model helper, preferring the activity manager's accepted inference model and falling back to completed applicable request metrics.
+- Preserved metadata exclusion: `/api/show`, `/api/tags`, `/api/version`, and `/api/ps` do not become the active/latest model source.
+- Made completed-metrics fallback deterministic by sorting applicable request history by timestamp when timestamps are available, so list ordering cannot cause an older model to win.
+- Preserved model warm-up behavior, health/activity separation, and the existing operational activity lifecycle.
+
+Model-switch acceptance-fix validation:
+
+- Python syntax validation: `.\.venv\Scripts\python.exe -m py_compile src\ctxkeeper\diagnostics\activity.py src\ctxkeeper\dashboard\routes.py src\ctxkeeper\proxy\routes.py`.
+- Focused automated validation: `.\.venv\Scripts\python.exe -m pytest tests/test_activity.py tests/test_app.py -q`, 36 tests passing, with one existing third-party `StarletteDeprecationWarning` from FastAPI/Starlette TestClient.
+- Full automated suite: `.\.venv\Scripts\python.exe -m pytest`, 149 tests passing, with the same existing third-party `StarletteDeprecationWarning`.
+- Regression tests now cover sequential model switch from model A to model B, active-request model update before stream completion, metadata requests not overriding the switched model, all supported applicable inference endpoints, request-history ordering, `/health` and dashboard data model consistency, active conversation snapshot consistency, model warm-up preservation, activity lifecycle preservation, and health acceptance preservation.
+- Real `/api/chat` streaming validation through ContextKeeper against configured Ollama `http://192.168.0.100:11434` switched from `llama3.2:latest` to `llava:latest`; dashboard data showed `llava:latest` during the active switched request with Activity `thinking` and active request count `1`, kept `llava:latest` after completion, reported `Model warming` for the first successful switched-model request, and returned to Health `healthy`, Activity `idle`, active request count `0`, Ollama `online`, and errors `0` after a second successful `llava:latest` request.
+
+Repeated model-switch acceptance finding:
+
+- A later manual model-switch retest still showed the Operations Console retaining the previous model after a new request, even though operational activity moved through Thinking, Streaming, and Idle correctly.
+- The failing request path observed in ContextKeeper logs remained a generic Ollama-compatible `POST /api/chat` request with `stream=true`.
+- The compatible model field path at the ContextKeeper proxy boundary is the top-level JSON `model` field used by Ollama chat/generate and OpenAI-compatible completion payloads.
+- ContextKeeper production code remains client-agnostic: no AnythingLLM-specific imports, product-name checks, user-agent checks, headers, configuration, endpoint branches, or client UI/API dependencies were added.
+- Centralized request model extraction in `src/ctxkeeper/proxy/model_extraction.py`; it normalizes the generic top-level `model` field and intentionally ignores prompt text and message content.
+- Added privacy-safe DEBUG diagnostics for applicable generation requests that can record only request id, endpoint, normalized model, model field path, top-level JSON keys, and streaming flag.
+- Corrected active model semantics so the dashboard prefers the newest in-flight request with a known model while requests are active.
+- Corrected missing-model semantics so an active applicable request without an extractable model is surfaced as `Unknown model` and does not inherit or display the previous completed model as if it belonged to the new request.
+- When no applicable request is active, the dashboard retains the most recently observed applicable inference model.
+- The same model state feeds OperationalActivityManager snapshots, `/health`, `/dashboard/data`, the Operations Active Model card, request state, and the active conversation snapshot.
+
+Repeated model-switch validation:
+
+- Python syntax validation: `.\.venv\Scripts\python.exe -m py_compile src\ctxkeeper\diagnostics\activity.py src\ctxkeeper\proxy\model_extraction.py src\ctxkeeper\proxy\routes.py src\ctxkeeper\dashboard\routes.py src\ctxkeeper\dashboard\template.py`.
+- Focused automated validation: `.\.venv\Scripts\python.exe -m pytest tests/test_activity.py tests/test_app.py tests/test_proxy_tags.py -q`, 52 tests passing, with one existing third-party `StarletteDeprecationWarning` from FastAPI/Starlette TestClient.
+- Full automated suite: `.\.venv\Scripts\python.exe -m pytest`, 161 tests passing, with the same existing third-party `StarletteDeprecationWarning`.
+- Generic regression tests now cover compatible model extraction for `/api/chat`, `/api/generate`, `/v1/chat/completions`, and `/v1/completions`; activity and metrics receiving the same extracted model; active known model selection; active unknown model display; previous model not overwriting a model-less active request; metadata not overwriting the model; health/activity preservation; and model warm-up preservation.
+- Direct client-independent `/api/chat` streaming validation through ContextKeeper against configured Ollama `http://192.168.0.100:11434` switched `llama3.2:latest -> llava:latest -> llama3.2:latest`; dashboard data showed each switched model while its request was active, retained the model after completion, preserved model-warm-up Busy state for first switched-model responses, and settled to Health `healthy`, Activity `idle`, active request count `0`, Ollama `online`, and errors `0` after a final same-model request.
+
+Known validation limits:
+
+- `receiving` and `finalizing` are intentionally event-driven and short-lived; the real dashboard polling sample did not reliably catch them, though automated manager and proxy lifecycle tests assert those transitions.
+- No explicit time-to-first-token or service-responsiveness metric is currently persisted in request history; until one exists, full successful generation duration is treated as telemetry rather than direct health evidence.
+- Browser-console and responsive viewport validation at 100%, 75%, and 50% zoom-equivalent desktop viewports were not executed in this coding environment because browser automation is not installed. Static JavaScript syntax validation and automated dashboard-rendering tests passed.
+- A live external-client UI retest is still required for final manual acceptance in the user's environment; repository-side direct validation confirmed the generic compatible request path and state handling.
+
+Evidence:
+
+- Current branch: `phase-6-5f-b4-3-dashboard-operational-state-machine`.
+- Current source evidence: `src/ctxkeeper/diagnostics/activity.py`, request lifecycle wiring in `src/ctxkeeper/proxy/routes.py`, dashboard API integration in `src/ctxkeeper/dashboard/routes.py`, dashboard activity UI and motion integration in `src/ctxkeeper/dashboard/template.py`, app bootstrap reset in `src/ctxkeeper/app.py`.
+- Test evidence: `tests/test_activity.py`, activity lifecycle assertions in `tests/test_proxy_tags.py`, dashboard API/UI assertions in `tests/test_app.py`.
+- This B4.3 work is active-branch work and should not be treated as merged until Git history confirms a merge.
 
 ## Current Project State
 
-- Current active branch: `phase-6-5f-b4-2-dashboard-micro-interactions`.
-- Current active phase: Phase 6.5F-B4 — Dashboard Visual Polish & Micro-Interactions.
-- Latest verified automated test count: 122 tests passing during the B4.2 health-state acceptance-fix pass.
-- Dashboard status: modern operations-console dashboard with live proxy, Ollama, request, context, compression, conversation, intelligence, health, trend, recommendation, timeline, resource surfaces, and restrained micro-interaction polish.
+- Current active branch: `phase-6-5f-b4-3-dashboard-operational-state-machine`.
+- Current active phase: Phase 6.5F-B4 — Dashboard Visual Polish & Micro-Interactions, currently in the B4.3 operational activity state-machine pass.
+- Latest verified automated test count: 161 tests passing during the B4.3 repeated model-switch acceptance-fix pass.
+- Dashboard status: modern operations-console dashboard with live proxy, Ollama, request, context, compression, conversation, intelligence, health, independent operational activity, trend, recommendation, timeline, resource surfaces, and restrained micro-interaction polish.
 - Major capabilities currently present:
   - FastAPI-based transparent Ollama proxy.
   - `/api/*` and `/v1/*` passthrough with streaming preservation for supported endpoints.
@@ -607,7 +716,7 @@ Evidence:
   - Windows service foundation, PyInstaller executable foundation, first-run setup wizard, Inno Setup installer foundation, and release build script.
 - Work still underway:
   - Overall Phase 6.5F-B4 visual polish and micro-interaction workstream.
-  - Phase 6.5F-B4.3 live motion refinement remains the next planned B4 pass.
+  - Phase 6.5F-B4.4 final UX polish and consistency review remains the next planned B4 pass.
   - Later rich dashboard widgets, customization, release polish, and public release preparation.
 
 Do not treat uncommitted active-branch work as merged, released, or available on `main` unless Git history later confirms that state.
@@ -616,7 +725,6 @@ Do not treat uncommitted active-branch work as merged, released, or available on
 
 This section is tentative and subject to refinement. These names and boundaries are planning labels, not completed commitments.
 
-- Phase 6.5F-B4.3 — Live Motion Refinement.
 - Phase 6.5F-B4.4 — Final UX Polish & Consistency Review.
 - Phase 6.5F-B5 — Live Data Visualization & Rich Widgets.
 - Phase 6.5F-B6 — Dashboard Customization & User Preferences.

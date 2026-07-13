@@ -1,16 +1,19 @@
 from __future__ import annotations
 
-import json
+import asyncio
 import logging
 import time
+from collections.abc import AsyncIterator
 from typing import Any, Protocol
 
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from .ollama_client import OllamaClient
+from .model_extraction import inspect_request_model
 from ..config import Settings
 from ..context.conversation_store import conversation_store
+from ..diagnostics.activity import activity_manager, is_generation_activity_request
 from ..diagnostics.metrics import metrics_store
 
 logger = logging.getLogger("ctxkeeper.proxy")
@@ -26,22 +29,11 @@ except ImportError:
     conversation_identity_registry = None
 
 
-def _extract_model(body: bytes) -> str | None:
-    if not body:
-        return None
-    try:
-        data: Any = json.loads(body.decode("utf-8"))
-        if isinstance(data, dict):
-            model = data.get("model")
-            return str(model) if model else None
-    except Exception:
-        return None
-    return None
-
-
 def _decode_json_object(body: bytes) -> dict[str, Any] | None:
     if not body:
         return None
+    import json
+
     try:
         data: Any = json.loads(body.decode("utf-8"))
     except Exception:
@@ -124,18 +116,41 @@ def create_proxy_router(settings: Settings) -> APIRouter:
         started = time.perf_counter()
         full_path = request.url.path
         body = await request.body()
-        model = _extract_model(body)
+        model_info = inspect_request_model(body)
+        model = model_info.model
         client_host = request.client.host if request.client else None
         is_stream_candidate = full_path in {"/api/chat", "/api/generate"}
         wants_stream = _wants_stream(body)
-        conversation_id = _conversation_id_for_chat(
-            request=request,
-            model=model,
-            wants_stream=wants_stream,
-        )
-        _record_incoming_chat_messages(conversation_id, body)
+        activity_request_id: str | None = None
+        conversation_id: str | None = None
 
         try:
+            if is_generation_activity_request(request.method, full_path):
+                activity_request_id = activity_manager.accept_request(
+                    method=request.method,
+                    endpoint=full_path,
+                    model=model,
+                )
+                logger.debug(
+                    "Accepted generation request request_id=%s endpoint=%s model=%s model_field=%s top_level_keys=%s stream=%s",
+                    activity_request_id,
+                    full_path,
+                    model,
+                    model_info.field_path,
+                    ",".join(model_info.top_level_keys),
+                    wants_stream,
+                )
+
+            conversation_id = _conversation_id_for_chat(
+                request=request,
+                model=model,
+                wants_stream=wants_stream,
+            )
+            _record_incoming_chat_messages(conversation_id, body)
+
+            if activity_request_id is not None:
+                activity_manager.mark_thinking(activity_request_id)
+
             if is_stream_candidate and wants_stream:
                 status_code, headers, stream_iterator = await ollama.stream(
                     method=request.method,
@@ -144,28 +159,21 @@ def create_proxy_router(settings: Settings) -> APIRouter:
                     body=body,
                     query=request.url.query,
                 )
-                latency_ms = (time.perf_counter() - started) * 1000
-                metrics_store.record_request(
+
+                monitored_stream = _track_streaming_response(
+                    stream_iterator=stream_iterator,
+                    activity_request_id=activity_request_id,
+                    started=started,
                     method=request.method,
                     endpoint=full_path,
                     model=model,
-                    status_code=status_code,
-                    latency_ms=latency_ms,
+                    upstream_status_code=status_code,
                     client_host=client_host,
-                )
-                logger.info(
-                    "%s %s model=%s status=%s latency_ms=%.2f client=%s stream=true",
-                    request.method,
-                    full_path,
-                    model,
-                    status_code,
-                    latency_ms,
-                    client_host,
                 )
                 # TODO: Capture streaming assistant responses only after adding a
                 # transparent stream tee that preserves chunk timing and errors.
                 return StreamingResponse(
-                    stream_iterator,
+                    monitored_stream,
                     status_code=status_code,
                     media_type=headers.get("content-type", "application/x-ndjson"),
                 )
@@ -177,32 +185,45 @@ def create_proxy_router(settings: Settings) -> APIRouter:
                 body=body,
                 query=request.url.query,
             )
-            latency_ms = (time.perf_counter() - started) * 1000
-            metrics_store.record_request(
-                method=request.method,
-                endpoint=full_path,
-                model=model,
-                status_code=upstream.status_code,
-                latency_ms=latency_ms,
-                client_host=client_host,
-            )
-            if full_path == "/api/chat" and request.method.upper() == "POST":
-                _record_chat_assistant_response(conversation_id, upstream.content)
-            logger.info(
-                "%s %s model=%s status=%s latency_ms=%.2f client=%s stream=false",
-                request.method,
-                full_path,
-                model,
-                upstream.status_code,
-                latency_ms,
-                client_host,
-            )
-            return Response(
-                content=upstream.content,
-                status_code=upstream.status_code,
-                media_type=upstream.headers.get("content-type"),
-            )
+            if activity_request_id is not None:
+                activity_manager.mark_finalizing(activity_request_id)
+            try:
+                latency_ms = (time.perf_counter() - started) * 1000
+                metrics_store.record_request(
+                    method=request.method,
+                    endpoint=full_path,
+                    model=model,
+                    status_code=upstream.status_code,
+                    latency_ms=latency_ms,
+                    client_host=client_host,
+                )
+                if full_path == "/api/chat" and request.method.upper() == "POST":
+                    _record_chat_assistant_response(conversation_id, upstream.content)
+                logger.info(
+                    "%s %s model=%s status=%s latency_ms=%.2f client=%s stream=false",
+                    request.method,
+                    full_path,
+                    model,
+                    upstream.status_code,
+                    latency_ms,
+                    client_host,
+                )
+                return Response(
+                    content=upstream.content,
+                    status_code=upstream.status_code,
+                    media_type=upstream.headers.get("content-type"),
+                )
+            finally:
+                if activity_request_id is not None:
+                    activity_manager.complete_request(activity_request_id, ollama_available=True)
+        except asyncio.CancelledError:
+            if activity_request_id is not None:
+                activity_manager.mark_finalizing(activity_request_id)
+                activity_manager.complete_request(activity_request_id)
+            raise
         except Exception as exc:
+            if activity_request_id is not None:
+                activity_manager.mark_finalizing(activity_request_id)
             latency_ms = (time.perf_counter() - started) * 1000
             metrics_store.record_request(
                 method=request.method,
@@ -213,6 +234,8 @@ def create_proxy_router(settings: Settings) -> APIRouter:
                 client_host=client_host,
             )
             logger.exception("Proxy failure for %s %s", request.method, full_path)
+            if activity_request_id is not None:
+                activity_manager.complete_request(activity_request_id, ollama_available=False)
             return JSONResponse(
                 status_code=502,
                 content={
@@ -232,3 +255,56 @@ def create_proxy_router(settings: Settings) -> APIRouter:
         return await proxy_request(request)
 
     return router
+
+
+async def _track_streaming_response(
+    *,
+    stream_iterator: AsyncIterator[bytes],
+    activity_request_id: str | None,
+    started: float,
+    method: str,
+    endpoint: str,
+    model: str | None,
+    upstream_status_code: int,
+    client_host: str | None,
+) -> AsyncIterator[bytes]:
+    first_chunk_seen = False
+    completion_status_code = upstream_status_code
+    try:
+        async for chunk in stream_iterator:
+            if chunk and activity_request_id is not None and not first_chunk_seen:
+                activity_manager.mark_streaming(activity_request_id)
+                first_chunk_seen = True
+            yield chunk
+    except asyncio.CancelledError:
+        completion_status_code = 499
+        raise
+    except Exception:
+        completion_status_code = 502
+        logger.exception("Streaming proxy failure for %s %s", method, endpoint)
+        raise
+    finally:
+        if activity_request_id is not None:
+            activity_manager.mark_finalizing(activity_request_id)
+        try:
+            latency_ms = (time.perf_counter() - started) * 1000
+            metrics_store.record_request(
+                method=method,
+                endpoint=endpoint,
+                model=model,
+                status_code=completion_status_code,
+                latency_ms=latency_ms,
+                client_host=client_host,
+            )
+            logger.info(
+                "%s %s model=%s status=%s latency_ms=%.2f client=%s stream=true",
+                method,
+                endpoint,
+                model,
+                completion_status_code,
+                latency_ms,
+                client_host,
+            )
+        finally:
+            if activity_request_id is not None:
+                activity_manager.complete_request(activity_request_id, ollama_available=True)

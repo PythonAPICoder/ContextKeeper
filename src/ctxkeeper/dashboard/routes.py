@@ -14,6 +14,7 @@ from ..context.compression_manager import ROLLING_SUMMARY_PREFIX
 from ..context.context_meter import ContextMeter
 from ..context.context_monitor import ContextMonitor
 from ..context.conversation_store import Conversation, conversation_store
+from ..diagnostics.activity import activity_manager
 from ..diagnostics.metrics import metrics_store
 from .insights import build_dashboard_insights
 from .intelligence import DashboardMetrics, HealthAssessment, HealthEngine, HealthStatus
@@ -119,6 +120,7 @@ def _dashboard_intelligence(
     active_conversation: dict[str, Any],
     active_model: str | None,
     warmup_state: ModelWarmupState,
+    active_request_count: int,
 ) -> dict[str, Any]:
     latency_values = [
         float(request["latency_ms"])
@@ -139,10 +141,15 @@ def _dashboard_intelligence(
             recent_requests=recent_requests,
             active_model=active_model,
         ),
-        active_requests=len(recent_requests),
+        active_requests=active_request_count,
+    )
+    health = _apply_recent_error_health(
+        health=HealthEngine().evaluate_metrics(metrics),
+        metrics=metrics,
+        recent_error_count=recent_error_count,
     )
     health = _apply_model_warmup_health(
-        health=HealthEngine().evaluate_metrics(metrics),
+        health=health,
         metrics=metrics,
         warmup_state=warmup_state,
     )
@@ -179,8 +186,10 @@ def _dashboard_intelligence(
         "source": {
             "recent_request_count": len(recent_requests),
             "total_errors": request_metrics.get("total_errors", 0),
+            "active_request_count": active_request_count,
             "health_latency_ms": metrics.average_latency_ms,
             "raw_average_latency_ms": average_latency_ms,
+            "latency_health_basis": "explicit_service_latency_only",
             "model_warmup": warmup_state.to_dict(),
         },
     }
@@ -266,8 +275,9 @@ def _health_message(assessment: HealthAssessment, warmup_state: ModelWarmupState
         "request_load_warning": "Request load is high.",
         "context_busy": "Context usage is elevated.",
         "latency_busy": "Request latency is above normal.",
-        "active_requests": "Recent request activity detected.",
+        "active_requests": "Active generation request in progress.",
         "model_warming": "Ollama is loading the selected model.",
+        "recent_request_errors": "Recent request errors detected.",
     }
     return reason_messages.get(assessment.reasons[0], "Dashboard health evaluated.")
 
@@ -298,7 +308,23 @@ def _is_applicable_model_request(request: object) -> bool:
 
 
 def _applicable_model_requests(recent_requests: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    return [request for request in recent_requests if _is_applicable_model_request(request)]
+    applicable_requests = [request for request in recent_requests if _is_applicable_model_request(request)]
+    decorated: list[tuple[datetime | None, int, dict[str, Any]]] = [
+        (_parse_timestamp(request.get("timestamp")), index, request)
+        for index, request in enumerate(applicable_requests)
+    ]
+    if not any(timestamp is not None for timestamp, _, _ in decorated):
+        return applicable_requests
+
+    oldest = datetime.min.replace(tzinfo=timezone.utc)
+    return [
+        request
+        for timestamp, _, request in sorted(
+            decorated,
+            key=lambda item: (item[0] or oldest, -item[1]),
+            reverse=True,
+        )
+    ]
 
 
 def _is_successful_request(request: dict[str, Any]) -> bool:
@@ -394,16 +420,23 @@ def _health_latency_ms(
     recent_requests: list[dict[str, Any]],
     active_model: str | None,
 ) -> float:
-    current_model_values = _current_model_latency_values(recent_requests, active_model)
-    if current_model_values:
-        return _persistent_latency_for_health(current_model_values)
-
-    fallback_values = [
-        float(request["latency_ms"])
-        for request in recent_requests
-        if isinstance(request.get("latency_ms"), int | float)
-    ]
-    return _persistent_latency_for_health(fallback_values)
+    service_latency_fields = (
+        "service_latency_ms",
+        "time_to_first_token_ms",
+        "first_token_latency_ms",
+    )
+    latency_values: list[float] = []
+    for request in _applicable_model_requests(recent_requests):
+        if active_model and request.get("model") != active_model:
+            if latency_values:
+                break
+            continue
+        for field in service_latency_fields:
+            latency_ms = request.get(field)
+            if isinstance(latency_ms, int | float):
+                latency_values.append(float(latency_ms))
+                break
+    return _persistent_latency_for_health(latency_values)
 
 
 def _apply_model_warmup_health(
@@ -423,6 +456,23 @@ def _apply_model_warmup_health(
     )
 
 
+def _apply_recent_error_health(
+    *,
+    health: HealthAssessment,
+    metrics: DashboardMetrics,
+    recent_error_count: int,
+) -> HealthAssessment:
+    if recent_error_count <= 0:
+        return health
+    if health.status in {HealthStatus.CRITICAL, HealthStatus.WARNING}:
+        return health
+    return HealthAssessment(
+        status=HealthStatus.WARNING,
+        reasons=["recent_request_errors", *[reason for reason in health.reasons if reason != "nominal"]],
+        indicators=metrics.to_dict(),
+    )
+
+
 def _latest_applicable_model(request_metrics: dict[str, Any]) -> str | None:
     recent_requests = request_metrics.get("recent_requests", [])
     if isinstance(recent_requests, list):
@@ -438,15 +488,49 @@ def _latest_applicable_model(request_metrics: dict[str, Any]) -> str | None:
     return None
 
 
+def _latest_observed_model(
+    request_metrics: dict[str, Any],
+    activity_snapshot: object | None = None,
+) -> str | None:
+    active_request_count = getattr(activity_snapshot, "active_request_count", 0)
+    if isinstance(active_request_count, int) and active_request_count > 0:
+        active_model = getattr(activity_snapshot, "active_model", None)
+        return active_model if isinstance(active_model, str) and active_model else None
+
+    latest_activity_model = getattr(activity_snapshot, "latest_model", None)
+    if isinstance(latest_activity_model, str) and latest_activity_model:
+        return latest_activity_model
+    return _latest_applicable_model(request_metrics)
+
+
+def _dashboard_model_state(activity_snapshot: object | None, model: str | None) -> str:
+    active_request_count = getattr(activity_snapshot, "active_request_count", 0)
+    if isinstance(active_request_count, int) and active_request_count > 0:
+        return "active_known" if model else "active_unknown"
+    return "observed" if model else "none"
+
+
+def _dashboard_model_label(model: str | None, model_state: str) -> str:
+    if model:
+        return model
+    if model_state == "active_unknown":
+        return "Unknown model"
+    return "No model observed yet"
+
+
 def build_dashboard_status(
     *,
     settings: Settings,
     metrics_snapshot: dict[str, Any],
     ollama_status: dict[str, object],
 ) -> dict[str, Any]:
+    activity_manager.observe_ollama_status(ollama_status.get("status"))
+    activity_snapshot = activity_manager.snapshot()
     request_metrics = metrics_snapshot["requests"]
     recent_requests = list(request_metrics.get("recent_requests", []))
-    active_model = _latest_applicable_model(request_metrics)
+    active_model = _latest_observed_model(request_metrics, activity_snapshot)
+    model_state = _dashboard_model_state(activity_snapshot, active_model)
+    model_label = _dashboard_model_label(active_model, model_state)
     warmup_state = _detect_model_warmup(recent_requests)
     context_scan = _create_context_monitor(settings).scan()
     compression_history = _compression_history(conversation_store.all())
@@ -462,6 +546,7 @@ def build_dashboard_status(
             "app": settings.app.name,
         },
         "ollama": ollama_status,
+        "activity": activity_snapshot.to_dict(),
         "requests": {
             "total_count": request_metrics.get("total_requests", 0),
             "recent_count": len(recent_requests),
@@ -469,6 +554,8 @@ def build_dashboard_status(
             "total_errors": request_metrics.get("total_errors", 0),
             "last_endpoint": request_metrics.get("last_endpoint"),
             "last_model": active_model,
+            "model_state": model_state,
+            "model_label": model_label,
             "last_observed_model": request_metrics.get("last_model"),
             "last_latency_ms": request_metrics.get("last_latency_ms"),
             "last_status_code": request_metrics.get("last_status_code"),
@@ -496,6 +583,7 @@ def build_dashboard_status(
             active_conversation=active_conversation_data,
             active_model=active_model,
             warmup_state=warmup_state,
+            active_request_count=activity_snapshot.active_request_count,
         ),
         "system": metrics_snapshot["system"],
         "refresh_interval_ms": settings.dashboard.refresh_interval_ms or 1000,
@@ -511,11 +599,18 @@ def create_dashboard_router(settings: Settings) -> APIRouter:
         requests = snapshot["requests"]
         recent = requests.get("recent_requests", [])
         client_count = len({r.get("client_host") for r in recent if r.get("client_host")})
-        last_model = _latest_applicable_model(requests)
         warmup_state = _detect_model_warmup(list(recent) if isinstance(recent, list) else [])
         ollama_status = await _check_ollama(settings)
+        activity_manager.observe_ollama_status(ollama_status.get("status"))
+        activity_snapshot = activity_manager.snapshot()
+        last_model = _latest_observed_model(requests, activity_snapshot)
+        model_state = _dashboard_model_state(activity_snapshot, last_model)
+        model_label = _dashboard_model_label(last_model, model_state)
         client_status = "online" if client_count > 0 else "waiting"
-        model_status = "busy" if warmup_state.active else "active" if last_model else "waiting"
+        if model_state == "active_unknown":
+            model_status = "unknown"
+        else:
+            model_status = "busy" if warmup_state.active else "active" if last_model else "waiting"
         return {
             "app": settings.app.name,
             "status": "running",
@@ -525,8 +620,9 @@ def create_dashboard_router(settings: Settings) -> APIRouter:
                 "client": {"status": client_status, "count": client_count},
                 "proxy": {"status": "online", "listen": f"{settings.server.host}:{settings.server.port}"},
                 "ollama": ollama_status,
-                "model": {"status": model_status, "name": last_model},
+                "model": {"status": model_status, "name": last_model, "label": model_label},
             },
+            "activity": activity_snapshot.to_dict(),
         }
 
     @router.get("/metrics")

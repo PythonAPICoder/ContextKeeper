@@ -5,14 +5,18 @@ from ctxkeeper.app import create_app
 from ctxkeeper.config import Settings
 from ctxkeeper.context.compression_manager import ROLLING_SUMMARY_PREFIX
 from ctxkeeper.context.conversation_store import conversation_store
+from ctxkeeper.dashboard.intelligence import HealthEngine
 from ctxkeeper.dashboard.routes import _latest_applicable_model, build_dashboard_status
+from ctxkeeper.diagnostics.activity import activity_manager
 
 
 @pytest.fixture(autouse=True)
 def clear_conversation_store() -> None:
+    activity_manager.reset()
     conversation_store.clear()
     yield
     conversation_store.clear()
+    activity_manager.reset()
 
 
 def test_health_endpoint() -> None:
@@ -41,6 +45,14 @@ def test_dashboard_endpoint() -> None:
     assert "Recommendations" in response.text
     assert "Activity Timeline" in response.text
     assert "Request Trend" in response.text
+    assert "Current Activity" in response.text
+    assert "currentActivityStatus" in response.text
+    assert "refreshOperationalActivity" in response.text
+    assert "activity-streaming" in response.text
+    assert "@media (prefers-reduced-motion: reduce)" in response.text
+    assert "ops-activity-summary" in response.text
+    assert "No model observed yet" in response.text
+    assert "No active model yet" not in response.text
 
 
 def test_dashboard_data_endpoint(monkeypatch) -> None:
@@ -58,6 +70,9 @@ def test_dashboard_data_endpoint(monkeypatch) -> None:
     data = response.json()
     assert data["contextkeeper"]["status"] == "running"
     assert data["ollama"]["status"] == "online"
+    assert data["activity"]["state"] == "ready"
+    assert data["activity"]["active_request_count"] == 0
+    assert "updated_at" in data["activity"]
     assert "total_count" in data["requests"]
     assert "recent_count" in data["requests"]
     assert "latest" in data["requests"]
@@ -75,6 +90,172 @@ def test_dashboard_data_endpoint(monkeypatch) -> None:
     assert data["active_conversation"]["conversation_id"] == "dashboard-live"
     assert data["active_conversation"]["recent_messages"][0]["content"] == "hello"
     assert data["refresh_interval_ms"] == 1000
+
+
+def test_dashboard_data_exposes_activity_independently_from_health() -> None:
+    activity_manager.reset()
+    request_id = activity_manager.accept_request(
+        method="POST",
+        endpoint="/api/chat",
+        model="llava:latest",
+    )
+    activity_manager.mark_streaming(request_id)
+    metrics_snapshot = {
+        "requests": {
+            "total_requests": 0,
+            "total_errors": 0,
+            "last_endpoint": None,
+            "last_model": None,
+            "last_latency_ms": None,
+            "last_status_code": None,
+            "recent_requests": [],
+        },
+        "system": {"cpu_percent": 0, "ram_percent": 0, "gpu": None},
+    }
+
+    status = build_dashboard_status(
+        settings=Settings(),
+        metrics_snapshot=metrics_snapshot,
+        ollama_status={"status": "offline"},
+    )
+
+    assert status["intelligence"]["health"]["status"] == "critical"
+    assert status["activity"]["state"] == "streaming"
+    assert status["activity"]["label"] == "Streaming Response"
+    assert status["activity"]["active_request_count"] == 1
+
+
+def test_completed_request_history_does_not_count_as_active_health_load() -> None:
+    completed_request_id = activity_manager.accept_request(
+        method="POST",
+        endpoint="/api/generate",
+        model="llama3.2:latest",
+    )
+    activity_manager.mark_finalizing(completed_request_id)
+    activity_manager.complete_request(completed_request_id, ollama_available=True)
+    recent_requests = [
+        {
+            "timestamp": f"2026-07-12T10:{minute:02d}:00+00:00",
+            "endpoint": "/api/generate",
+            "model": "llama3.2:latest",
+            "status_code": 200,
+            "latency_ms": 6_000.0,
+        }
+        for minute in range(55)
+    ]
+    metrics_snapshot = {
+        "requests": {
+            "total_requests": 55,
+            "total_errors": 0,
+            "last_endpoint": "/api/generate",
+            "last_model": "llama3.2:latest",
+            "last_latency_ms": 6_000.0,
+            "last_status_code": 200,
+            "recent_requests": recent_requests,
+        },
+        "system": {"cpu_percent": 0, "ram_percent": 0, "gpu": None},
+    }
+
+    status = build_dashboard_status(
+        settings=Settings(),
+        metrics_snapshot=metrics_snapshot,
+        ollama_status={"status": "online"},
+    )
+
+    health = status["intelligence"]["health"]
+    recommendation_codes = {
+        recommendation["code"]
+        for recommendation in status["intelligence"]["recommendations"]
+    }
+
+    assert status["activity"]["state"] == "idle"
+    assert status["activity"]["active_request_count"] == 0
+    assert health["status"] == "healthy"
+    assert health["indicators"]["active_requests"] == 0
+    assert health["indicators"]["average_latency_ms"] == 0.0
+    assert status["intelligence"]["source"]["active_request_count"] == 0
+    assert status["intelligence"]["source"]["health_latency_ms"] == 0.0
+    assert status["intelligence"]["source"]["raw_average_latency_ms"] == 6000.0
+    assert status["requests"]["last_latency_ms"] == 6_000.0
+    assert status["intelligence"]["trends"]["average_latency_ms"] == 6000.0
+    assert "request_load_warning" not in health["reasons"]
+    assert "latency_critical" not in health["reasons"]
+    assert "monitor_load" not in recommendation_codes
+    assert "ollama_overloaded" not in recommendation_codes
+
+
+def test_genuine_active_concurrency_still_warns_about_request_load() -> None:
+    for index in range(HealthEngine.WARNING_ACTIVE_REQUESTS):
+        activity_manager.accept_request(
+            method="POST",
+            endpoint="/api/chat",
+            model=f"model-{index}",
+        )
+    metrics_snapshot = {
+        "requests": {
+            "total_requests": 0,
+            "total_errors": 0,
+            "last_endpoint": None,
+            "last_model": None,
+            "last_latency_ms": None,
+            "last_status_code": None,
+            "recent_requests": [],
+        },
+        "system": {"cpu_percent": 0, "ram_percent": 0, "gpu": None},
+    }
+
+    status = build_dashboard_status(
+        settings=Settings(),
+        metrics_snapshot=metrics_snapshot,
+        ollama_status={"status": "online"},
+    )
+
+    health = status["intelligence"]["health"]
+    recommendation_codes = {
+        recommendation["code"]
+        for recommendation in status["intelligence"]["recommendations"]
+    }
+
+    assert status["activity"]["active_request_count"] == HealthEngine.WARNING_ACTIVE_REQUESTS
+    assert health["status"] == "warning"
+    assert "request_load_warning" in health["reasons"]
+    assert "monitor_load" in recommendation_codes
+
+
+def test_recent_request_errors_still_warn_without_duration_health_signal() -> None:
+    metrics_snapshot = {
+        "requests": {
+            "total_requests": 1,
+            "total_errors": 1,
+            "last_endpoint": "/api/generate",
+            "last_model": "llama3.2:latest",
+            "last_latency_ms": 20.0,
+            "last_status_code": 502,
+            "recent_requests": [
+                {
+                    "timestamp": "2026-07-12T10:00:00+00:00",
+                    "endpoint": "/api/generate",
+                    "model": "llama3.2:latest",
+                    "status_code": 502,
+                    "latency_ms": 20.0,
+                }
+            ],
+        },
+        "system": {"cpu_percent": 0, "ram_percent": 0, "gpu": None},
+    }
+
+    status = build_dashboard_status(
+        settings=Settings(),
+        metrics_snapshot=metrics_snapshot,
+        ollama_status={"status": "online"},
+    )
+
+    health = status["intelligence"]["health"]
+
+    assert status["activity"]["active_request_count"] == 0
+    assert health["status"] == "warning"
+    assert health["reasons"][0] == "recent_request_errors"
+    assert health["message"] == "Recent request errors detected."
 
 
 def test_health_endpoint_reports_latest_applicable_request_model(monkeypatch) -> None:
@@ -113,6 +294,7 @@ def test_health_endpoint_reports_latest_applicable_request_model(monkeypatch) ->
     assert response.json()["connections"]["model"] == {
         "status": "active",
         "name": "llava:latest",
+        "label": "llava:latest",
     }
 
 
@@ -224,6 +406,270 @@ def test_dashboard_status_uses_latest_applicable_request_model() -> None:
     assert status["active_conversation"]["model_name"] == "llava:latest"
 
 
+@pytest.mark.parametrize(
+    "endpoint",
+    [
+        "/api/chat",
+        "/api/generate",
+        "/v1/chat/completions",
+        "/v1/completions",
+    ],
+)
+def test_dashboard_active_model_updates_during_active_generation_request(endpoint: str) -> None:
+    activity_manager.accept_request(
+        method="POST",
+        endpoint=endpoint,
+        model="llava:latest",
+    )
+    metrics_snapshot = {
+        "requests": {
+            "total_requests": 2,
+            "total_errors": 0,
+            "last_endpoint": "/api/show",
+            "last_model": "qwen2.5:32b",
+            "last_latency_ms": 12.5,
+            "last_status_code": 200,
+            "recent_requests": [
+                {
+                    "timestamp": "2026-07-11T18:01:02+00:00",
+                    "endpoint": "/api/show",
+                    "model": "qwen2.5:32b",
+                    "status_code": 200,
+                    "latency_ms": 40.0,
+                },
+                {
+                    "timestamp": "2026-07-11T18:01:01+00:00",
+                    "endpoint": "/api/chat",
+                    "model": "qwen2.5:32b",
+                    "status_code": 200,
+                    "latency_ms": 100.0,
+                },
+            ],
+        },
+        "system": {"cpu_percent": 0, "ram_percent": 0, "gpu": None},
+    }
+
+    status = build_dashboard_status(
+        settings=Settings(),
+        metrics_snapshot=metrics_snapshot,
+        ollama_status={"status": "online"},
+    )
+
+    assert status["requests"]["last_model"] == "llava:latest"
+    assert status["requests"]["model_state"] == "active_known"
+    assert status["requests"]["model_label"] == "llava:latest"
+    assert status["activity"]["active_model"] == "llava:latest"
+    assert status["activity"]["active_model_state"] == "known"
+    assert status["activity"]["latest_model"] == "llava:latest"
+    assert status["active_conversation"]["model_name"] == "llava:latest"
+
+
+def test_active_request_without_model_does_not_reuse_previous_model(monkeypatch) -> None:
+    async def fake_check_ollama(settings: Settings) -> dict[str, object]:
+        return {"status": "online", "version": "test", "latency_ms": 1.0}
+
+    class FakeMetricsStore:
+        def snapshot(self) -> dict[str, object]:
+            return {
+                "requests": {
+                    "total_requests": 1,
+                    "total_errors": 0,
+                    "last_endpoint": "/api/chat",
+                    "last_model": "gpt-oss:20b",
+                    "last_latency_ms": 100.0,
+                    "last_status_code": 200,
+                    "recent_requests": [
+                        {
+                            "timestamp": "2026-07-11T18:01:00+00:00",
+                            "endpoint": "/api/chat",
+                            "model": "gpt-oss:20b",
+                            "status_code": 200,
+                            "latency_ms": 100.0,
+                            "client_host": "127.0.0.1",
+                        },
+                    ],
+                },
+                "system": {"cpu_percent": 0, "ram_percent": 0, "gpu": None},
+            }
+
+    first = activity_manager.accept_request(
+        method="POST",
+        endpoint="/api/chat",
+        model="gpt-oss:20b",
+    )
+    activity_manager.complete_request(first, ollama_available=True)
+    activity_manager.accept_request(
+        method="POST",
+        endpoint="/api/chat",
+        model=None,
+    )
+    metrics_snapshot = FakeMetricsStore().snapshot()
+
+    status = build_dashboard_status(
+        settings=Settings(),
+        metrics_snapshot=metrics_snapshot,
+        ollama_status={"status": "online"},
+    )
+
+    assert status["activity"]["active_request_count"] == 1
+    assert status["activity"]["active_model"] is None
+    assert status["activity"]["active_model_state"] == "unknown"
+    assert status["activity"]["latest_model"] == "gpt-oss:20b"
+    assert status["requests"]["last_model"] is None
+    assert status["requests"]["model_state"] == "active_unknown"
+    assert status["requests"]["model_label"] == "Unknown model"
+    assert status["requests"]["last_observed_model"] == "gpt-oss:20b"
+    assert status["active_conversation"]["model_name"] is None
+
+    monkeypatch.setattr("ctxkeeper.dashboard.routes._check_ollama", fake_check_ollama)
+    monkeypatch.setattr("ctxkeeper.dashboard.routes.metrics_store", FakeMetricsStore())
+    app = create_app(Settings())
+    activity_manager.accept_request(
+        method="POST",
+        endpoint="/api/chat",
+        model=None,
+    )
+    client = TestClient(app)
+
+    health = client.get("/health").json()
+
+    assert health["connections"]["model"] == {
+        "status": "unknown",
+        "name": None,
+        "label": "Unknown model",
+    }
+
+
+def test_completed_model_switch_persists_over_later_metadata_requests() -> None:
+    first = activity_manager.accept_request(
+        method="POST",
+        endpoint="/api/chat",
+        model="qwen2.5:32b",
+    )
+    activity_manager.complete_request(first, ollama_available=True)
+    second = activity_manager.accept_request(
+        method="POST",
+        endpoint="/api/chat",
+        model="llava:latest",
+    )
+    activity_manager.complete_request(second, ollama_available=True)
+    metrics_snapshot = {
+        "requests": {
+            "total_requests": 4,
+            "total_errors": 0,
+            "last_endpoint": "/api/show",
+            "last_model": "qwen2.5:32b",
+            "last_latency_ms": 40.0,
+            "last_status_code": 200,
+            "recent_requests": [
+                {
+                    "timestamp": "2026-07-11T18:01:03+00:00",
+                    "endpoint": "/api/show",
+                    "model": "qwen2.5:32b",
+                    "status_code": 200,
+                    "latency_ms": 40.0,
+                },
+                {
+                    "timestamp": "2026-07-11T18:01:02+00:00",
+                    "endpoint": "/api/chat",
+                    "model": "qwen2.5:32b",
+                    "status_code": 200,
+                    "latency_ms": 100.0,
+                },
+            ],
+        },
+        "system": {"cpu_percent": 0, "ram_percent": 0, "gpu": None},
+    }
+
+    status = build_dashboard_status(
+        settings=Settings(),
+        metrics_snapshot=metrics_snapshot,
+        ollama_status={"status": "online"},
+    )
+
+    assert status["activity"]["state"] == "idle"
+    assert status["activity"]["active_request_count"] == 0
+    assert status["requests"]["last_model"] == "llava:latest"
+    assert status["requests"]["last_observed_model"] == "qwen2.5:32b"
+
+
+def test_latest_applicable_model_uses_newest_timestamp_not_list_position() -> None:
+    metrics = {
+        "last_endpoint": "/api/chat",
+        "last_model": "qwen2.5:32b",
+        "recent_requests": [
+            {
+                "timestamp": "2026-07-11T18:01:00+00:00",
+                "endpoint": "/api/chat",
+                "model": "qwen2.5:32b",
+            },
+            {
+                "timestamp": "2026-07-11T18:01:01+00:00",
+                "endpoint": "/api/chat",
+                "model": "llava:latest",
+            },
+        ],
+    }
+
+    assert _latest_applicable_model(metrics) == "llava:latest"
+
+
+def test_health_and_dashboard_data_use_same_active_generation_model(monkeypatch) -> None:
+    async def fake_check_ollama(settings: Settings) -> dict[str, object]:
+        return {"status": "online", "version": "test", "latency_ms": 1.0}
+
+    class FakeMetricsStore:
+        def snapshot(self) -> dict[str, object]:
+            return {
+                "requests": {
+                    "total_requests": 2,
+                    "total_errors": 0,
+                    "last_endpoint": "/api/show",
+                    "last_model": "qwen2.5:32b",
+                    "last_latency_ms": 40.0,
+                    "last_status_code": 200,
+                    "recent_requests": [
+                        {
+                            "timestamp": "2026-07-11T18:01:02+00:00",
+                            "endpoint": "/api/show",
+                            "model": "qwen2.5:32b",
+                            "status_code": 200,
+                            "latency_ms": 40.0,
+                            "client_host": "127.0.0.1",
+                        },
+                        {
+                            "timestamp": "2026-07-11T18:01:01+00:00",
+                            "endpoint": "/api/chat",
+                            "model": "qwen2.5:32b",
+                            "status_code": 200,
+                            "latency_ms": 100.0,
+                            "client_host": "127.0.0.1",
+                        },
+                    ],
+                },
+                "system": {"cpu_percent": 0, "ram_percent": 0, "gpu": None},
+            }
+
+    monkeypatch.setattr("ctxkeeper.dashboard.routes._check_ollama", fake_check_ollama)
+    monkeypatch.setattr("ctxkeeper.dashboard.routes.metrics_store", FakeMetricsStore())
+    app = create_app(Settings())
+    activity_manager.accept_request(
+        method="POST",
+        endpoint="/api/chat",
+        model="llava:latest",
+    )
+    client = TestClient(app)
+
+    health = client.get("/health").json()
+    dashboard = client.get("/dashboard/data").json()
+
+    assert health["connections"]["model"]["name"] == "llava:latest"
+    assert health["activity"]["latest_model"] == "llava:latest"
+    assert dashboard["requests"]["last_model"] == "llava:latest"
+    assert dashboard["activity"]["latest_model"] == "llava:latest"
+    assert dashboard["active_conversation"]["model_name"] == "llava:latest"
+
+
 def test_dashboard_status_reports_model_warming_for_single_slow_request_after_model_switch() -> None:
     metrics_snapshot = {
         "requests": {
@@ -281,7 +727,7 @@ def test_dashboard_status_reports_model_warming_for_single_slow_request_after_mo
     assert all("reduce concurrent load" not in message for message in recommendation_messages)
 
 
-def test_dashboard_status_warns_when_latency_persists_after_model_warmup() -> None:
+def test_dashboard_status_treats_successful_generation_duration_as_telemetry() -> None:
     metrics_snapshot = {
         "requests": {
             "total_requests": 3,
@@ -324,19 +770,80 @@ def test_dashboard_status_warns_when_latency_persists_after_model_warmup() -> No
     )
 
     health = status["intelligence"]["health"]
-
-    assert status["intelligence"]["source"]["model_warmup"]["active"] is False
-    assert health["status"] == "warning"
-    assert "latency_warning" in health["reasons"]
-    assert health["message"] == "Request latency is elevated."
-    assert health["indicators"]["average_latency_ms"] == 2500.0
-    assert "watch_latency" in {
+    recommendation_codes = {
         recommendation["code"]
         for recommendation in status["intelligence"]["recommendations"]
     }
 
+    assert status["intelligence"]["source"]["model_warmup"]["active"] is False
+    assert health["status"] == "healthy"
+    assert health["message"] == "All monitored systems are operating normally."
+    assert health["indicators"]["average_latency_ms"] == 0.0
+    assert status["intelligence"]["source"]["health_latency_ms"] == 0.0
+    assert status["intelligence"]["source"]["raw_average_latency_ms"] == pytest.approx(1706.67)
+    assert status["intelligence"]["trends"]["average_latency_ms"] == pytest.approx(1706.67)
+    assert "watch_latency" not in recommendation_codes
+    assert "ollama_overloaded" not in recommendation_codes
+
+
+def test_dashboard_status_uses_explicit_service_latency_for_health_when_available() -> None:
+    metrics_snapshot = {
+        "requests": {
+            "total_requests": 2,
+            "total_errors": 0,
+            "last_endpoint": "/api/generate",
+            "last_model": "llama3.2:latest",
+            "last_latency_ms": 6_000.0,
+            "last_status_code": 200,
+            "recent_requests": [
+                {
+                    "timestamp": "2026-07-11T18:05:01+00:00",
+                    "endpoint": "/api/generate",
+                    "model": "llama3.2:latest",
+                    "status_code": 200,
+                    "latency_ms": 6_000.0,
+                    "service_latency_ms": 2_600.0,
+                },
+                {
+                    "timestamp": "2026-07-11T18:05:00+00:00",
+                    "endpoint": "/api/generate",
+                    "model": "llama3.2:latest",
+                    "status_code": 200,
+                    "latency_ms": 5_500.0,
+                    "service_latency_ms": 2_400.0,
+                },
+            ],
+        },
+        "system": {"cpu_percent": 0, "ram_percent": 0, "gpu": None},
+    }
+
+    status = build_dashboard_status(
+        settings=Settings(),
+        metrics_snapshot=metrics_snapshot,
+        ollama_status={"status": "online"},
+    )
+
+    health = status["intelligence"]["health"]
+    recommendation_codes = {
+        recommendation["code"]
+        for recommendation in status["intelligence"]["recommendations"]
+    }
+
+    assert health["status"] == "warning"
+    assert "latency_warning" in health["reasons"]
+    assert health["indicators"]["average_latency_ms"] == 2500.0
+    assert status["intelligence"]["source"]["health_latency_ms"] == 2500.0
+    assert status["intelligence"]["source"]["raw_average_latency_ms"] == 5750.0
+    assert "watch_latency" in recommendation_codes
+
 
 def test_dashboard_status_preserves_request_load_warning_during_model_warmup() -> None:
+    for index in range(HealthEngine.WARNING_ACTIVE_REQUESTS):
+        activity_manager.accept_request(
+            method="POST",
+            endpoint="/api/generate",
+            model=f"llava-active-{index}",
+        )
     recent_requests = [
         {
             "timestamp": "2026-07-11T18:04:49+00:00",
@@ -378,6 +885,7 @@ def test_dashboard_status_preserves_request_load_warning_during_model_warmup() -
     health = status["intelligence"]["health"]
 
     assert status["intelligence"]["source"]["model_warmup"]["active"] is True
+    assert status["intelligence"]["source"]["active_request_count"] == HealthEngine.WARNING_ACTIVE_REQUESTS
     assert health["status"] == "warning"
     assert "request_load_warning" in health["reasons"]
     assert health["message"] == "Request load is high."

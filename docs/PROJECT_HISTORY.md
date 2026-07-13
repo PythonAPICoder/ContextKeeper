@@ -66,7 +66,7 @@ Example: `Phase 6.5F-B4.2`
 | Live dashboard and intelligence | Completed | Dashboard routes, live metrics, health, insights, recommendations, trends, and timeline implemented. |
 | Windows executable/service foundation | Completed | PyInstaller spec, executable entry point, service runner, and service placeholder present. |
 | Setup wizard and installer | Completed | First-run wizard, Inno Setup foundation, and release build script present. |
-| Dashboard modernization | Active | Current branch is `phase-6-5f-b4-dashboard-visual-polish`; B4 remains active. |
+| Dashboard modernization | Active | Current branch is `phase-6-5f-b4-2-dashboard-micro-interactions`; B4.2 is completed and B4 remains active. |
 | GitHub release preparation | Planned | Tentative Phase 7 work area. |
 | Version 1.0 release | Planned | Planned release target, not yet completed. |
 
@@ -521,7 +521,7 @@ Goal: Apply final visual polish and restrained micro-interactions without destab
 
 Current workstream:
 
-- Branch: `phase-6-5f-b4-dashboard-visual-polish`.
+- Branch: `phase-6-5f-b4-2-dashboard-micro-interactions`.
 - Base commit: `e0228ff` (`Recover responsive dashboard layout architecture`).
 - Overall B4 is not complete yet.
 
@@ -545,16 +545,58 @@ Validation:
 
 Evidence:
 
-- Current branch: `phase-6-5f-b4-dashboard-visual-polish`.
+- Branch at the time of the B4.1 pass: `phase-6-5f-b4-dashboard-visual-polish`.
 - Current working tree evidence at the time this history was created: CSS changes in `src/ctxkeeper/dashboard/template.py`.
 - This B4.1 work was not yet represented by a committed Git revision at the time this document was created.
 
+#### Phase 6.5F-B4.2 — Dashboard Micro-Interactions
+
+Status: Completed within the active B4 workstream
+
+Principal outcomes:
+
+- Added restrained, professional micro-interaction polish to the existing browser dashboard without changing the stabilized card layout, responsive grid, breakpoints, or backend behavior.
+- Refined sidebar hover, active, pressed, and keyboard-focus states, including `aria-current` management for active navigation items.
+- Calmed general informational card hover behavior while preserving responsive feedback for live metric cards, connection nodes, focus-within card surfaces, and badge-styled links.
+- Added accessible badge/link feedback for hover, focus, pressed, disabled, and status-change states.
+- Reworked live value update feedback so metric values animate only when their displayed value changes, and status badges animate only when their state class changes.
+- Removed refresh-cycle animation churn from status badges that previously changed text twice per poll.
+- Added subtle refresh busy feedback during polling without introducing spinners, layout shifts, or additional polling timers.
+- Refined the Client → ContextKeeper → Ollama → Model flow so request packets pulse only when total request count increases, while connector and status transitions remain smooth.
+- Completed an acceptance fix that made the request pulse visibly observable during a real request-count increase by adding a restrained flow-stage sweep, connector emphasis, pipe-node pulse, and slightly longer one-shot pulse duration while preserving the static idle topology.
+- Corrected dashboard active-model selection so the model shown in the Connection Flow and active conversation state comes from the latest applicable chat/generate request instead of model metadata requests such as `/api/show`.
+- Added model-transition warm-up health interpretation so the first slow successful chat/generate request after switching from one active model to another reports a non-alarming `Model warming`/busy state instead of immediately warning about elevated latency or recommending reduced concurrent load.
+- Preserved raw latency metrics and trend reporting while requiring repeated elevated applicable-request latency before latency warnings and latency recommendations are emitted.
+- Extended reduced-motion support so nonessential animations and transitions are disabled or made static while preserving state labels and clarity.
+- Added an inline dashboard favicon declaration to prevent browser `/favicon.ico` console errors during dashboard validation.
+
+Validation:
+
+- Python syntax validation: `python -m py_compile src\ctxkeeper\dashboard\routes.py src\ctxkeeper\dashboard\template.py`.
+- Focused acceptance tests added for dashboard active-model selection, `/health` model reporting, model warm-up health interpretation, sustained latency warnings after warm-up, and request-load warnings during a model transition.
+- Full automated suite: `.\.venv\Scripts\python.exe -m pytest`, 122 tests passing, with one existing third-party `StarletteDeprecationWarning` from FastAPI/Starlette TestClient.
+- Headless Microsoft Edge dashboard validation at browser zoom-equivalent desktop viewports:
+  - 100%: 1600 × 900 CSS viewport.
+  - 75%: 2133 × 1200 CSS viewport.
+  - 50%: 3200 × 1800 CSS viewport.
+- Browser validation confirmed no viewport scroll regression, no app/page overflow, no out-of-bounds card clipping, no detected card overlap, no layout instability (`maxLayoutDeltaPx: 0`), and no console errors at 50%, 75%, or 100%.
+- Browser interaction validation confirmed `triggerTopologyPulse()` runs after a request-count increase, one `request-pulse` class addition occurs for one new request, unchanged polling does not add another pulse, and the pulse cleanup leaves the topology static afterward.
+- Model-selection tests confirmed `/api/show` metadata requests no longer override the dashboard active model when a newer applicable `/api/chat`, `/api/generate`, `/v1/chat/completions`, or `/v1/completions` model is available in recent metrics.
+- Headless browser validation with synthetic request history confirmed a qwen2.5:32b -> llava:latest model switch displays `Model warming`, keeps the active model as `llava:latest`, avoids the reduce-concurrent-load recommendation for the single slow cold-start request, and returns to a normal latency warning after a second slow successful llava request.
+- Reduced-motion emulation confirmed `prefers-reduced-motion: reduce` matched, status-dot and flow-packet animations resolved to `none`, and nav/badge transition durations resolved to `0s`.
+
+Evidence:
+
+- Current branch: `phase-6-5f-b4-2-dashboard-micro-interactions`.
+- Current working tree evidence at the time this history was updated: focused CSS and vanilla JavaScript changes in `src/ctxkeeper/dashboard/template.py`, dashboard active-model and model-warm-up health interpretation changes in `src/ctxkeeper/dashboard/routes.py`, focused tests in `tests/test_app.py`, plus this history update.
+- This B4.2 work was not yet represented by a committed Git revision at the time this document was updated.
+
 ## Current Project State
 
-- Current active branch: `phase-6-5f-b4-dashboard-visual-polish`.
+- Current active branch: `phase-6-5f-b4-2-dashboard-micro-interactions`.
 - Current active phase: Phase 6.5F-B4 — Dashboard Visual Polish & Micro-Interactions.
-- Latest verified automated test count: 115 tests passing during the B4.1 implementation pass.
-- Dashboard status: modern operations-console dashboard with live proxy, Ollama, request, context, compression, conversation, intelligence, health, trend, recommendation, timeline, and resource surfaces.
+- Latest verified automated test count: 122 tests passing during the B4.2 health-state acceptance-fix pass.
+- Dashboard status: modern operations-console dashboard with live proxy, Ollama, request, context, compression, conversation, intelligence, health, trend, recommendation, timeline, resource surfaces, and restrained micro-interaction polish.
 - Major capabilities currently present:
   - FastAPI-based transparent Ollama proxy.
   - `/api/*` and `/v1/*` passthrough with streaming preservation for supported endpoints.
@@ -565,6 +607,7 @@ Evidence:
   - Windows service foundation, PyInstaller executable foundation, first-run setup wizard, Inno Setup installer foundation, and release build script.
 - Work still underway:
   - Overall Phase 6.5F-B4 visual polish and micro-interaction workstream.
+  - Phase 6.5F-B4.3 live motion refinement remains the next planned B4 pass.
   - Later rich dashboard widgets, customization, release polish, and public release preparation.
 
 Do not treat uncommitted active-branch work as merged, released, or available on `main` unless Git history later confirms that state.
@@ -573,7 +616,6 @@ Do not treat uncommitted active-branch work as merged, released, or available on
 
 This section is tentative and subject to refinement. These names and boundaries are planning labels, not completed commitments.
 
-- Phase 6.5F-B4.2 — Dashboard Micro-Interactions.
 - Phase 6.5F-B4.3 — Live Motion Refinement.
 - Phase 6.5F-B4.4 — Final UX Polish & Consistency Review.
 - Phase 6.5F-B5 — Live Data Visualization & Rich Widgets.

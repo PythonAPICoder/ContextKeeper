@@ -11,6 +11,7 @@ def render_dashboard_html(settings: Settings) -> str:
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>{settings.dashboard.title}</title>
+<link rel="icon" href="data:," />
 <style>
 :root {{ --bg:#090e1a; --sidebar:#0d1424; --panel:#111827; --card:#182132; --card-strong:#1f2937; --text:#e5e7eb; --muted:#94a3b8; --soft:#cbd5e1; --good:#22c55e; --warn:#f59e0b; --bad:#ef4444; --accent:#38bdf8; --accent-2:#818cf8; --line:#2d3a4f; --glass:rgba(15,23,42,.66); --glass-strong:rgba(24,33,50,.88); --border-card:rgba(203,213,225,.11); --border-card-hot:rgba(56,189,248,.28); --surface-inset-highlight:inset 0 1px 0 rgba(255,255,255,.055); --shadow:0 18px 46px rgba(0,0,0,.28); --shadow-soft:0 10px 24px rgba(0,0,0,.2); --shadow-neutral-soft:0 14px 32px rgba(2,6,23,.24); --glow-good:0 0 0 1px rgba(34,197,94,.07),0 0 18px rgba(34,197,94,.12); --glow-info:0 0 0 1px rgba(56,189,248,.07),0 0 18px rgba(56,189,248,.12); --glow-warn:0 0 0 1px rgba(245,158,11,.07),0 0 18px rgba(245,158,11,.12); --glow-bad:0 0 0 1px rgba(239,68,68,.07),0 0 18px rgba(239,68,68,.12); }}
 * {{ box-sizing:border-box; }}
@@ -19,6 +20,8 @@ body {{ margin:0; width:100%; height:100%; min-width:320px; overflow:hidden; fon
 body::before {{ content:""; position:fixed; inset:0; z-index:-1; pointer-events:none; background:radial-gradient(circle at 18% 8%,rgba(56,189,248,.16),transparent 28%),radial-gradient(circle at 84% 18%,rgba(129,140,248,.12),transparent 30%),linear-gradient(135deg,#070b14,#0b1220 45%,#101827); }}
 a {{ color:inherit; text-decoration:none; }}
 :where(a,button,[tabindex]):focus-visible {{ outline:2px solid rgba(56,189,248,.68); outline-offset:2px; }}
+button,a.badge {{ font:inherit; }}
+button:disabled,[aria-disabled="true"] {{ cursor:not-allowed; opacity:.48; filter:saturate(.72); }}
 .app-shell {{ height:100vh; height:100dvh; min-height:0; overflow:hidden; display:grid; grid-template-columns:240px minmax(0,1fr); background:linear-gradient(90deg,rgba(13,20,36,.72),transparent 38%); }}
 .sidebar {{ position:relative; top:0; height:100%; min-height:0; overflow:hidden; display:flex; flex-direction:column; gap:26px; padding:20px 16px; background:linear-gradient(180deg,rgba(13,20,36,.94),rgba(9,14,26,.9)); border-right:1px solid rgba(203,213,225,.09); box-shadow:8px 0 34px rgba(0,0,0,.18); backdrop-filter:blur(18px); }}
 .brand {{ display:flex; align-items:center; gap:12px; padding:6px 6px 14px; border-bottom:1px solid rgba(203,213,225,.09); }}
@@ -27,16 +30,23 @@ a {{ color:inherit; text-decoration:none; }}
 .brand-sub {{ color:var(--muted); font-size:12px; margin-top:2px; }}
 .nav {{ display:grid; gap:7px; }}
 .nav a {{ position:relative; display:flex; align-items:center; gap:10px; min-height:40px; padding:8px 10px 8px 12px; border-radius:8px; color:var(--soft); font-size:14px; border:1px solid transparent; transition:background .18s ease,border-color .18s ease,color .18s ease,transform .18s ease,box-shadow .18s ease; }}
+.nav a::before {{ content:""; position:absolute; left:0; top:50%; width:2px; height:18px; border-radius:999px; background:var(--accent); opacity:0; transform:translateY(-50%) scaleY(.55); transition:opacity .18s ease,transform .18s ease; }}
 .nav a:hover {{ background:rgba(148,163,184,.12); color:var(--text); transform:translateX(1px); border-color:rgba(203,213,225,.08); }}
+.nav a:hover::before,.nav a:focus-visible::before {{ opacity:.48; transform:translateY(-50%) scaleY(.86); }}
+.nav a:focus-visible {{ background:rgba(56,189,248,.13); border-color:rgba(56,189,248,.34); box-shadow:0 0 0 3px rgba(56,189,248,.12); }}
+.nav a:active {{ transform:translateX(1px) scale(.995); }}
 .nav a.active {{ background:linear-gradient(90deg,rgba(56,189,248,.18),rgba(129,140,248,.08)); border-color:rgba(56,189,248,.26); color:#fff; box-shadow:inset 3px 0 0 var(--accent),0 8px 20px rgba(2,6,23,.18); }}
+.nav a.active::before {{ opacity:1; transform:translateY(-50%) scaleY(1); }}
 .nav-kicker {{ color:var(--muted); font-size:11px; text-transform:uppercase; font-weight:800; letter-spacing:.08em; margin:4px 10px; }}
 .sidebar-footer {{ margin-top:auto; color:var(--muted); font-size:12px; line-height:1.5; padding:12px 10px; border-top:1px solid rgba(203,213,225,.09); }}
 .workspace {{ min-width:0; height:100%; min-height:0; overflow:hidden; display:grid; grid-template-rows:auto minmax(0,1fr); }}
 .topbar {{ position:relative; z-index:5; display:flex; justify-content:space-between; align-items:center; gap:18px; margin:8px 12px 0; padding:10px 14px; background:linear-gradient(135deg,rgba(15,23,42,.84),rgba(24,33,50,.72)); backdrop-filter:blur(20px); border:1px solid var(--border-card); border-radius:12px; box-shadow:var(--shadow-soft),var(--surface-inset-highlight); }}
 .topbar-left {{ min-width:0; display:flex; align-items:center; gap:14px; }}
 .topbar-title {{ min-width:0; }}
-.topbar-status {{ display:inline-flex; align-items:center; gap:8px; min-height:28px; padding:4px 9px; border:1px solid rgba(34,197,94,.2); border-radius:999px; background:rgba(34,197,94,.09); color:#86efac; font-size:12px; font-weight:800; text-transform:uppercase; }}
-.topbar-status-dot {{ width:8px; height:8px; border-radius:50%; background:var(--good); box-shadow:0 0 14px rgba(34,197,94,.7); }}
+.topbar-status {{ display:inline-flex; align-items:center; gap:8px; min-height:28px; padding:4px 9px; border:1px solid rgba(34,197,94,.2); border-radius:999px; background:rgba(34,197,94,.09); color:#86efac; font-size:12px; font-weight:800; text-transform:uppercase; transition:background .18s ease,border-color .18s ease,color .18s ease,box-shadow .18s ease; }}
+.topbar-status-dot {{ width:8px; height:8px; border-radius:50%; background:var(--good); box-shadow:0 0 14px rgba(34,197,94,.7); transition:opacity .18s ease,box-shadow .18s ease,transform .18s ease; }}
+body.is-refreshing .topbar-status {{ border-color:rgba(56,189,248,.26); background:rgba(56,189,248,.09); color:#bae6fd; box-shadow:var(--surface-inset-highlight),0 0 16px rgba(56,189,248,.08); }}
+body.is-refreshing .topbar-status-dot {{ opacity:.58; box-shadow:0 0 10px rgba(56,189,248,.44); transform:scale(.9); }}
 .topbar-actions {{ display:flex; flex-wrap:wrap; justify-content:flex-end; gap:10px; color:var(--muted); font-size:13px; }}
 .topbar-pill {{ display:inline-flex; align-items:center; min-height:30px; padding:5px 10px; border:1px solid var(--border-card); border-radius:999px; background:rgba(15,23,42,.7); box-shadow:var(--surface-inset-highlight); }}
 .dashboard-main {{ height:100%; min-height:0; min-width:0; overflow:hidden; display:grid; grid-template-rows:minmax(0,1fr); padding:10px 14px 14px; }}
@@ -112,10 +122,12 @@ h1 {{ margin:0; font-size:25px; }}
 .operations-lower {{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); grid-auto-rows:minmax(0,1fr); gap:10px; align-items:stretch; height:100%; min-height:0; min-width:0; overflow:hidden; }}
 .grid {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px; }}
 .card {{ background:linear-gradient(180deg,rgba(24,33,50,.82),rgba(15,23,42,.76)); border:1px solid var(--border-card); border-radius:10px; padding:12px; box-shadow:var(--shadow),var(--surface-inset-highlight); backdrop-filter:blur(18px); transition:border-color .18s ease, transform .18s ease, background .18s ease,box-shadow .18s ease; }}
-.card:hover,.node:hover {{ border-color:var(--border-card-hot); transform:translateY(-1px); background:linear-gradient(180deg,rgba(30,41,59,.88),rgba(15,23,42,.8)); box-shadow:var(--shadow-neutral-soft),var(--surface-inset-highlight),var(--glow-info); }}
+.card:hover {{ border-color:rgba(203,213,225,.16); background:linear-gradient(180deg,rgba(28,38,56,.86),rgba(15,23,42,.78)); box-shadow:var(--shadow-soft),var(--surface-inset-highlight); }}
+.card:focus-within {{ border-color:rgba(56,189,248,.28); box-shadow:var(--shadow-soft),var(--surface-inset-highlight),0 0 0 1px rgba(56,189,248,.08); }}
+.node:hover {{ border-color:var(--border-card-hot); transform:translateY(-1px); background:linear-gradient(180deg,rgba(30,41,59,.88),rgba(15,23,42,.8)); box-shadow:var(--shadow-neutral-soft),var(--surface-inset-highlight),var(--glow-info); }}
 .card.hero-status,.card.hero-status:hover {{ background:radial-gradient(circle at 92% 0%,var(--hero-state-wash),transparent 38%),linear-gradient(135deg,rgba(15,23,42,.96),rgba(17,24,39,.92)); border-color:var(--hero-state-border); box-shadow:inset 5px 0 0 var(--hero-state-color),var(--shadow-neutral-soft),var(--surface-inset-highlight),var(--hero-state-glow); transition:border-color .22s ease,background .22s ease,box-shadow .22s ease; }}
 .card.hero-status:hover {{ transform:none; }}
-.hero-stat-card:hover,.hero-stat-card:focus-within,.hero-stat-card:focus-visible {{ border-color:var(--border-card-hot); background:linear-gradient(180deg,rgba(30,41,59,.9),rgba(15,23,42,.82)); box-shadow:var(--shadow-neutral-soft),var(--surface-inset-highlight),var(--glow-info); transform:translateY(-1px); }}
+.hero-stat-card:hover,.hero-stat-card:focus-within,.hero-stat-card:focus-visible {{ border-color:var(--border-card-hot); background:linear-gradient(180deg,rgba(30,41,59,.9),rgba(15,23,42,.82)); box-shadow:var(--shadow-neutral-soft),var(--surface-inset-highlight),var(--glow-info); transform:none; }}
 .hero-stat-card:hover::before,.hero-stat-card:focus-within::before,.hero-stat-card:focus-visible::before {{ opacity:.92; }}
 .hero-stat-card:hover .hero-stat-value,.hero-stat-card:focus-within .hero-stat-value,.hero-stat-card:focus-visible .hero-stat-value {{ color:#fff; }}
 .card h2 {{ margin:0 0 7px; font-size:13px; letter-spacing:.02em; }}
@@ -142,8 +154,13 @@ h1 {{ margin:0; font-size:25px; }}
 @keyframes valuePop {{ 0% {{ transform:translateY(0); color:var(--text); }} 45% {{ transform:translateY(-1px); color:#ffffff; }} 100% {{ transform:translateY(0); color:inherit; }} }}
 .icon-label {{ display:inline-flex; align-items:center; gap:8px; }}
 .icon-mark {{ color:var(--accent); font-size:14px; }}
-.badge {{ --badge-ring:rgba(148,163,184,.18); --badge-glow:0 0 12px rgba(148,163,184,.07); display:inline-flex; align-items:center; min-height:22px; padding:2px 7px; border-radius:999px; font-size:11px; font-weight:700; text-transform:uppercase; background:rgba(148,163,184,.16); color:var(--muted); box-shadow:inset 0 0 0 1px var(--badge-ring),var(--surface-inset-highlight),var(--badge-glow); transition:background .18s ease,box-shadow .18s ease,color .18s ease,opacity .18s ease; }}
+.badge {{ --badge-ring:rgba(148,163,184,.18); --badge-glow:0 0 12px rgba(148,163,184,.07); display:inline-flex; align-items:center; min-height:22px; padding:2px 7px; border-radius:999px; font-size:11px; font-weight:700; text-transform:uppercase; background:rgba(148,163,184,.16); color:var(--muted); box-shadow:inset 0 0 0 1px var(--badge-ring),var(--surface-inset-highlight),var(--badge-glow); transition:background .18s ease,box-shadow .18s ease,color .18s ease,opacity .18s ease,transform .14s ease; }}
 .badge.positive,.badge.healthy,.badge.low,.badge.online,.badge.active,.badge.running {{ --badge-ring:rgba(34,197,94,.22); --badge-glow:0 0 14px rgba(34,197,94,.1); color:var(--good); background:rgba(34,197,94,.12); }} .badge.info,.badge.busy {{ --badge-ring:rgba(56,189,248,.22); --badge-glow:0 0 14px rgba(56,189,248,.1); color:var(--accent); background:rgba(56,189,248,.12); }} .badge.warning,.badge.medium,.badge.waiting,.badge.pending {{ --badge-ring:rgba(245,158,11,.24); --badge-glow:0 0 14px rgba(245,158,11,.1); color:var(--warn); background:rgba(245,158,11,.12); }} .badge.critical,.badge.high,.badge.offline,.badge.error {{ --badge-ring:rgba(239,68,68,.24); --badge-glow:0 0 14px rgba(239,68,68,.1); color:var(--bad); background:rgba(239,68,68,.12); }}
+a.badge:hover {{ transform:translateY(-1px); box-shadow:inset 0 0 0 1px var(--badge-ring),var(--surface-inset-highlight),var(--badge-glow),0 0 0 3px rgba(56,189,248,.08); }}
+a.badge:active {{ transform:translateY(0); opacity:.86; }}
+a.badge:focus-visible {{ outline:2px solid rgba(56,189,248,.72); outline-offset:2px; box-shadow:inset 0 0 0 1px var(--badge-ring),var(--surface-inset-highlight),var(--badge-glow),0 0 0 3px rgba(56,189,248,.12); }}
+.badge-update {{ animation:badgeSettle .3s ease-out 1; }}
+@keyframes badgeSettle {{ 0% {{ transform:scale(.985); }} 45% {{ transform:scale(1.015); }} 100% {{ transform:scale(1); }} }}
 .panel-list {{ display:grid; gap:8px; }}
 .panel-item {{ display:flex; justify-content:space-between; gap:10px; align-items:flex-start; background:rgba(15,23,42,.46); border:1px solid var(--border-card); border-radius:8px; padding:7px 9px; box-shadow:var(--surface-inset-highlight); transition:border-color .18s ease, background .18s ease,box-shadow .18s ease; }}
 .panel-item:hover,.timeline-item:hover,.message:hover {{ border-color:rgba(129,140,248,.24); background:rgba(15,23,42,.68); box-shadow:var(--surface-inset-highlight),0 0 16px rgba(129,140,248,.09); }}
@@ -171,22 +188,30 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
 .flow-heading {{ display:flex; align-items:center; gap:9px; }}
 .flow-heading svg {{ width:17px; height:17px; stroke:var(--accent); fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }}
 .flow-stage {{ position:relative; display:grid; grid-template-columns:minmax(126px,1fr) 24px minmax(126px,1fr) 24px minmax(126px,1fr) 24px minmax(126px,1fr); gap:6px; align-items:stretch; min-width:0; min-height:auto; }}
+.flow-stage::after {{ content:""; position:absolute; inset:-2px 0; z-index:0; pointer-events:none; border-radius:12px; background:linear-gradient(90deg,transparent,rgba(56,189,248,.2),transparent); opacity:0; transform:translateX(-70%); }}
 .flow-svg-layer {{ position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:0; overflow:visible; }}
 .flow-stage > .flow-node,.flow-stage > .pipe {{ position:relative; z-index:1; }}
-.flow-svg-line {{ fill:none; stroke:rgba(148,163,184,.22); stroke-width:2; stroke-linecap:round; vector-effect:non-scaling-stroke; }}
+.flow-svg-line {{ fill:none; stroke:rgba(148,163,184,.22); stroke-width:2; stroke-linecap:round; vector-effect:non-scaling-stroke; transition:stroke .24s cubic-bezier(.2,0,0,1),filter .24s cubic-bezier(.2,0,0,1),opacity .24s ease; }}
 .flow-svg-line.flow-line-active {{ stroke:rgba(56,189,248,.72); filter:drop-shadow(0 0 5px rgba(56,189,248,.28)); }}
 .flow-svg-line.flow-line-waiting {{ stroke:rgba(245,158,11,.42); stroke-dasharray:5 8; }}
 .flow-svg-line.flow-line-offline {{ stroke:rgba(239,68,68,.36); stroke-dasharray:3 8; }}
 .flow-svg-packet {{ fill:var(--accent); opacity:0; filter:drop-shadow(0 0 8px rgba(56,189,248,.55)); }}
 .flow-svg-packet {{ offset-path:path("M 55 90 C 180 90 200 90 325 90 C 450 90 470 90 595 90 C 720 90 740 90 945 90"); offset-rotate:0deg; }}
-.flow-panel.flow-active .flow-svg-packet {{ opacity:.86; animation:flowPacket 3.8s ease-in-out infinite; }}
-.flow-panel.flow-waiting .flow-svg-packet {{ fill:var(--warn); opacity:.34; animation:flowPacket 6s ease-in-out infinite; }}
+.flow-panel.flow-active .flow-svg-packet {{ opacity:0; animation:none; }}
+.flow-panel.flow-waiting .flow-svg-packet {{ fill:var(--warn); opacity:0; animation:none; }}
 .flow-panel.flow-offline .flow-svg-packet {{ opacity:0; animation:none; }}
-.flow-panel.request-pulse .flow-svg-packet {{ animation:flowPacketPulse 900ms ease-out 1; opacity:1; }}
-.flow-panel.request-pulse .flow-node {{ border-color:var(--border-card-hot); box-shadow:var(--shadow-neutral-soft),var(--surface-inset-highlight),var(--glow-info); }}
+.flow-panel.request-pulse .flow-stage::after {{ animation:flowStagePulse 1300ms ease-out 1; }}
+.flow-panel.request-pulse .flow-svg-packet {{ animation:flowPacketPulse 1300ms ease-out 1; opacity:.92; }}
+.flow-panel.request-pulse .flow-svg-line.flow-line-active,.flow-panel.request-pulse .flow-svg-line.flow-line-waiting {{ stroke:rgba(125,211,252,.86); filter:drop-shadow(0 0 7px rgba(56,189,248,.36)); }}
+.flow-panel.request-pulse .pipe {{ background:linear-gradient(90deg,rgba(45,58,79,.35),rgba(125,211,252,.9),rgba(45,58,79,.35)); }}
+.flow-panel.request-pulse .pipe::after {{ animation:pipeRequestPulse 1300ms ease-out 1; background:rgba(125,211,252,.82); box-shadow:0 0 22px rgba(56,189,248,.54); }}
+.flow-panel.request-pulse .flow-node {{ border-color:rgba(56,189,248,.36); box-shadow:var(--shadow-neutral-soft),var(--surface-inset-highlight),var(--glow-info); }}
+.flow-panel.request-pulse .flow-node-icon {{ border-color:rgba(56,189,248,.34); background:rgba(56,189,248,.14); box-shadow:0 0 0 3px rgba(56,189,248,.06),var(--glow-info); }}
 .flow-node.status-pulse {{ animation:nodeStatusPulse 700ms ease-out 1; }}
 @keyframes flowPacket {{ 0% {{ offset-distance:0%; opacity:0; }} 10% {{ opacity:.72; }} 86% {{ opacity:.72; }} 100% {{ offset-distance:100%; opacity:0; }} }}
 @keyframes flowPacketPulse {{ 0% {{ offset-distance:0%; opacity:0; }} 12% {{ opacity:1; }} 82% {{ opacity:1; }} 100% {{ offset-distance:100%; opacity:0; }} }}
+@keyframes flowStagePulse {{ 0% {{ opacity:0; transform:translateX(-70%); }} 18% {{ opacity:.68; }} 72% {{ opacity:.26; }} 100% {{ opacity:0; transform:translateX(70%); }} }}
+@keyframes pipeRequestPulse {{ 0% {{ transform:translate(-50%,-50%) scale(.92); opacity:.74; }} 32% {{ transform:translate(-50%,-50%) scale(1.28); opacity:1; }} 100% {{ transform:translate(-50%,-50%) scale(1); opacity:.86; }} }}
 @keyframes nodeStatusPulse {{ 0% {{ transform:translateY(0); }} 35% {{ transform:translateY(-1px); border-color:rgba(56,189,248,.38); }} 100% {{ transform:translateY(0); }} }}
 .flow-note {{ color:var(--muted); font-size:12px; }}
 .node {{ position:relative; background:radial-gradient(circle at 50% 0%,rgba(56,189,248,.13),transparent 46%),rgba(15,23,42,.92); border:1px solid var(--border-card); border-radius:8px; padding:12px; min-width:0; min-height:118px; box-shadow:var(--shadow-neutral-soft),var(--surface-inset-highlight); transition:border-color .18s ease, transform .18s ease, background .18s ease,box-shadow .18s ease; }}
@@ -207,13 +232,13 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
 .signal-node {{ display:flex; flex-direction:column; justify-content:space-between; background:linear-gradient(180deg,rgba(30,41,59,.96),rgba(15,23,42,.92)); }}
 .signal-node.flow-node {{ display:grid; justify-content:stretch; }}
 .node-title {{ font-weight:800; font-size:14px; margin-bottom:8px; }}
-.dot {{ display:inline-block; width:12px; height:12px; border-radius:99px; background:var(--warn); margin-right:8px; box-shadow:0 0 16px currentColor; animation:statusPulse 2s ease-in-out infinite; }}
-.dot.online {{ background:var(--good); color:var(--good); }} .dot.waiting {{ background:var(--warn); color:var(--warn); }} .dot.offline {{ background:var(--bad); color:var(--bad); }}
+.dot {{ display:inline-block; width:12px; height:12px; border-radius:99px; background:var(--warn); margin-right:8px; box-shadow:0 0 16px currentColor; animation:statusPulse 2.4s ease-in-out infinite; transition:background .2s ease,color .2s ease,box-shadow .2s ease,opacity .2s ease; }}
+.dot.online {{ background:var(--good); color:var(--good); }} .dot.waiting {{ background:var(--warn); color:var(--warn); }} .dot.offline {{ background:var(--bad); color:var(--bad); animation:none; opacity:.86; }}
 @keyframes statusPulse {{ 0%,100% {{ opacity:.72; }} 50% {{ opacity:1; }} }}
 .pipe {{ position:relative; height:2px; align-self:center; background:linear-gradient(90deg,rgba(45,58,79,.35),rgba(56,189,248,.85),rgba(45,58,79,.35)); border-radius:99px; opacity:.9; }}
 .pipe::before {{ content:""; position:absolute; inset:-12px 0; border-top:1px dashed rgba(148,163,184,.22); top:50%; }}
 .pipe::after {{ content:""; position:absolute; left:50%; top:50%; width:10px; height:10px; border-radius:50%; transform:translate(-50%,-50%); background:rgba(56,189,248,.5); box-shadow:0 0 18px rgba(56,189,248,.42); }}
-@media (prefers-reduced-motion: reduce) {{ html {{ scroll-behavior:auto; }} .flow-panel.flow-active .flow-svg-packet,.flow-panel.flow-waiting .flow-svg-packet,.flow-panel.request-pulse .flow-svg-packet,.flow-node.status-pulse,.dot,.value-pop {{ animation:none; }} .flow-svg-packet {{ opacity:0; }} .nav a,.card,.node,.hero-status,.hero-status::before,.hero-status::after,.hero-stat-card,.hero-stat-icon,.hero-stat-value,.badge,.ops-health-row,.panel-item,.timeline-item,.message {{ transition:none; }} .nav a:hover,.card:hover,.node:hover,.hero-stat-card:hover,.hero-stat-card:focus-within,.hero-stat-card:focus-visible,.hero-stat-card:hover .hero-stat-icon,.hero-stat-card:focus-within .hero-stat-icon,.hero-stat-card:focus-visible .hero-stat-icon {{ transform:none; }} }}
+@media (prefers-reduced-motion: reduce) {{ html {{ scroll-behavior:auto; }} .flow-panel.flow-active .flow-svg-packet,.flow-panel.flow-waiting .flow-svg-packet,.flow-panel.request-pulse .flow-svg-packet,.flow-panel.request-pulse .flow-stage::after,.flow-panel.request-pulse .pipe::after,.flow-node.status-pulse,.dot,.value-pop,.badge-update {{ animation:none; }} .flow-svg-packet,.flow-stage::after {{ opacity:0; }} .nav a,.nav a::before,.topbar-status,.topbar-status-dot,.card,.node,.hero-status,.hero-status::before,.hero-status::after,.hero-stat-card,.hero-stat-icon,.hero-stat-value,.badge,.flow-svg-line,.gauge-progress,.fill,.ops-health-row,.panel-item,.timeline-item,.message {{ transition:none; }} .nav a:hover,.nav a:active,.card:hover,.node:hover,.hero-stat-card:hover,.hero-stat-card:focus-within,.hero-stat-card:focus-visible,.hero-stat-card:hover .hero-stat-icon,.hero-stat-card:focus-within .hero-stat-icon,.hero-stat-card:focus-visible .hero-stat-icon,a.badge:hover,a.badge:active,body.is-refreshing .topbar-status-dot {{ transform:none; }} }}
 .small {{ font-size:12px; color:var(--muted); overflow-wrap:anywhere; }}
 .traffic-panel {{ display:grid; grid-template-rows:auto auto 1fr; gap:10px; }}
 .traffic-stats {{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }}
@@ -604,7 +629,7 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
   <section id="connections" class="card flow-panel ops-panel">
     <div class="health-title">
       <h2 class="flow-heading"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"></path><path d="M18 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"></path><path d="M6 22a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"></path><path d="M8.6 6.5 15.4 10.5"></path><path d="M15.4 13.5 8.6 17.5"></path></svg>Connection Flow</h2>
-      <span class="flow-note">Static topology now; connector placeholders are reserved for animated traffic flow.</span>
+      <span class="flow-note">Request pulses appear only when traffic changes.</span>
     </div>
     <div class="flow-stage">
       <svg class="flow-svg-layer" viewBox="0 0 1000 180" preserveAspectRatio="none" aria-hidden="true">
@@ -724,10 +749,22 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
 </div>
 <script>
 const DASHBOARD_REFRESH_INTERVAL_MS = {settings.dashboard.refresh_interval_ms or 1000};
+const TOPOLOGY_PULSE_DURATION_MS = 1300;
+const REDUCED_MOTION_QUERY = window.matchMedia('(prefers-reduced-motion: reduce)');
 let lastTopologyRequestCount = null;
 let topologyPulseTimer = null;
+let refreshInFlight = false;
 function byId(id) {{
   return document.getElementById(id);
+}}
+function motionAllowed() {{
+  return !REDUCED_MOTION_QUERY.matches;
+}}
+function restartAnimation(el, className) {{
+  if (!el || !motionAllowed()) return;
+  el.classList.remove(className);
+  void el.offsetWidth;
+  el.classList.add(className);
 }}
 function escapeHtml(value) {{
   return String(value ?? '').replace(/[&<>"']/g, char => ({{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}}[char]));
@@ -735,7 +772,8 @@ function escapeHtml(value) {{
 function setDot(id, status) {{
   const el = byId(id);
   if (!el) return;
-  el.className = 'dot ' + (status === 'online' || status === 'active' ? 'online' : status === 'offline' ? 'offline' : 'waiting');
+  const nextClass = 'dot ' + (status === 'online' || status === 'active' ? 'online' : status === 'offline' ? 'offline' : 'waiting');
+  if (el.className !== nextClass) el.className = nextClass;
 }}
 function safeClass(value) {{
   return String(value || '').toLowerCase().replace(/[^a-z0-9_-]/g, '');
@@ -743,30 +781,33 @@ function safeClass(value) {{
 function titleCase(value) {{
   return String(value || '').replace(/_/g, ' ').replace(/(^|\\s)([a-z])/g, match => match.toUpperCase());
 }}
-function setText(id, value) {{
+function shouldAnimateTextUpdate(el) {{
+  if (!motionAllowed()) return false;
+  return el.matches('.value,.hero-stat-value,.speedometer-value,.ops-health-status') || el.dataset.liveValue === 'true';
+}}
+function setText(id, value, animate) {{
   const el = byId(id);
   if (!el) return;
   const next = String(value);
   if (el.textContent !== next) {{
     el.textContent = next;
-    el.classList.remove('value-pop');
-    void el.offsetWidth;
-    el.classList.add('value-pop');
+    const shouldAnimate = animate ?? shouldAnimateTextUpdate(el);
+    if (shouldAnimate) restartAnimation(el, 'value-pop');
   }}
 }}
-function setStatusBadge(id, value) {{
+function setStatusBadge(id, value, label) {{
   const el = byId(id);
   if (!el) return;
   const extraClass = el.classList.contains('flow-status') ? ' flow-status' : '';
   const nextClass = 'badge ' + safeClass(value) + extraClass;
-  const changed = el.className !== nextClass;
-  el.className = nextClass;
-  setText(id, titleCase(value || 'unknown'));
+  const currentClass = Array.from(el.classList).filter(name => name !== 'badge-update').join(' ');
+  const changed = currentClass !== nextClass;
+  if (changed) el.className = nextClass;
+  setText(id, label ?? titleCase(value || 'unknown'), false);
+  if (changed) restartAnimation(el, 'badge-update');
   const node = el.closest ? el.closest('.flow-node') : null;
   if (changed && node) {{
-    node.classList.remove('status-pulse');
-    void node.offsetWidth;
-    node.classList.add('status-pulse');
+    restartAnimation(node, 'status-pulse');
   }}
 }}
 function setHtml(id, html) {{
@@ -793,6 +834,11 @@ function heroStateForStatus(status) {{
   if (status === 'healthy') return {{ icon:'🟢', title:'All Systems Operational' }};
   if (status === 'critical' || status === 'offline') return {{ icon:'🔴', title:'System Degraded' }};
   return {{ icon:'🟡', title:'Attention Required' }};
+}}
+function heroStateForHealth(health) {{
+  const reasons = Array.isArray(health?.reasons) ? health.reasons : [];
+  if (reasons[0] === 'model_warming' || health?.label === 'Model warming') return {{ icon:'🔵', title:'Model Warming' }};
+  return heroStateForStatus(health?.status || 'unknown');
 }}
 function healthGaugeValue(status) {{
   return ({{healthy: 100, busy: 76, warning: 48, critical: 20, offline: 4}})[status] ?? 0;
@@ -831,11 +877,11 @@ function triggerTopologyPulse(totalRequests) {{
   const panel = byId('connections');
   if (!panel) return;
   if (lastTopologyRequestCount !== null && count > lastTopologyRequestCount) {{
-    panel.classList.remove('request-pulse');
-    void panel.offsetWidth;
-    panel.classList.add('request-pulse');
-    clearTimeout(topologyPulseTimer);
-    topologyPulseTimer = setTimeout(() => panel.classList.remove('request-pulse'), 950);
+    if (motionAllowed()) {{
+      restartAnimation(panel, 'request-pulse');
+      clearTimeout(topologyPulseTimer);
+      topologyPulseTimer = setTimeout(() => panel.classList.remove('request-pulse'), TOPOLOGY_PULSE_DURATION_MS);
+    }}
   }}
   lastTopologyRequestCount = count;
 }}
@@ -859,7 +905,14 @@ function renderSparkline(requests) {{
 function showPage(pageName) {{
   const target = pageName || 'operations';
   document.querySelectorAll('[data-page]').forEach(page => page.classList.toggle('active', page.dataset.page === target));
-  document.querySelectorAll('[data-page-link]').forEach(link => link.classList.toggle('active', link.dataset.pageLink === target));
+  document.querySelectorAll('[data-page-link]').forEach(link => {{
+    const active = link.dataset.pageLink === target;
+    link.classList.toggle('active', active);
+    if (link.closest('.nav')) {{
+      if (active) link.setAttribute('aria-current', 'page');
+      else link.removeAttribute('aria-current');
+    }}
+  }});
   if (location.hash !== '#' + target) history.replaceState(null, '', '#' + target);
 }}
 function initializePages() {{
@@ -898,11 +951,9 @@ async function refreshHealth() {{
   setStatusBadge('opsModelStatus', c.model.status || 'waiting');
   setText('opsModelDetail', c.model.name || 'No active model yet');
   setText('opsUptimeDetail', 'Not exposed by backend');
-  setStatusBadge('opsUptimeStatus', 'info');
-  setText('opsUptimeStatus', 'Local');
+  setStatusBadge('opsUptimeStatus', 'info', 'Local');
   setText('opsLastRefreshDetail', 'Every ' + DASHBOARD_REFRESH_INTERVAL_MS + ' ms');
-  setStatusBadge('opsLastRefreshStatus', 'running');
-  setText('opsLastRefreshStatus', new Date().toLocaleTimeString());
+  setStatusBadge('opsLastRefreshStatus', 'running', new Date().toLocaleTimeString());
   updateTopologyState(c);
 }}
 async function refreshMetrics() {{
@@ -953,14 +1004,12 @@ function refreshIntelligence(intelligence) {{
   if (healthCard) healthCard.className = 'card health-card signal-card compact-card ops-health-panel ' + safeClass(status);
   const hero = byId('opsHeroStatus');
   if (hero) hero.className = 'card hero-status ' + safeClass(status);
-  const heroState = heroStateForStatus(status);
+  const heroState = heroStateForHealth(health);
   setText('opsHeroIcon', heroState.icon);
   setText('opsHeroText', heroState.title);
   setText('opsHeroMessage', health.message || 'Dashboard health evaluated.');
-  const healthBadge = byId('systemHealthBadge');
-  if (healthBadge) healthBadge.className = 'badge ' + safeClass(status);
-  setText('systemHealthBadge', status);
-  setText('systemHealthStatus', titleCase(status));
+  setStatusBadge('systemHealthBadge', status);
+  setText('systemHealthStatus', health.label || titleCase(status));
   setText('systemHealthMessage', health.message || 'Dashboard health evaluated.');
   setGauge('healthGaugeArc', healthGaugeValue(status));
 
@@ -1021,8 +1070,23 @@ function refreshConversationRisk(risk) {{
   setHtml('conversationRiskIndicators', html);
   setHtml('opsConversationRiskIndicators', html);
 }}
+function setRefreshBusy(isBusy) {{
+  document.body.classList.toggle('is-refreshing', isBusy);
+  document.body.setAttribute('aria-busy', isBusy ? 'true' : 'false');
+}}
 async function refresh() {{
-  await Promise.all([refreshHealth(), refreshMetrics(), refreshDashboardData()]);
+  if (refreshInFlight) return;
+  refreshInFlight = true;
+  setRefreshBusy(true);
+  try {{
+    await Promise.all([refreshHealth(), refreshMetrics(), refreshDashboardData()]);
+    document.body.classList.remove('refresh-error');
+  }} catch (error) {{
+    document.body.classList.add('refresh-error');
+  }} finally {{
+    refreshInFlight = false;
+    setRefreshBusy(false);
+  }}
 }}
 initializePages();
 refresh(); setInterval(refresh, DASHBOARD_REFRESH_INTERVAL_MS);

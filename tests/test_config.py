@@ -9,6 +9,8 @@ def test_default_settings_load() -> None:
     settings = Settings()
     assert settings.app.name == "ContextKeeper"
     assert settings.server.port == 11500
+    assert settings.context.enabled is True
+    assert settings.compression.enabled is True
 
 
 def test_load_config_from_yaml(tmp_path: Path) -> None:
@@ -40,6 +42,24 @@ models:
     assert settings.logging.level == "DEBUG"
     assert settings.context.compression_threshold_percent == 80
     assert settings.models["gpt-oss:20b"]["context_window_tokens"] == 32768
+
+
+def test_context_and_compression_can_be_disabled_by_config(tmp_path: Path) -> None:
+    config_path = tmp_path / "contextkeeper.yaml"
+    config_path.write_text(
+        """
+context:
+  enabled: false
+compression:
+  enabled: false
+""",
+        encoding="utf-8",
+    )
+
+    settings = load_config(config_path)
+
+    assert settings.context.enabled is False
+    assert settings.compression.enabled is False
 
 
 def test_environment_overrides_yaml(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

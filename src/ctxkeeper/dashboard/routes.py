@@ -522,14 +522,14 @@ def _context_usage_instrument(
             **base,
             "state": "disabled",
             "status": "disabled",
-            "status_label": "Disabled",
+            "status_label": "Off",
             "conversation_id": active_conversation.get("conversation_id"),
             "usage_percent": None,
             "estimated_tokens": None,
             "context_window_tokens": context_window_tokens,
-            "message": "Context tracking is disabled in configuration.",
+            "message": "Context Tracking OFF",
             "detail_lines": _instrument_detail_lines(
-                _instrument_detail_line("Context tracking disabled", fallback="Context tracking disabled"),
+                _instrument_detail_line("Context Tracking OFF", fallback="Context Tracking OFF"),
                 _instrument_detail_line(
                     _format_context_window(context_window_tokens),
                     fallback="Context window unavailable",
@@ -546,13 +546,13 @@ def _context_usage_instrument(
         return {
             **base,
             "state": "no_active_conversation",
-            "status": "unavailable",
-            "status_label": "No Active Conversation",
+            "status": "waiting",
+            "status_label": "Waiting",
             "conversation_id": None,
-            "usage_percent": None,
+            "usage_percent": 0.0,
             "estimated_tokens": None,
             "context_window_tokens": context_window_tokens,
-            "message": "No active conversation is currently being tracked.",
+            "message": "No active conversation",
             "detail_lines": _instrument_detail_lines(
                 _instrument_detail_line("No active conversation", fallback="No active conversation"),
                 _instrument_detail_line(
@@ -658,9 +658,11 @@ def _context_trend_instrument(*, settings: Settings, context_usage: dict[str, An
         return {
             **thresholds,
             "state": "empty",
+            "status": "waiting",
+            "status_label": "Waiting",
             "current_usage_percent": usage_percent,
             "samples": [],
-            "message": "Collecting context history.",
+            "message": "Awaiting context history.",
             "estimate_label": "Estimate unavailable",
         }
 
@@ -674,9 +676,11 @@ def _context_trend_instrument(*, settings: Settings, context_usage: dict[str, An
     return {
         **thresholds,
         "state": state,
+        "status": state,
+        "status_label": "Ready" if state == "ready" else "Collecting",
         "current_usage_percent": usage_percent,
         "samples": samples,
-        "message": "Context trend ready." if state == "ready" else "Collecting context history.",
+        "message": "Context trend ready." if state == "ready" else "Awaiting context history.",
         "estimate_label": "Estimate unavailable",
     }
 
@@ -702,16 +706,16 @@ def _compression_status_instrument(
 
     if not settings.compression.enabled:
         state = "disabled"
-        label = "Disabled"
-        message = "Compression is disabled in configuration."
+        label = "Off"
+        message = "Compression OFF"
     elif not settings.context.enabled:
         state = "unavailable"
         label = "Unavailable"
         message = "Compression requires context tracking to be enabled."
     elif context_usage.get("state") in {"no_active_conversation", "empty"}:
-        state = "monitoring"
-        label = "Monitoring"
-        message = "Waiting for active conversation context."
+        state = "ready"
+        label = "Ready"
+        message = "Waiting for context threshold"
     elif context_usage.get("status") == "critical":
         state = "approaching"
         label = "Approaching"
@@ -738,13 +742,11 @@ def _compression_status_instrument(
         "active_conversation_event_count": _int_or_none(active_history.get("compression_count")) if active_history else 0,
         "proximity_percent": proximity_percent,
         "message": message,
-        "detail_lines": _instrument_detail_lines(
-            _instrument_detail_line(f"Threshold {threshold}%", fallback="Threshold unavailable"),
-            _instrument_detail_line(
-                f"{event_count} compression event{'s' if event_count != 1 else ''}",
-                fallback="Compression events unavailable",
-            ),
-            _instrument_detail_line(message, fallback="Compression status unavailable", title=message),
+        "detail_lines": _compression_detail_lines(
+            state=state,
+            message=message,
+            threshold=threshold,
+            event_count=event_count,
         ),
     }
 
@@ -849,7 +851,22 @@ def _format_context_tokens(estimated_tokens: int | None, context_window_tokens: 
 
 
 def _format_thresholds(warning_threshold: int, compression_threshold: int) -> str:
-    return f"Warn {warning_threshold}% · Compress {compression_threshold}%"
+    return f"Warn {warning_threshold}% • Compress {compression_threshold}%"
+
+
+def _compression_detail_lines(*, state: str, message: str, threshold: int, event_count: int) -> list[dict[str, str]]:
+    event_line = f"{event_count} compression event{'s' if event_count != 1 else ''}"
+    if state == "disabled":
+        return _instrument_detail_lines(
+            _instrument_detail_line("Compression OFF", fallback="Compression OFF"),
+            _instrument_detail_line(f"Threshold {threshold}%", fallback="Threshold unavailable"),
+            _instrument_detail_line(event_line, fallback="Compression events unavailable"),
+        )
+    return _instrument_detail_lines(
+        _instrument_detail_line(f"Threshold {threshold}%", fallback="Threshold unavailable"),
+        _instrument_detail_line(event_line, fallback="Compression events unavailable"),
+        _instrument_detail_line(message, fallback="Compression status unavailable", title=message),
+    )
 
 
 def _health_message(assessment: HealthAssessment, warmup_state: ModelWarmupState | None = None) -> str:

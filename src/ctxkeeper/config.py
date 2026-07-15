@@ -92,7 +92,7 @@ class DashboardConfig(BaseModel):
 
 
 class ContextConfig(BaseModel):
-    enabled: bool = False
+    enabled: bool = True
     default_context_window_tokens: int = 16384
     warning_threshold_percent: int = 75
     compression_threshold_percent: int = 85
@@ -127,7 +127,7 @@ class ContextConfig(BaseModel):
 
 
 class CompressionConfig(BaseModel):
-    enabled: bool = False
+    enabled: bool = True
     summarizer_model: str = "gpt-oss:20b"
     max_summary_tokens: int = 1200
 

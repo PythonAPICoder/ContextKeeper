@@ -27,7 +27,7 @@ logging:
   request_log_enabled: true
 
 context:
-  enabled: false
+  enabled: true
   default_context_window_tokens: 16384
   warning_threshold_percent: 75
   compression_threshold_percent: 85
@@ -35,7 +35,7 @@ context:
   keep_recent_messages: 8
 
 compression:
-  enabled: false
+  enabled: true
   summarizer_model: "gpt-oss:20b"
   max_summary_tokens: 1200
 

@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from collections import Counter
+from html.parser import HTMLParser
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -9,6 +12,26 @@ from ctxkeeper.context.compression_manager import ROLLING_SUMMARY_PREFIX
 from ctxkeeper.context.conversation_store import conversation_store
 from ctxkeeper.dashboard.routes import build_dashboard_status, context_history_store
 from ctxkeeper.diagnostics.activity import activity_manager
+
+
+class DashboardHtmlParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self.ids: list[str] = []
+        self.pages: list[str] = []
+        self.page_links: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        attributes = dict(attrs)
+        element_id = attributes.get("id")
+        if element_id:
+            self.ids.append(element_id)
+        page = attributes.get("data-page")
+        if page:
+            self.pages.append(page)
+        page_link = attributes.get("data-page-link")
+        if page_link:
+            self.page_links.append(page_link)
 
 
 @pytest.fixture(autouse=True)
@@ -22,7 +45,7 @@ def clear_dashboard_state() -> None:
     activity_manager.reset()
 
 
-def _settings(*, context_enabled: bool = True, compression_enabled: bool = False) -> Settings:
+def _settings(*, context_enabled: bool = True, compression_enabled: bool = True) -> Settings:
     return Settings.model_validate(
         {
             "context": {
@@ -101,6 +124,12 @@ def test_dashboard_template_contains_six_instrument_cards() -> None:
     assert "updateInstrumentGauge" in response.text
     assert "renderContextTrend" in response.text
     assert "renderInstrumentSupport" in response.text
+    assert "setInstrumentReadingNeutral" in response.text
+    assert ".instrument-reading.is-neutral" in response.text
+    assert ".instrument-reading .badge" in response.text
+    assert "Awaiting context history." in response.text
+    assert "displayState = state === 'empty' ? 'waiting'" in response.text
+    assert "Collecting context history." not in response.text
     assert response.text.count('class="instrument-support"') == 5
     assert response.text.count('data-support-slot="1"') == 5
     assert response.text.count('data-support-slot="2"') == 5
@@ -108,6 +137,33 @@ def test_dashboard_template_contains_six_instrument_cards() -> None:
     assert ".instrument-support-row" in response.text
     assert "Intel Core i9-14900K" not in response.text
     assert "NVIDIA GeForce RTX 4090" not in response.text
+
+
+def test_dashboard_template_has_consistent_page_targets_and_unique_ids() -> None:
+    app = create_app(Settings())
+    client = TestClient(app)
+
+    response = client.get("/dashboard")
+    parser = DashboardHtmlParser()
+    parser.feed(response.text)
+
+    assert response.status_code == 200
+    assert parser.pages == ["operations", "conversations", "context", "analytics", "logs", "settings"]
+    assert set(parser.pages).issubset(set(parser.page_links))
+    assert [element_id for element_id, count in Counter(parser.ids).items() if count > 1] == []
+
+
+def test_dashboard_template_contains_visual_qa_overflow_guards() -> None:
+    app = create_app(Settings())
+    client = TestClient(app)
+
+    response = client.get("/dashboard")
+
+    assert response.status_code == 200
+    assert ".page-header > * { min-width:0; }" in response.text
+    assert ".panel-item > * { min-width:0; }" in response.text
+    assert "table-layout:fixed" in response.text
+    assert "word-break:break-word" in response.text
 
 
 def test_dashboard_overview_removes_duplicate_resources_card_and_rebalances_lower_layout() -> None:
@@ -359,13 +415,29 @@ def test_instrument_panel_reports_no_active_conversation_state() -> None:
     panel = _status(_settings(context_enabled=True, compression_enabled=True))["instrument_panel"]
 
     assert panel["context_usage"]["state"] == "no_active_conversation"
-    assert panel["context_usage"]["usage_percent"] is None
+    assert panel["context_usage"]["status"] == "waiting"
+    assert panel["context_usage"]["status_label"] == "Waiting"
+    assert panel["context_usage"]["status_label"] != "No Active Conversation"
+    assert panel["context_usage"]["usage_percent"] == 0.0
     assert panel["context_trend"]["state"] == "empty"
-    assert panel["compression_status"]["state"] == "monitoring"
+    assert panel["context_trend"]["status"] == "waiting"
+    assert panel["context_trend"]["status_label"] == "Waiting"
+    assert panel["context_trend"]["status_label"] != "Empty"
+    assert panel["context_trend"]["current_usage_percent"] == 0.0
+    assert panel["context_trend"]["message"] == "Awaiting context history."
+    assert panel["compression_status"]["state"] == "ready"
+    assert panel["compression_status"]["status_label"] == "Ready"
+    assert panel["compression_status"]["status_label"] != "Monitoring"
+    assert panel["compression_status"]["message"] == "Waiting for context threshold"
     assert _detail_texts(panel["context_usage"]) == [
         "No active conversation",
         "100 token window",
-        "Warn 70% · Compress 90%",
+        "Warn 70% • Compress 90%",
+    ]
+    assert _detail_texts(panel["compression_status"]) == [
+        "Threshold 90%",
+        "0 compression events",
+        "Waiting for context threshold",
     ]
 
 
@@ -375,10 +447,15 @@ def test_instrument_panel_reports_context_tracking_disabled_state() -> None:
     panel = _status(_settings(context_enabled=False, compression_enabled=True))["instrument_panel"]
 
     assert panel["context_usage"]["state"] == "disabled"
+    assert panel["context_usage"]["status_label"] == "Off"
     assert panel["context_usage"]["usage_percent"] is None
     assert panel["context_trend"]["state"] == "disabled"
     assert panel["compression_status"]["state"] == "unavailable"
-    assert _detail_texts(panel["context_usage"])[0] == "Context tracking disabled"
+    assert _detail_texts(panel["context_usage"]) == [
+        "Context Tracking OFF",
+        "100 token window",
+        "Warn 70% • Compress 90%",
+    ]
 
 
 def test_instrument_panel_reports_active_context_data_with_model_window() -> None:
@@ -418,7 +495,7 @@ def test_instrument_panel_reports_active_context_data_with_model_window() -> Non
     detail_texts = _detail_texts(context_usage)
     assert detail_texts[0].endswith(" / 200 tokens")
     assert detail_texts[1] == "test-model"
-    assert detail_texts[2] == "Warn 75% · Compress 90%"
+    assert detail_texts[2] == "Warn 75% • Compress 90%"
 
 
 def test_instrument_panel_reports_compression_disabled_and_enabled_states() -> None:
@@ -442,11 +519,13 @@ def test_instrument_panel_reports_compression_disabled_and_enabled_states() -> N
     )["instrument_panel"]["compression_status"]
 
     assert disabled["state"] == "disabled"
+    assert disabled["status_label"] == "Off"
     assert disabled["threshold_percent"] == 90
+    assert disabled["message"] == "Compression OFF"
     assert _detail_texts(disabled) == [
+        "Compression OFF",
         "Threshold 90%",
         "0 compression events",
-        "Compression is disabled in configuration.",
     ]
     assert enabled["state"] == "approaching"
     assert enabled["threshold_percent"] == 60
@@ -476,6 +555,10 @@ def test_instrument_panel_reports_completed_compression_history() -> None:
 def test_instrument_panel_context_trend_empty_and_populated_states() -> None:
     empty = _status(_settings(context_enabled=True))["instrument_panel"]["context_trend"]
     assert empty["state"] == "empty"
+    assert empty["status"] == "waiting"
+    assert empty["status_label"] == "Waiting"
+    assert empty["current_usage_percent"] == 0.0
+    assert empty["message"] == "Awaiting context history."
     assert empty["samples"] == []
 
     conversation_store.append_message("trend-context", "user", "first message")
@@ -483,6 +566,7 @@ def test_instrument_panel_context_trend_empty_and_populated_states() -> None:
     second = _status(_settings(context_enabled=True))["instrument_panel"]["context_trend"]
 
     assert first["state"] == "collecting"
+    assert first["message"] == "Awaiting context history."
     assert len(first["samples"]) == 1
     assert second["state"] == "ready"
     assert len(second["samples"]) == 2

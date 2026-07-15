@@ -55,6 +55,7 @@ h1 {{ margin:0; font-size:25px; }}
 .page {{ display:none; }}
 .page.active {{ height:100%; min-height:0; min-width:0; overflow:auto; display:grid; align-content:start; gap:8px; }}
 .page-header {{ display:flex; justify-content:space-between; align-items:end; gap:18px; }}
+.page-header > * {{ min-width:0; }}
 .page-title {{ margin:0; font-size:22px; }}
 .page-sub {{ color:var(--muted); margin-top:4px; }}
 .command-meta {{ display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }}
@@ -164,9 +165,9 @@ h1 {{ margin:0; font-size:25px; }}
 .instrument-card {{ --instrument-accent:var(--accent); --instrument-gauge-w:128px; --instrument-gauge-h:74px; --instrument-support-line-h:14px; --instrument-reading-h:23px; position:relative; overflow:hidden; min-width:0; min-height:148px; display:grid; grid-template-rows:18px var(--instrument-gauge-h) var(--instrument-reading-h) calc((var(--instrument-support-line-h) * 3) + 4px); gap:5px; align-content:start; padding:10px; background:radial-gradient(circle at 50% -18%,rgba(56,189,248,.12),transparent 42%),linear-gradient(180deg,rgba(18,27,43,.96),rgba(12,18,31,.94)); border-color:rgba(148,163,184,.14); box-shadow:var(--shadow-neutral-soft),var(--surface-inset-highlight); }}
 .instrument-card::before {{ content:""; position:absolute; inset:0 0 auto; height:1px; background:linear-gradient(90deg,transparent,rgba(203,213,225,.16),transparent); pointer-events:none; }}
 .instrument-card > * {{ position:relative; z-index:1; }}
-.instrument-card.healthy,.instrument-card.available,.instrument-card.completed {{ --instrument-accent:var(--good); }}
+.instrument-card.healthy,.instrument-card.available,.instrument-card.completed,.instrument-card.ready {{ --instrument-accent:var(--good); }}
 .instrument-card.moderate,.instrument-card.partial,.instrument-card.monitoring,.instrument-card.collecting {{ --instrument-accent:var(--accent); }}
-.instrument-card.warning,.instrument-card.approaching {{ --instrument-accent:var(--warn); }}
+.instrument-card.warning,.instrument-card.approaching,.instrument-card.waiting {{ --instrument-accent:var(--warn); }}
 .instrument-card.critical,.instrument-card.error {{ --instrument-accent:var(--bad); }}
 .instrument-card.disabled,.instrument-card.unavailable,.instrument-card.empty {{ --instrument-accent:var(--muted); }}
 .instrument-head {{ display:flex; align-items:center; justify-content:space-between; gap:8px; min-width:0; min-height:18px; }}
@@ -174,7 +175,9 @@ h1 {{ margin:0; font-size:25px; }}
 .instrument-info {{ flex:0 0 auto; display:grid; place-items:center; width:18px; height:18px; border-radius:50%; border:1px solid rgba(148,163,184,.18); color:var(--muted); font-size:11px; font-weight:850; background:rgba(15,23,42,.58); }}
 .instrument-body {{ display:grid; justify-items:center; align-content:center; min-width:0; min-height:var(--instrument-gauge-h); }}
 .instrument-reading {{ display:flex; align-items:center; justify-content:center; flex-wrap:nowrap; gap:5px 7px; min-width:0; min-height:var(--instrument-reading-h); text-align:center; }}
-.instrument-card-value {{ color:#f8fafc; font-size:22px; line-height:1; font-weight:850; letter-spacing:-.02em; overflow-wrap:anywhere; transition:color .18s ease; }}
+.instrument-reading.is-neutral {{ visibility:hidden; }}
+.instrument-reading .badge {{ flex:0 0 auto; white-space:nowrap; }}
+.instrument-card-value {{ color:#f8fafc; font-size:22px; line-height:1; font-weight:850; letter-spacing:-.02em; overflow-wrap:anywhere; white-space:nowrap; transition:color .18s ease; }}
 .instrument-support {{ display:grid; grid-template-rows:repeat(3,var(--instrument-support-line-h)); gap:2px; min-width:0; min-height:calc((var(--instrument-support-line-h) * 3) + 4px); align-content:start; }}
 .instrument-support-row {{ min-width:0; color:var(--muted); font-size:10px; line-height:var(--instrument-support-line-h); text-align:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }}
 .instrument-support-row.primary {{ color:#dbeafe; font-weight:750; }}
@@ -223,6 +226,8 @@ a.badge:focus-visible {{ outline:2px solid rgba(56,189,248,.72); outline-offset:
 @keyframes badgeSettle {{ 0% {{ transform:scale(.985); }} 45% {{ transform:scale(1.015); }} 100% {{ transform:scale(1); }} }}
 .panel-list {{ display:grid; gap:8px; }}
 .panel-item {{ display:flex; justify-content:space-between; gap:10px; align-items:flex-start; background:rgba(15,23,42,.46); border:1px solid var(--border-card); border-radius:8px; padding:7px 9px; box-shadow:var(--surface-inset-highlight); transition:border-color .18s ease, background .18s ease,box-shadow .18s ease; }}
+.panel-item > * {{ min-width:0; }}
+.panel-item span:first-child {{ overflow-wrap:anywhere; }}
 .panel-item:hover,.timeline-item:hover,.message:hover {{ border-color:rgba(129,140,248,.24); background:rgba(15,23,42,.68); box-shadow:var(--surface-inset-highlight),0 0 16px rgba(129,140,248,.09); }}
 .timeline-list {{ display:grid; gap:8px; }}
 .timeline-item {{ display:grid; grid-template-columns:86px 1fr; gap:10px; align-items:start; background:rgba(15,23,42,.46); border:1px solid var(--border-card); border-radius:8px; padding:9px 10px; box-shadow:var(--surface-inset-highlight); transition:border-color .18s ease, background .18s ease,box-shadow .18s ease; }}
@@ -238,8 +243,8 @@ a.badge:focus-visible {{ outline:2px solid rgba(56,189,248,.72); outline-offset:
 .ok {{ color:var(--good); }} .warn {{ color:var(--warn); }} .bad {{ color:var(--bad); }}
 .bar {{ height:12px; border-radius:999px; background:#334155; overflow:hidden; margin:10px 0; }}
 .fill {{ height:100%; background:var(--accent); width:0%; transition:width .25s ease; }}
-table {{ width:100%; border-collapse:collapse; font-size:13px; }}
-th,td {{ text-align:left; padding:7px 8px; border-bottom:1px solid rgba(255,255,255,.08); }}
+table {{ width:100%; border-collapse:collapse; font-size:13px; table-layout:fixed; }}
+th,td {{ text-align:left; vertical-align:top; padding:7px 8px; border-bottom:1px solid rgba(255,255,255,.08); overflow-wrap:anywhere; word-break:break-word; }}
 th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.06em; }}
 .flow-panel {{ position:relative; display:grid; grid-template-rows:auto auto; gap:10px; min-height:0; overflow:hidden; padding:13px 14px; background:linear-gradient(145deg,rgba(15,23,42,.96),rgba(24,33,50,.86)); }}
 .flow-panel::before {{ content:""; position:absolute; inset:46px 14px 14px; border:1px solid rgba(56,189,248,.08); border-radius:10px; pointer-events:none; }}
@@ -754,19 +759,19 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
     <div id="contextTrendCard" class="card instrument-card instrument-trend-card">
       <div class="instrument-head"><div class="instrument-title">Context Trend</div><div class="instrument-info" title="Rolling active-context history">i</div></div>
       <div class="trend-body">
-        <div class="trend-summary"><div id="contextTrendValue" class="trend-current" data-live-value="true">--</div><span id="contextTrendStatus" class="badge">Collecting</span></div>
+        <div class="trend-summary"><div id="contextTrendValue" class="trend-current" data-live-value="true">0%</div><span id="contextTrendStatus" class="badge waiting">Waiting</span></div>
         <div class="trend-chart-wrap">
           <svg id="contextTrendChart" class="trend-chart" viewBox="0 0 260 72" preserveAspectRatio="none" role="img" aria-labelledby="contextTrendA11y">
-            <title id="contextTrendA11y">Context trend data is loading.</title>
+            <title id="contextTrendA11y">Awaiting context history.</title>
             <line class="trend-grid" x1="0" y1="36" x2="260" y2="36"></line>
             <line id="contextTrendWarning" class="trend-threshold warn" x1="0" y1="72" x2="260" y2="72"></line>
             <line id="contextTrendCompression" class="trend-threshold critical" x1="0" y1="72" x2="260" y2="72"></line>
             <polygon id="contextTrendArea" class="trend-area" points=""></polygon>
             <polyline id="contextTrendLine" class="trend-line" points=""></polyline>
           </svg>
-          <div id="contextTrendEmpty" class="trend-empty">Collecting context history.</div>
+          <div id="contextTrendEmpty" class="trend-empty">Awaiting context history.</div>
         </div>
-        <div class="trend-footer"><span id="contextTrendDetail">Estimate unavailable</span><span id="contextTrendThresholds">Warn -- · Compress --</span></div>
+        <div class="trend-footer"><span id="contextTrendDetail">Estimate unavailable</span><span id="contextTrendThresholds">Warn -- • Compress --</span></div>
       </div>
     </div>
     <div id="compressionInstrumentCard" class="card instrument-card">
@@ -965,6 +970,11 @@ function setStatusBadge(id, value, label) {{
   if (changed && node) {{
     restartAnimation(node, 'status-pulse');
   }}
+}}
+function setInstrumentReadingNeutral(valueId, neutral) {{
+  const valueEl = byId(valueId);
+  const reading = valueEl ? valueEl.closest('.instrument-reading') : null;
+  if (reading) reading.classList.toggle('is-neutral', Boolean(neutral));
 }}
 function setHtml(id, html) {{
   const el = byId(id);
@@ -1212,42 +1222,52 @@ function updateContextUsageInstrument(context) {{
   const status = current.status || current.state || 'unavailable';
   const label = current.status_label || titleCase(status);
   const usage = numberOrNull(current.usage_percent);
-  const valueText = usage === null ? (current.state === 'disabled' ? 'Disabled' : 'N/A') : formatPercentValue(usage);
+  const disabled = current.state === 'disabled';
+  const gaugeValue = disabled ? 0 : usage;
+  const valueText = disabled ? '' : (usage === null ? 'N/A' : formatPercentValue(usage));
+  const centerText = disabled ? '0%' : valueText;
   setInstrumentCardState('contextInstrumentCard', status);
+  setInstrumentReadingNeutral('contextInstrumentValue', disabled);
   setText('contextInstrumentValue', valueText);
   setStatusBadge('contextInstrumentStatus', status, label);
   renderInstrumentSupport('contextInstrumentSupport', current.detail_lines, [
     current.message || 'Active context telemetry unavailable.',
     current.active_model || 'Active model unknown',
-    'Warn ' + (current.warning_threshold_percent ?? '--') + '% · Compress ' + (current.compression_threshold_percent ?? '--') + '%'
+    'Warn ' + (current.warning_threshold_percent ?? '--') + '% • Compress ' + (current.compression_threshold_percent ?? '--') + '%'
   ]);
-  updateInstrumentGauge('contextInstrumentGauge', usage, valueText, label);
+  updateInstrumentGauge('contextInstrumentGauge', gaugeValue, centerText, label);
 }}
 function updateCompressionInstrument(compression) {{
   const current = compression || {{}};
   const state = current.state || current.status || 'unavailable';
   const label = current.status_label || titleCase(state);
   const proximity = numberOrNull(current.proximity_percent);
+  const disabled = state === 'disabled';
+  const valueText = disabled ? '' : label;
+  const centerText = disabled ? '—' : label;
   setInstrumentCardState('compressionInstrumentCard', state);
-  setText('compressionInstrumentValue', label);
+  setInstrumentReadingNeutral('compressionInstrumentValue', disabled);
+  setText('compressionInstrumentValue', valueText);
   setStatusBadge('compressionInstrumentStatus', state, label);
   renderInstrumentSupport('compressionInstrumentSupport', current.detail_lines, [
     'Threshold ' + (current.threshold_percent ?? '--') + '%',
     'Events ' + (current.event_count ?? 0),
     current.message || 'Compression status unavailable.'
   ]);
-  updateInstrumentGauge('compressionInstrumentGauge', proximity, label, 'Threshold proximity ' + (proximity === null ? 'unavailable' : formatPercentValue(proximity)));
+  updateInstrumentGauge('compressionInstrumentGauge', disabled ? null : proximity, centerText, 'Threshold proximity ' + (disabled || proximity === null ? 'unavailable' : formatPercentValue(proximity)));
 }}
 function renderContextTrend(trend) {{
   const current = trend || {{}};
   const state = current.state || 'empty';
+  const displayState = state === 'empty' ? 'waiting' : (current.status || state);
+  const displayLabel = state === 'empty' ? 'Waiting' : (current.status_label || (state === 'ready' ? 'Ready' : titleCase(displayState)));
   const samples = Array.isArray(current.samples) ? current.samples : [];
   const currentUsage = numberOrNull(current.current_usage_percent);
-  setInstrumentCardState('contextTrendCard', state);
-  setText('contextTrendValue', currentUsage === null ? '--' : formatPercentValue(currentUsage));
-  setStatusBadge('contextTrendStatus', state, state === 'ready' ? 'Ready' : titleCase(state));
+  setInstrumentCardState('contextTrendCard', displayState);
+  setText('contextTrendValue', currentUsage === null && state === 'empty' ? '0%' : (currentUsage === null ? '--' : formatPercentValue(currentUsage)));
+  setStatusBadge('contextTrendStatus', displayState, displayLabel);
   setText('contextTrendDetail', current.estimate_label || current.message || 'Estimate unavailable');
-  setText('contextTrendThresholds', 'Warn ' + (current.warning_threshold_percent ?? '--') + '% · Compress ' + (current.compression_threshold_percent ?? '--') + '%');
+  setText('contextTrendThresholds', 'Warn ' + (current.warning_threshold_percent ?? '--') + '% • Compress ' + (current.compression_threshold_percent ?? '--') + '%');
 
   const line = byId('contextTrendLine');
   const area = byId('contextTrendArea');
@@ -1276,8 +1296,8 @@ function renderContextTrend(trend) {{
     line.setAttribute('points', '');
     area.setAttribute('points', '');
     empty.style.display = 'grid';
-    empty.textContent = current.message || 'Collecting context history.';
-    if (title) title.textContent = current.message || 'Collecting context history.';
+    empty.textContent = current.message || 'Awaiting context history.';
+    if (title) title.textContent = current.message || 'Awaiting context history.';
     return;
   }}
 

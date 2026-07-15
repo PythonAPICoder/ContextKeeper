@@ -18,8 +18,8 @@ class WizardConfig:
     proxy_host: str = "0.0.0.0"
     proxy_port: int = 11500
     dashboard_enabled: bool = True
-    context_enabled: bool = False
-    compression_enabled: bool = False
+    context_enabled: bool = True
+    compression_enabled: bool = True
     logging_level: str = "INFO"
 
 

@@ -795,12 +795,56 @@ Follow-up:
 - Recommended next review step: Phase 6.5F-B4.7 — Manual Visual QA & Acceptance Review.
 - Steve should launch the dashboard locally and manually verify gauge alignment, long hardware names, unavailable CPU/GPU temperature states, 100%, 75%, and 50% zoom, browser resize, reduced motion, and absence of unexpected page or nested horizontal scrollbars.
 
+#### Phase 6.5F-B4.7 — Visual QA & Acceptance Review
+
+Status: Implemented on the active feature branch; not yet merged
+
+Scope reviewed:
+
+- Reviewed the current dashboard page set: Operations, the Overview section within Operations, Conversations, Context, Analytics, Logs, and Settings.
+- Treated Context, Analytics, and Logs as the current diagnostics/history equivalents because the dashboard does not currently expose separate pages named Diagnostics or History.
+- Verified rendered HTML page targets, sidebar page links, and duplicate-id behavior through static parsing.
+- Reviewed dashboard layout, typography, card consistency, gauge consistency, status indicator classes, animation/reduced-motion CSS, overflow behavior, and accessibility affordances available in the template.
+
+Accepted UI refinements:
+
+- Added CSS wrapping guards for dashboard page headers so long titles or subtitles do not distort page layout.
+- Added flex-child min-width guards for dashboard panel items so long insight and recommendation text wraps instead of crowding badges.
+- Added fixed table layout and cell wrapping for the Logs / Live Activity table so long client, endpoint, model, or status values wrap instead of clipping or causing hidden horizontal overflow.
+- Standardized disabled-state presentation for Context Usage and Compression Status so inactive states use a single neutral gauge reading and three concise support lines instead of repeated disabled labels or duplicate badges.
+- Standardized enabled no-active/no-history context and compression instrument labels to short operational words: Context Usage and Context Trend now present `WAITING`, and Compression Status presents `READY` instead of long phrases or wrapping labels.
+- Kept the visual changes focused and did not alter dashboard APIs, proxy behavior, feature scope, page structure, or the established visual design.
+
+Configuration refinements:
+
+- Changed the default `context.enabled` value to `true` so fresh installations enable completed context tracking by default.
+- Changed the default `compression.enabled` value to `true` so fresh installations enable completed compression behavior by default.
+- Updated first-run wizard defaults and configuration documentation to match the new core-feature defaults.
+- Preserved the existing configuration options so users can explicitly disable context tracking or compression in `contextkeeper.yaml`.
+
+Validation:
+
+- Static rendered HTML QA: confirmed page targets for `operations`, `conversations`, `context`, `analytics`, `logs`, and `settings`; confirmed no duplicate ids in the rendered dashboard.
+- Python syntax validation: `.\.venv\Scripts\python.exe -m py_compile src\ctxkeeper\dashboard\template.py tests\test_dashboard_instrument_panel.py`.
+- Focused dashboard panel validation: `.\.venv\Scripts\python.exe -m pytest tests\test_dashboard_instrument_panel.py -q`, 17 tests passing, with one existing third-party `StarletteDeprecationWarning` from FastAPI/Starlette TestClient.
+- Broader dashboard-focused validation: `.\.venv\Scripts\python.exe -m pytest tests\test_dashboard_instrument_panel.py tests\test_app.py tests\test_dashboard_snapshots.py tests\test_dashboard_intelligence.py tests\test_diagnostics_metrics.py -q`, 73 tests passing, with the same existing warning.
+- Rendered dashboard JavaScript syntax validation: extracted `<script>` from `render_dashboard_html(Settings())` with UTF-8 output and ran `node --check -`, passing.
+- Focused dashboard/config/wizard validation for the final B4.7 refinement: `.\.venv\Scripts\python.exe -m pytest tests\test_dashboard_instrument_panel.py tests\test_config.py tests\test_wizard.py -q`, 35 tests passing, with the same existing warning.
+- Broader dashboard/config validation for the final B4.7 refinement: `.\.venv\Scripts\python.exe -m pytest tests\test_dashboard_instrument_panel.py tests\test_app.py tests\test_dashboard_snapshots.py tests\test_dashboard_intelligence.py tests\test_diagnostics_metrics.py tests\test_config.py tests\test_wizard.py -q`, 91 tests passing, with the same existing warning.
+- Full automated suite after the final B4.7 refinement: `.\.venv\Scripts\python.exe -m pytest`, 183 tests passing, with the same existing warning.
+- Browser zoom validation at 50%, 75%, and 100% could not be executed in this environment because no Edge, Chrome, Chromium, or Firefox binary was available on PATH or standard Windows install paths.
+
+Remaining deferred items:
+
+- Manual browser acceptance remains required for 50%, 75%, and 100% zoom, common desktop resolutions, Chromium-family rendering, reduced-motion mode, and visual confirmation of subtle animation timing.
+- No additional dashboard redesign, feature expansion, or proxy behavior changes were accepted during this QA pass.
+
 ## Current Project State
 
-- Current active branch: `phase-6-5f-b4-6-instrument-panel-standardization`.
-- Current active phase: Phase 6.5F-B4 — Dashboard Visual Polish & Micro-Interactions, currently in the B4.6 instrument-panel standardization pass.
-- Latest verified automated test count: 180 tests passing during the B4.6 instrument-panel standardization pass.
-- Dashboard status: modern operations-console dashboard with live proxy, Ollama, request, context, compression, conversation, intelligence, health, independent operational activity, trend, recommendation, timeline, six-card instrument panel, standardized three-line gauge support rows, converged lower Overview layout, reusable gauges, and restrained micro-interaction polish.
+- Current active branch: `phase-6-5f-b4-7-visual-qa-acceptance-review`.
+- Current active phase: Phase 6.5F-B4 — Dashboard Visual Polish & Micro-Interactions, currently through the B4.7 visual QA and acceptance review pass.
+- Latest verified automated test count: 183 tests passing during the B4.7 visual QA and acceptance review pass.
+- Dashboard status: modern operations-console dashboard with live proxy, Ollama, request, context, compression, conversation, intelligence, health, independent operational activity, trend, recommendation, timeline, six-card instrument panel, standardized three-line gauge support rows, refined inactive and no-active Context/Compression instruments, converged lower Overview layout, reusable gauges, visual QA overflow guards, and restrained micro-interaction polish.
 - Major capabilities currently present:
   - FastAPI-based transparent Ollama proxy.
   - `/api/*` and `/v1/*` passthrough with streaming preservation for supported endpoints.
@@ -819,7 +863,6 @@ Do not treat uncommitted active-branch work as merged, released, or available on
 
 This section is tentative and subject to refinement. These names and boundaries are planning labels, not completed commitments.
 
-- Phase 6.5F-B4.7 — Manual Visual QA & Acceptance Review.
 - Phase 6.5F-B5 — Live Data Visualization & Rich Widgets.
 - Phase 6.5F-B6 — Dashboard Customization & User Preferences.
 - Phase 6.5F-B7 — Release Polish & Final UX Review.

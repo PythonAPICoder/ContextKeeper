@@ -58,7 +58,7 @@ h1 {{ margin:0; font-size:25px; }}
 .page-title {{ margin:0; font-size:22px; }}
 .page-sub {{ color:var(--muted); margin-top:4px; }}
 .command-meta {{ display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }}
-.page.active.operations-page {{ height:100%; min-height:0; overflow:hidden; grid-template-rows:auto auto minmax(0,1fr); align-content:stretch; }}
+.page.active.operations-page {{ height:100%; min-height:0; overflow:hidden; grid-template-rows:auto auto auto minmax(0,1fr); align-content:stretch; }}
 .ops-hero {{ min-height:0; overflow:visible; display:grid; grid-template-columns:minmax(360px,1.35fr) minmax(280px,.65fr); grid-template-areas:"hero actions" "stats stats"; gap:8px; align-items:stretch; min-width:0; }}
 .hero-status {{ --hero-state-color:var(--accent); --hero-state-border:rgba(56,189,248,.2); --hero-state-wash:rgba(56,189,248,.14); --hero-state-glow:var(--glow-info); position:relative; overflow:hidden; min-height:68px; min-width:0; display:grid; align-content:start; padding:8px 12px; background:linear-gradient(135deg,rgba(15,23,42,.96),rgba(17,24,39,.92)); border-left:5px solid var(--hero-state-color); }}
 .ops-hero > .hero-status {{ grid-area:hero; }}
@@ -136,7 +136,7 @@ h1 {{ margin:0; font-size:25px; }}
 .hero-stat-value {{ font-size:24px; line-height:.95; font-weight:850; letter-spacing:0; overflow-wrap:anywhere; transition:color .18s ease; }}
 .hero-stat-desc {{ color:var(--muted); font-size:10px; line-height:1.12; }}
 .hero-stat-hidden-binding {{ display:none; }}
-.operations-lower {{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); grid-auto-rows:minmax(0,1fr); gap:10px; align-items:stretch; height:100%; min-height:0; min-width:0; overflow:hidden; }}
+.operations-lower {{ display:grid; grid-template-columns:minmax(0,3fr) minmax(280px,2fr); grid-auto-rows:minmax(0,1fr); gap:10px; align-items:stretch; height:100%; min-height:0; min-width:0; overflow:hidden; }}
 .grid {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px; }}
 .card {{ background:linear-gradient(180deg,rgba(24,33,50,.82),rgba(15,23,42,.76)); border:1px solid var(--border-card); border-radius:10px; padding:12px; box-shadow:var(--shadow),var(--surface-inset-highlight); backdrop-filter:blur(18px); transition:border-color .18s ease, transform .18s ease, background .18s ease,box-shadow .18s ease; }}
 .card:hover {{ border-color:rgba(203,213,225,.16); background:linear-gradient(180deg,rgba(28,38,56,.86),rgba(15,23,42,.78)); box-shadow:var(--shadow-soft),var(--surface-inset-highlight); }}
@@ -149,7 +149,7 @@ h1 {{ margin:0; font-size:25px; }}
 .hero-stat-card:hover .hero-stat-value,.hero-stat-card:focus-within .hero-stat-value,.hero-stat-card:focus-visible .hero-stat-value {{ color:#fff; }}
 .card h2 {{ margin:0 0 7px; font-size:13px; letter-spacing:.02em; }}
 .ops-panel {{ min-height:0; overflow:hidden; }}
-.operations-lower > .ops-panel {{ height:100%; overflow:auto; }}
+.operations-lower > .ops-panel {{ height:100%; overflow:hidden; }}
 .compact-card {{ min-height:0; padding:11px; }}
 .signal-card {{ min-height:112px; min-width:170px; display:flex; flex-direction:column; justify-content:space-between; background:linear-gradient(180deg,rgba(30,41,59,.96),rgba(15,23,42,.92)); }}
 .signal-card.ops-health-panel {{ display:grid; justify-content:stretch; }}
@@ -160,6 +160,49 @@ h1 {{ margin:0; font-size:25px; }}
 .gauge {{ width:46px; height:46px; transform:rotate(-90deg); }}
 .gauge-track {{ fill:none; stroke:rgba(148,163,184,.18); stroke-width:10; }}
 .gauge-progress {{ fill:none; stroke:var(--accent); stroke-width:10; stroke-linecap:round; stroke-dasharray:100; stroke-dashoffset:100; transition:stroke-dashoffset .55s ease, stroke .25s ease; }}
+.instrument-panel {{ display:grid; grid-template-columns:repeat(4,minmax(148px,1fr)) minmax(240px,1.45fr) minmax(148px,1fr); gap:8px; min-width:0; align-items:stretch; }}
+.instrument-card {{ --instrument-accent:var(--accent); --instrument-gauge-w:128px; --instrument-gauge-h:74px; --instrument-support-line-h:14px; --instrument-reading-h:23px; position:relative; overflow:hidden; min-width:0; min-height:148px; display:grid; grid-template-rows:18px var(--instrument-gauge-h) var(--instrument-reading-h) calc((var(--instrument-support-line-h) * 3) + 4px); gap:5px; align-content:start; padding:10px; background:radial-gradient(circle at 50% -18%,rgba(56,189,248,.12),transparent 42%),linear-gradient(180deg,rgba(18,27,43,.96),rgba(12,18,31,.94)); border-color:rgba(148,163,184,.14); box-shadow:var(--shadow-neutral-soft),var(--surface-inset-highlight); }}
+.instrument-card::before {{ content:""; position:absolute; inset:0 0 auto; height:1px; background:linear-gradient(90deg,transparent,rgba(203,213,225,.16),transparent); pointer-events:none; }}
+.instrument-card > * {{ position:relative; z-index:1; }}
+.instrument-card.healthy,.instrument-card.available,.instrument-card.completed {{ --instrument-accent:var(--good); }}
+.instrument-card.moderate,.instrument-card.partial,.instrument-card.monitoring,.instrument-card.collecting {{ --instrument-accent:var(--accent); }}
+.instrument-card.warning,.instrument-card.approaching {{ --instrument-accent:var(--warn); }}
+.instrument-card.critical,.instrument-card.error {{ --instrument-accent:var(--bad); }}
+.instrument-card.disabled,.instrument-card.unavailable,.instrument-card.empty {{ --instrument-accent:var(--muted); }}
+.instrument-head {{ display:flex; align-items:center; justify-content:space-between; gap:8px; min-width:0; min-height:18px; }}
+.instrument-title {{ min-width:0; color:var(--soft); font-size:11px; font-weight:850; letter-spacing:.075em; text-transform:uppercase; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }}
+.instrument-info {{ flex:0 0 auto; display:grid; place-items:center; width:18px; height:18px; border-radius:50%; border:1px solid rgba(148,163,184,.18); color:var(--muted); font-size:11px; font-weight:850; background:rgba(15,23,42,.58); }}
+.instrument-body {{ display:grid; justify-items:center; align-content:center; min-width:0; min-height:var(--instrument-gauge-h); }}
+.instrument-reading {{ display:flex; align-items:center; justify-content:center; flex-wrap:nowrap; gap:5px 7px; min-width:0; min-height:var(--instrument-reading-h); text-align:center; }}
+.instrument-card-value {{ color:#f8fafc; font-size:22px; line-height:1; font-weight:850; letter-spacing:-.02em; overflow-wrap:anywhere; transition:color .18s ease; }}
+.instrument-support {{ display:grid; grid-template-rows:repeat(3,var(--instrument-support-line-h)); gap:2px; min-width:0; min-height:calc((var(--instrument-support-line-h) * 3) + 4px); align-content:start; }}
+.instrument-support-row {{ min-width:0; color:var(--muted); font-size:10px; line-height:var(--instrument-support-line-h); text-align:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }}
+.instrument-support-row.primary {{ color:#dbeafe; font-weight:750; }}
+.instrument-gauge-shell {{ width:var(--instrument-gauge-w); max-width:100%; height:var(--instrument-gauge-h); display:grid; place-items:center; overflow:visible; }}
+.instrument-gauge-svg {{ width:var(--instrument-gauge-w); max-width:100%; height:var(--instrument-gauge-h); overflow:visible; shape-rendering:geometricPrecision; }}
+.instrument-gauge-segment {{ fill:none; stroke-width:9; stroke-linecap:butt; vector-effect:non-scaling-stroke; opacity:.9; }}
+.instrument-gauge-segment.good {{ stroke:#22c55e; }} .instrument-gauge-segment.warn {{ stroke:#f59e0b; }} .instrument-gauge-segment.orange {{ stroke:#f97316; }} .instrument-gauge-segment.bad {{ stroke:#ef4444; }}
+.instrument-gauge-baseline {{ fill:none; stroke:rgba(148,163,184,.16); stroke-width:11; stroke-linecap:round; vector-effect:non-scaling-stroke; }}
+.instrument-gauge-tick {{ stroke:rgba(203,213,225,.22); stroke-width:1; vector-effect:non-scaling-stroke; }}
+.instrument-gauge-needle {{ stroke:#e5e7eb; stroke-width:2.4; stroke-linecap:round; transform-origin:60px 60px; transform:rotate(-90deg); transition:transform .55s cubic-bezier(.2,0,0,1),stroke .18s ease,opacity .18s ease; filter:drop-shadow(0 0 5px rgba(226,232,240,.22)); vector-effect:non-scaling-stroke; }}
+.instrument-gauge-pivot {{ fill:#0f172a; stroke:var(--instrument-accent); stroke-width:2; vector-effect:non-scaling-stroke; filter:drop-shadow(0 0 6px rgba(56,189,248,.24)); transition:stroke .18s ease; }}
+.instrument-gauge-center {{ fill:#f8fafc; font-size:12px; font-weight:850; text-anchor:middle; dominant-baseline:middle; }}
+.instrument-gauge-shell.is-unavailable .instrument-gauge-needle {{ opacity:.32; }}
+.instrument-gauge-shell.is-unavailable .instrument-gauge-center {{ fill:var(--muted); }}
+.instrument-trend-card {{ min-width:240px; grid-template-rows:auto 1fr; gap:7px; }}
+.trend-body {{ display:grid; grid-template-rows:auto 1fr auto; gap:6px; min-width:0; }}
+.trend-summary {{ display:flex; align-items:center; justify-content:space-between; gap:8px; min-width:0; }}
+.trend-current {{ color:#f8fafc; font-size:20px; line-height:1; font-weight:850; }}
+.trend-chart-wrap {{ position:relative; min-height:72px; border:1px solid rgba(148,163,184,.12); border-radius:8px; background:linear-gradient(180deg,rgba(15,23,42,.54),rgba(2,6,23,.28)); overflow:hidden; }}
+.trend-chart {{ width:100%; height:72px; display:block; overflow:visible; }}
+.trend-grid {{ stroke:rgba(148,163,184,.13); stroke-width:1; vector-effect:non-scaling-stroke; }}
+.trend-threshold.warn {{ stroke:rgba(245,158,11,.62); }} .trend-threshold.critical {{ stroke:rgba(239,68,68,.58); }}
+.trend-threshold {{ stroke-width:1; stroke-dasharray:4 5; vector-effect:non-scaling-stroke; }}
+.trend-line {{ fill:none; stroke:var(--accent); stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; vector-effect:non-scaling-stroke; filter:drop-shadow(0 0 7px rgba(56,189,248,.26)); transition:points .28s ease,opacity .18s ease; }}
+.trend-area {{ fill:rgba(56,189,248,.08); transition:points .28s ease,opacity .18s ease; }}
+.trend-empty {{ position:absolute; inset:0; display:grid; place-items:center; padding:8px; color:#aebbd0; font-size:11px; text-align:center; background:rgba(15,23,42,.48); }}
+.trend-footer {{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:6px; color:var(--muted); font-size:9px; line-height:1.15; }}
+.sr-only {{ position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }}
 .health-card {{ --health-card-glow:var(--glow-info); border-left:5px solid var(--accent); box-shadow:var(--shadow-neutral-soft),var(--surface-inset-highlight),var(--health-card-glow); }}
 .health-card.healthy {{ --health-card-glow:var(--glow-good); border-left-color:var(--good); }} .health-card.busy {{ --health-card-glow:var(--glow-info); border-left-color:var(--accent); }} .health-card.warning {{ --health-card-glow:var(--glow-warn); border-left-color:var(--warn); }} .health-card.critical,.health-card.offline {{ --health-card-glow:var(--glow-bad); border-left-color:var(--bad); }}
 .health-card.healthy .gauge-progress {{ stroke:var(--good); }} .health-card.busy .gauge-progress {{ stroke:var(--accent); }} .health-card.warning .gauge-progress {{ stroke:var(--warn); }} .health-card.critical .gauge-progress,.health-card.offline .gauge-progress {{ stroke:var(--bad); }}
@@ -172,7 +215,7 @@ h1 {{ margin:0; font-size:25px; }}
 .icon-label {{ display:inline-flex; align-items:center; gap:8px; }}
 .icon-mark {{ color:var(--accent); font-size:14px; }}
 .badge {{ --badge-ring:rgba(148,163,184,.18); --badge-glow:0 0 12px rgba(148,163,184,.07); display:inline-flex; align-items:center; min-height:22px; padding:2px 7px; border-radius:999px; font-size:11px; font-weight:700; text-transform:uppercase; background:rgba(148,163,184,.16); color:var(--muted); box-shadow:inset 0 0 0 1px var(--badge-ring),var(--surface-inset-highlight),var(--badge-glow); transition:background .18s ease,box-shadow .18s ease,color .18s ease,opacity .18s ease,transform .14s ease; }}
-.badge.positive,.badge.healthy,.badge.low,.badge.online,.badge.active,.badge.running,.badge.ready,.badge.idle {{ --badge-ring:rgba(34,197,94,.22); --badge-glow:0 0 14px rgba(34,197,94,.1); color:var(--good); background:rgba(34,197,94,.12); }} .badge.info,.badge.busy,.badge.starting,.badge.receiving,.badge.thinking,.badge.streaming,.badge.finalizing {{ --badge-ring:rgba(56,189,248,.22); --badge-glow:0 0 14px rgba(56,189,248,.1); color:var(--accent); background:rgba(56,189,248,.12); }} .badge.warning,.badge.medium,.badge.waiting,.badge.pending,.badge.connecting {{ --badge-ring:rgba(245,158,11,.24); --badge-glow:0 0 14px rgba(245,158,11,.1); color:var(--warn); background:rgba(245,158,11,.12); }} .badge.critical,.badge.high,.badge.offline,.badge.error {{ --badge-ring:rgba(239,68,68,.24); --badge-glow:0 0 14px rgba(239,68,68,.1); color:var(--bad); background:rgba(239,68,68,.12); }}
+.badge.positive,.badge.healthy,.badge.low,.badge.online,.badge.active,.badge.running,.badge.ready,.badge.idle,.badge.available,.badge.completed {{ --badge-ring:rgba(34,197,94,.22); --badge-glow:0 0 14px rgba(34,197,94,.1); color:var(--good); background:rgba(34,197,94,.12); }} .badge.info,.badge.busy,.badge.starting,.badge.receiving,.badge.thinking,.badge.streaming,.badge.finalizing,.badge.moderate,.badge.partial,.badge.monitoring,.badge.collecting {{ --badge-ring:rgba(56,189,248,.22); --badge-glow:0 0 14px rgba(56,189,248,.1); color:var(--accent); background:rgba(56,189,248,.12); }} .badge.warning,.badge.medium,.badge.waiting,.badge.pending,.badge.connecting,.badge.approaching {{ --badge-ring:rgba(245,158,11,.24); --badge-glow:0 0 14px rgba(245,158,11,.1); color:var(--warn); background:rgba(245,158,11,.12); }} .badge.critical,.badge.high,.badge.offline,.badge.error {{ --badge-ring:rgba(239,68,68,.24); --badge-glow:0 0 14px rgba(239,68,68,.1); color:var(--bad); background:rgba(239,68,68,.12); }} .badge.disabled,.badge.unavailable,.badge.empty {{ --badge-ring:rgba(148,163,184,.2); --badge-glow:0 0 10px rgba(148,163,184,.06); color:var(--muted); background:rgba(148,163,184,.12); }}
 a.badge:hover {{ transform:translateY(-1px); box-shadow:inset 0 0 0 1px var(--badge-ring),var(--surface-inset-highlight),var(--badge-glow),0 0 0 3px rgba(56,189,248,.08); }}
 a.badge:active {{ transform:translateY(0); opacity:.86; }}
 a.badge:focus-visible {{ outline:2px solid rgba(56,189,248,.72); outline-offset:2px; box-shadow:inset 0 0 0 1px var(--badge-ring),var(--surface-inset-highlight),var(--badge-glow),0 0 0 3px rgba(56,189,248,.12); }}
@@ -258,23 +301,23 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
 .pipe {{ position:relative; height:2px; align-self:center; background:linear-gradient(90deg,rgba(45,58,79,.35),rgba(56,189,248,.85),rgba(45,58,79,.35)); border-radius:99px; opacity:.9; }}
 .pipe::before {{ content:""; position:absolute; inset:-12px 0; border-top:1px dashed rgba(148,163,184,.22); top:50%; }}
 .pipe::after {{ content:""; position:absolute; left:50%; top:50%; width:10px; height:10px; border-radius:50%; transform:translate(-50%,-50%); background:rgba(56,189,248,.5); box-shadow:0 0 18px rgba(56,189,248,.42); }}
-@media (prefers-reduced-motion: reduce) {{ html {{ scroll-behavior:auto; }} .flow-panel.flow-active .flow-svg-packet,.flow-panel.flow-waiting .flow-svg-packet,.flow-panel.activity-streaming .flow-svg-packet,.flow-panel.request-pulse .flow-svg-packet,.flow-panel.request-pulse .flow-stage::after,.flow-panel.request-pulse .pipe::after,.flow-node.status-pulse,.dot,.value-pop,.badge-update,.ops-activity-summary,.ops-activity-summary .ops-health-status,.ops-activity-summary::after {{ animation:none; }} .flow-svg-packet,.flow-stage::after {{ opacity:0; }} .nav a,.nav a::before,.topbar-status,.topbar-status-dot,.card,.node,.hero-status,.hero-status::before,.hero-status::after,.hero-stat-card,.hero-stat-icon,.hero-stat-value,.badge,.flow-svg-line,.gauge-progress,.fill,.ops-health-row,.ops-activity-summary,.panel-item,.timeline-item,.message {{ transition:none; }} .nav a:hover,.nav a:active,.card:hover,.node:hover,.hero-stat-card:hover,.hero-stat-card:focus-within,.hero-stat-card:focus-visible,.hero-stat-card:hover .hero-stat-icon,.hero-stat-card:focus-within .hero-stat-icon,.hero-stat-card:focus-visible .hero-stat-icon,a.badge:hover,a.badge:active,body.is-refreshing .topbar-status-dot {{ transform:none; }} }}
+@media (prefers-reduced-motion: reduce) {{ html {{ scroll-behavior:auto; }} .flow-panel.flow-active .flow-svg-packet,.flow-panel.flow-waiting .flow-svg-packet,.flow-panel.activity-streaming .flow-svg-packet,.flow-panel.request-pulse .flow-svg-packet,.flow-panel.request-pulse .flow-stage::after,.flow-panel.request-pulse .pipe::after,.flow-node.status-pulse,.dot,.value-pop,.badge-update,.ops-activity-summary,.ops-activity-summary .ops-health-status,.ops-activity-summary::after {{ animation:none; }} .flow-svg-packet,.flow-stage::after {{ opacity:0; }} .nav a,.nav a::before,.topbar-status,.topbar-status-dot,.card,.node,.hero-status,.hero-status::before,.hero-status::after,.hero-stat-card,.hero-stat-icon,.hero-stat-value,.badge,.flow-svg-line,.gauge-progress,.fill,.ops-health-row,.ops-activity-summary,.panel-item,.timeline-item,.message,.instrument-gauge-needle,.instrument-gauge-pivot,.instrument-card-value,.trend-line,.trend-area {{ transition:none; }} .nav a:hover,.nav a:active,.card:hover,.node:hover,.hero-stat-card:hover,.hero-stat-card:focus-within,.hero-stat-card:focus-visible,.hero-stat-card:hover .hero-stat-icon,.hero-stat-card:focus-within .hero-stat-icon,.hero-stat-card:focus-visible .hero-stat-icon,a.badge:hover,a.badge:active,body.is-refreshing .topbar-status-dot {{ transform:none; }} }}
 .small {{ font-size:12px; color:var(--muted); overflow-wrap:anywhere; }}
-.traffic-panel {{ display:grid; grid-template-rows:auto auto 1fr; gap:10px; }}
-.traffic-stats {{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }}
-.resource-stack {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(112px,1fr)); gap:12px; align-items:start; }}
-.resource-error {{ display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:12px; padding-top:10px; border-top:1px solid rgba(255,255,255,.08); }}
-.speedometer {{ display:grid; justify-items:center; gap:4px; min-width:112px; overflow:visible; }}
-.speedometer-label {{ color:var(--muted); font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }}
-.speedometer-shell {{ position:relative; width:clamp(92px,7vw,112px); min-width:92px; max-width:112px; aspect-ratio:2 / 1; overflow:hidden; }}
-.speedometer-arc {{ --fill:0%; position:absolute; inset:0; border-radius:112px 112px 0 0; background:conic-gradient(from 270deg at 50% 100%, var(--accent) var(--fill), rgba(51,65,85,.72) 0 50%, transparent 0); }}
-.speedometer-arc::after {{ content:""; position:absolute; left:14px; right:14px; bottom:-42px; height:84px; border-radius:84px 84px 0 0; background:rgba(24,33,50,.98); border:1px solid rgba(255,255,255,.06); }}
-.speedometer-value {{ position:relative; margin-top:-38px; min-height:28px; font-size:22px; font-weight:800; white-space:nowrap; }}
-.speedometer-detail {{ min-height:28px; text-align:center; font-size:11px; color:var(--muted); overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }}
+.traffic-panel {{ display:grid; grid-template-rows:auto auto 1fr; gap:12px; align-content:start; padding:14px; }}
+.traffic-stats {{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; align-items:stretch; }}
+.traffic-stat {{ min-width:0; display:grid; align-content:start; gap:5px; padding:10px 11px; border:1px solid rgba(203,213,225,.08); border-radius:9px; background:linear-gradient(180deg,rgba(15,23,42,.48),rgba(2,6,23,.26)); box-shadow:var(--surface-inset-highlight); }}
+.traffic-stat .small {{ font-size:11px; font-weight:850; letter-spacing:.06em; text-transform:uppercase; }}
+.traffic-stat .value {{ font-size:28px; line-height:1; }}
+.traffic-stat .muted {{ font-size:11px; line-height:1.22; }}
+.traffic-note {{ align-self:end; padding-top:8px; border-top:1px solid rgba(203,213,225,.08); line-height:1.35; }}
 .conversation-meta {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; margin-bottom:14px; }}
 .conversation-meta.compact {{ grid-template-columns:repeat(2,minmax(0,1fr)); margin-bottom:0; }}
-.conversation-compact {{ display:grid; gap:10px; }}
-.conversation-compact .summary {{ max-height:62px; overflow:hidden; }}
+.conversation-compact {{ display:grid; grid-template-rows:auto auto auto minmax(0,1fr); gap:12px; padding:14px; }}
+.conversation-compact .health-title {{ align-items:center; }}
+.conversation-compact .conversation-meta.compact {{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-bottom:0; }}
+.conversation-compact .conversation-meta.compact > div {{ min-width:0; display:grid; gap:3px; padding:8px 9px; border:1px solid rgba(203,213,225,.08); border-radius:8px; background:rgba(15,23,42,.34); box-shadow:var(--surface-inset-highlight); }}
+.conversation-compact .conversation-meta.compact .muted {{ line-height:1.25; white-space:normal; overflow-wrap:anywhere; }}
+.conversation-compact .summary {{ min-height:0; max-height:92px; overflow:hidden; line-height:1.28; }}
 .summary {{ background:rgba(15,23,42,.62); border:1px solid var(--border-card); border-radius:10px; padding:12px; white-space:pre-wrap; box-shadow:var(--surface-inset-highlight); }}
 .messages {{ display:grid; gap:10px; margin-top:12px; }}
 .message {{ background:rgba(15,23,42,.46); border:1px solid var(--border-card); border-radius:10px; padding:10px 12px; box-shadow:var(--surface-inset-highlight); transition:border-color .18s ease,background .18s ease,box-shadow .18s ease; }}
@@ -301,6 +344,10 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
   .hero-kicker {{ font-size:10px; }}
   .hero-status .command-meta {{ display:none; }}
   .hero-status #systemHealthCard {{ margin-top:5px; padding:7px; }}
+  .instrument-panel {{ gap:6px; }}
+  .instrument-card {{ --instrument-gauge-w:112px; --instrument-gauge-h:66px; --instrument-support-line-h:13px; --instrument-reading-h:22px; min-height:136px; padding:9px; }}
+  .instrument-card-value {{ font-size:20px; }}
+  .instrument-support-row {{ font-size:9px; }}
   .ops-health-panel {{ gap:6px; }}
   .ops-health-body {{ grid-template-columns:minmax(0,1fr) 56px; gap:6px; }}
   .ops-health-status {{ font-size:18px; }}
@@ -339,27 +386,24 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
   .node-title {{ font-size:11px; margin-bottom:3px; }}
   .node .value {{ font-size:18px; }}
   .node .small {{ font-size:10px; line-height:1.16; }}
-  .operations-lower {{ grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }}
-  .traffic-panel {{ gap:6px; }}
-  .traffic-stats {{ gap:7px; }}
-  .resource-stack {{ grid-template-columns:repeat(3,minmax(78px,1fr)); gap:6px; }}
-  .speedometer {{ min-width:78px; }}
-  .speedometer-shell {{ width:78px; min-width:78px; max-width:78px; }}
-  .speedometer-value {{ margin-top:-28px; min-height:22px; font-size:16px; }}
-  .speedometer-detail {{ min-height:18px; font-size:9px; }}
-  .resource-error {{ margin-top:7px; padding-top:6px; }}
-  .conversation-compact {{ gap:6px; }}
-  .conversation-compact .summary {{ max-height:38px; }}
+  .operations-lower {{ grid-template-columns:minmax(0,3fr) minmax(260px,2fr); gap:8px; }}
+  .traffic-panel,.conversation-compact {{ gap:8px; padding:10px; }}
+  .traffic-stats {{ gap:8px; }}
+  .traffic-stat {{ padding:8px 9px; }}
+  .traffic-stat .value {{ font-size:24px; }}
+  .conversation-compact .conversation-meta.compact {{ gap:8px; }}
+  .conversation-compact .summary {{ max-height:54px; }}
 }}
 @media (max-width: 1500px) {{
   .ops-hero {{ grid-template-columns:minmax(250px,1fr) minmax(220px,.78fr); gap:7px; }}
+  .instrument-panel {{ grid-template-columns:repeat(3,minmax(0,1fr)); }}
+  .instrument-trend-card {{ grid-column:span 2; }}
   .hero-stats-grid {{ grid-template-columns:repeat(4,minmax(132px,1fr)); gap:7px; }}
   .hero-stat-card {{ min-height:68px; }}
   .hero-title {{ white-space:normal; }}
   .hero-title span:last-child {{ overflow:visible; text-overflow:clip; }}
-  .operations-lower {{ grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }}
+  .operations-lower {{ grid-template-columns:minmax(0,3fr) minmax(240px,2fr); gap:6px; }}
   .flow-stage {{ grid-template-columns:minmax(118px,1fr) 20px minmax(118px,1fr) 20px minmax(118px,1fr) 20px minmax(118px,1fr); gap:6px; }}
-  .resource-stack {{ grid-template-columns:repeat(auto-fit,minmax(96px,1fr)); }}
 }}
 @media (max-width: 1350px) {{
   .app-shell {{ grid-template-columns:200px minmax(0,1fr); }}
@@ -399,6 +443,12 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
   .ops-health-row svg {{ width:14px; height:14px; }}
   .ops-health-row-label {{ font-size:9px; }}
   .action-panel {{ grid-area:actions; padding:8px 10px; }}
+  .instrument-panel {{ gap:6px; }}
+  .instrument-card {{ --instrument-gauge-w:98px; --instrument-gauge-h:58px; --instrument-support-line-h:12px; --instrument-reading-h:21px; min-height:126px; padding:8px; }}
+  .instrument-title {{ font-size:10px; }}
+  .instrument-card-value {{ font-size:18px; }}
+  .instrument-support-row {{ font-size:9px; }}
+  .trend-chart,.trend-chart-wrap {{ min-height:62px; height:62px; }}
   .action-panel .health-title {{ margin-bottom:3px; }}
   .action-panel .panel-list {{ max-height:none; }}
   .action-panel .panel-item {{ padding:4px 6px; font-size:11px; line-height:1.2; }}
@@ -434,19 +484,15 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
   .node .small {{ font-size:9px; line-height:1.1; }}
   .dot {{ width:9px; height:9px; margin-right:5px; }}
   .pipe::after {{ width:7px; height:7px; }}
-  .operations-lower {{ grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }}
-  .traffic-panel {{ gap:4px; }}
+  .operations-lower {{ grid-template-columns:minmax(0,3fr) minmax(220px,2fr); gap:6px; }}
+  .traffic-panel,.conversation-compact {{ gap:5px; padding:8px; }}
   .traffic-stats {{ gap:5px; }}
-  .resource-stack {{ grid-template-columns:repeat(3,minmax(68px,1fr)); gap:5px; }}
-  .speedometer {{ min-width:68px; gap:2px; }}
-  .speedometer-label {{ font-size:9px; }}
-  .speedometer-shell {{ width:68px; min-width:68px; max-width:68px; }}
-  .speedometer-arc::after {{ left:10px; right:10px; bottom:-32px; height:64px; }}
-  .speedometer-value {{ margin-top:-24px; min-height:19px; font-size:14px; }}
-  .speedometer-detail {{ min-height:14px; font-size:9px; -webkit-line-clamp:1; }}
-  .resource-error {{ margin-top:4px; padding-top:4px; }}
-  .conversation-compact {{ grid-column:auto; gap:5px; }}
+  .traffic-stat {{ padding:6px 7px; gap:3px; }}
+  .traffic-stat .value {{ font-size:20px; }}
+  .traffic-note {{ padding-top:5px; }}
+  .conversation-compact {{ grid-column:auto; }}
   .conversation-meta.compact {{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }}
+  .conversation-compact .conversation-meta.compact > div {{ padding:6px 7px; }}
   .conversation-compact .summary {{ max-height:32px; padding:8px; }}
 }}
 @media (min-width: 1001px) and (max-height: 900px) {{
@@ -459,6 +505,8 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
   .hero-title {{ margin-top:3px; }}
   .hero-copy {{ margin-top:3px; line-height:1.2; }}
   .hero-status #systemHealthCard {{ margin-top:4px; padding:6px; }}
+  .instrument-card {{ --instrument-support-line-h:12px; min-height:122px; gap:4px; }}
+  .instrument-support-row {{ font-size:9px; }}
   .ops-health-panel {{ gap:5px; }}
   .ops-health-body {{ gap:6px; }}
   .hero-stats-grid {{ gap:5px; }}
@@ -467,8 +515,7 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
   .flow-stage {{ gap:5px; }}
   .operations-lower {{ gap:6px; }}
   .traffic-panel,.conversation-compact {{ gap:5px; }}
-  .resource-stack {{ gap:5px; }}
-  .resource-error {{ margin-top:5px; padding-top:5px; }}
+  .traffic-stat {{ padding:6px 7px; }}
 }}
 @media (min-width: 1001px) and (max-height: 800px) {{
   .topbar {{ margin:4px 10px 0; padding:5px 10px; border-radius:10px; }}
@@ -481,6 +528,10 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
   .hero-title {{ margin-top:2px; }}
   .hero-copy {{ margin-top:2px; line-height:1.15; }}
   .hero-status #systemHealthCard {{ margin-top:3px; padding:5px; }}
+  .instrument-card {{ --instrument-gauge-w:88px; --instrument-gauge-h:52px; --instrument-support-line-h:11px; --instrument-reading-h:19px; min-height:112px; padding:7px; gap:4px; }}
+  .instrument-card-value {{ font-size:16px; }}
+  .instrument-info {{ display:none; }}
+  .trend-chart,.trend-chart-wrap {{ min-height:52px; height:52px; }}
   .ops-health-panel {{ gap:4px; }}
   .ops-health-body {{ gap:5px; }}
   .ops-health-details {{ gap:3px; }}
@@ -502,8 +553,7 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
   .operations-lower .card {{ padding:8px; }}
   .traffic-panel,.conversation-compact {{ gap:4px; }}
   .traffic-stats {{ gap:5px; }}
-  .resource-stack {{ gap:4px; }}
-  .resource-error {{ margin-top:3px; padding-top:3px; }}
+  .traffic-stat {{ padding:5px 6px; }}
   .conversation-meta.compact {{ gap:6px; }}
 }}
 @media (min-width: 1351px) and (max-width: 1500px) and (max-height: 800px) {{
@@ -544,16 +594,14 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
   .operations-lower .card {{ padding:6px; }}
   .traffic-panel,.conversation-compact {{ gap:3px; }}
   .traffic-stats {{ gap:4px; }}
-  .resource-stack {{ gap:3px; }}
-  .speedometer {{ gap:1px; }}
-  .resource-error {{ margin-top:2px; padding-top:2px; }}
+  .traffic-stat {{ padding:4px 5px; }}
   .conversation-meta.compact {{ gap:4px; }}
   .risk-row {{ margin-top:4px; gap:4px; }}
   .conversation-compact .summary {{ padding:8px; }}
   .badge {{ min-height:19px; padding:1px 6px; }}
 }}
-@media (max-width: 1000px) {{ .app-shell {{ grid-template-columns:220px minmax(0,1fr); }} .dashboard-main {{ padding:14px 16px 18px; }} .ops-hero,.operations-lower {{ grid-template-columns:1fr; }} .hero-title {{ white-space:normal; }} .hero-title span:last-child {{ overflow:visible; text-overflow:clip; }} .ops-health-details {{ grid-template-columns:1fr; }} .ops-health-row {{ grid-template-columns:16px minmax(0,1fr) auto; }} .flow-svg-layer {{ display:none; }} .flow-stage {{ grid-template-columns:1fr; }} .pipe {{ height:20px; width:4px; justify-self:center; }} .resource-stack {{ grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); }} }}
-@media (max-width: 1000px) {{ .app-shell {{ height:100vh; overflow-y:auto; overflow-x:hidden; grid-template-columns:1fr; }} .workspace {{ height:auto; min-height:0; overflow:visible; }} .sidebar {{ position:relative; height:auto; gap:14px; }} .nav {{ grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); }} .sidebar-footer {{ display:none; }} .topbar {{ position:relative; align-items:flex-start; flex-direction:column; }} .dashboard-main {{ height:auto; overflow:visible; padding:18px; }} .page.active,.ops-hero,.operations-lower {{ height:auto; overflow:visible; grid-template-columns:1fr; }} .ops-hero {{ grid-template-areas:"hero" "actions" "stats"; }} .hero-stats-grid {{ grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); }} .operations-page {{ min-height:auto; grid-template-rows:none; }} .timeline-item {{ grid-template-columns:1fr; }} }}
+@media (max-width: 1000px) {{ .app-shell {{ grid-template-columns:220px minmax(0,1fr); }} .dashboard-main {{ padding:14px 16px 18px; }} .ops-hero,.operations-lower {{ grid-template-columns:1fr; }} .hero-title {{ white-space:normal; }} .hero-title span:last-child {{ overflow:visible; text-overflow:clip; }} .ops-health-details {{ grid-template-columns:1fr; }} .ops-health-row {{ grid-template-columns:16px minmax(0,1fr) auto; }} .flow-svg-layer {{ display:none; }} .flow-stage {{ grid-template-columns:1fr; }} .pipe {{ height:20px; width:4px; justify-self:center; }} }}
+@media (max-width: 1000px) {{ .app-shell {{ height:100vh; overflow-y:auto; overflow-x:hidden; grid-template-columns:1fr; }} .workspace {{ height:auto; min-height:0; overflow:visible; }} .sidebar {{ position:relative; height:auto; gap:14px; }} .nav {{ grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); }} .sidebar-footer {{ display:none; }} .topbar {{ position:relative; align-items:flex-start; flex-direction:column; }} .dashboard-main {{ height:auto; overflow:visible; padding:18px; }} .page.active,.ops-hero,.operations-lower {{ height:auto; overflow:visible; grid-template-columns:1fr; }} .ops-hero {{ grid-template-areas:"hero" "actions" "stats"; }} .hero-stats-grid {{ grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); }} .traffic-stats {{ grid-template-columns:1fr; }} .instrument-panel {{ grid-template-columns:1fr; }} .instrument-trend-card {{ grid-column:auto; }} .operations-page {{ min-height:auto; grid-template-rows:none; }} .timeline-item {{ grid-template-columns:1fr; }} }}
 </style>
 </head>
 <body>
@@ -662,6 +710,77 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
     </div>
   </section>
 
+  <section id="instrumentPanel" class="instrument-panel" aria-label="Dashboard instrument panel">
+    <div id="cpuInstrumentCard" class="card instrument-card">
+      <div class="instrument-head"><div class="instrument-title">CPU Usage</div><div class="instrument-info" title="Processor utilization and hardware detail">i</div></div>
+      <div class="instrument-body"><div id="cpuInstrumentGauge" class="instrument-gauge-shell" data-gauge-label="CPU Usage"></div></div>
+      <div class="instrument-reading"><div id="cpuInstrumentValue" class="instrument-card-value" data-live-value="true">--</div><span id="cpuInstrumentStatus" class="badge">Loading</span></div>
+      <div id="cpuInstrumentSupport" class="instrument-support" data-instrument-support="cpu" aria-label="CPU supporting details">
+        <div class="instrument-support-row primary" data-support-slot="1">CPU telemetry is loading.</div>
+        <div class="instrument-support-row" data-support-slot="2">Thread count pending.</div>
+        <div class="instrument-support-row" data-support-slot="3">Temperature pending.</div>
+      </div>
+    </div>
+    <div id="gpuInstrumentCard" class="card instrument-card">
+      <div class="instrument-head"><div class="instrument-title">GPU Usage</div><div class="instrument-info" title="GPU utilization, VRAM, and temperature when available">i</div></div>
+      <div class="instrument-body"><div id="gpuInstrumentGauge" class="instrument-gauge-shell" data-gauge-label="GPU Usage"></div></div>
+      <div class="instrument-reading"><div id="gpuInstrumentValue" class="instrument-card-value" data-live-value="true">--</div><span id="gpuInstrumentStatus" class="badge">Loading</span></div>
+      <div id="gpuInstrumentSupport" class="instrument-support" data-instrument-support="gpu" aria-label="GPU supporting details">
+        <div class="instrument-support-row primary" data-support-slot="1">GPU telemetry is loading.</div>
+        <div class="instrument-support-row" data-support-slot="2">VRAM pending.</div>
+        <div class="instrument-support-row" data-support-slot="3">Temperature pending.</div>
+      </div>
+    </div>
+    <div id="memoryInstrumentCard" class="card instrument-card">
+      <div class="instrument-head"><div class="instrument-title">Memory Usage</div><div class="instrument-info" title="System memory utilization">i</div></div>
+      <div class="instrument-body"><div id="memoryInstrumentGauge" class="instrument-gauge-shell" data-gauge-label="Memory Usage"></div></div>
+      <div class="instrument-reading"><div id="memoryInstrumentValue" class="instrument-card-value" data-live-value="true">--</div><span id="memoryInstrumentStatus" class="badge">Loading</span></div>
+      <div id="memoryInstrumentSupport" class="instrument-support" data-instrument-support="memory" aria-label="Memory supporting details">
+        <div class="instrument-support-row primary" data-support-slot="1">Memory telemetry is loading.</div>
+        <div class="instrument-support-row" data-support-slot="2">Capacity pending.</div>
+        <div class="instrument-support-row" data-support-slot="3">Status pending.</div>
+      </div>
+    </div>
+    <div id="contextInstrumentCard" class="card instrument-card">
+      <div class="instrument-head"><div class="instrument-title">Context Usage</div><div class="instrument-info" title="Active conversation token pressure">i</div></div>
+      <div class="instrument-body"><div id="contextInstrumentGauge" class="instrument-gauge-shell" data-gauge-label="Context Usage"></div></div>
+      <div class="instrument-reading"><div id="contextInstrumentValue" class="instrument-card-value" data-live-value="true">--</div><span id="contextInstrumentStatus" class="badge">Loading</span></div>
+      <div id="contextInstrumentSupport" class="instrument-support" data-instrument-support="context" aria-label="Context supporting details">
+        <div class="instrument-support-row primary" data-support-slot="1">Active context telemetry is loading.</div>
+        <div class="instrument-support-row" data-support-slot="2">Model pending.</div>
+        <div class="instrument-support-row" data-support-slot="3">Thresholds pending.</div>
+      </div>
+    </div>
+    <div id="contextTrendCard" class="card instrument-card instrument-trend-card">
+      <div class="instrument-head"><div class="instrument-title">Context Trend</div><div class="instrument-info" title="Rolling active-context history">i</div></div>
+      <div class="trend-body">
+        <div class="trend-summary"><div id="contextTrendValue" class="trend-current" data-live-value="true">--</div><span id="contextTrendStatus" class="badge">Collecting</span></div>
+        <div class="trend-chart-wrap">
+          <svg id="contextTrendChart" class="trend-chart" viewBox="0 0 260 72" preserveAspectRatio="none" role="img" aria-labelledby="contextTrendA11y">
+            <title id="contextTrendA11y">Context trend data is loading.</title>
+            <line class="trend-grid" x1="0" y1="36" x2="260" y2="36"></line>
+            <line id="contextTrendWarning" class="trend-threshold warn" x1="0" y1="72" x2="260" y2="72"></line>
+            <line id="contextTrendCompression" class="trend-threshold critical" x1="0" y1="72" x2="260" y2="72"></line>
+            <polygon id="contextTrendArea" class="trend-area" points=""></polygon>
+            <polyline id="contextTrendLine" class="trend-line" points=""></polyline>
+          </svg>
+          <div id="contextTrendEmpty" class="trend-empty">Collecting context history.</div>
+        </div>
+        <div class="trend-footer"><span id="contextTrendDetail">Estimate unavailable</span><span id="contextTrendThresholds">Warn -- · Compress --</span></div>
+      </div>
+    </div>
+    <div id="compressionInstrumentCard" class="card instrument-card">
+      <div class="instrument-head"><div class="instrument-title">Compression Status</div><div class="instrument-info" title="Compression readiness and threshold proximity">i</div></div>
+      <div class="instrument-body"><div id="compressionInstrumentGauge" class="instrument-gauge-shell" data-gauge-label="Compression Status"></div></div>
+      <div class="instrument-reading"><div id="compressionInstrumentValue" class="instrument-card-value" data-live-value="true">--</div><span id="compressionInstrumentStatus" class="badge">Loading</span></div>
+      <div id="compressionInstrumentSupport" class="instrument-support" data-instrument-support="compression" aria-label="Compression supporting details">
+        <div class="instrument-support-row primary" data-support-slot="1">Compression state is loading.</div>
+        <div class="instrument-support-row" data-support-slot="2">Event count pending.</div>
+        <div class="instrument-support-row" data-support-slot="3">Readiness pending.</div>
+      </div>
+    </div>
+  </section>
+
   <section id="connections" class="card flow-panel ops-panel">
     <div class="health-title">
       <h2 class="flow-heading"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"></path><path d="M18 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"></path><path d="M6 22a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"></path><path d="M8.6 6.5 15.4 10.5"></path><path d="M15.4 13.5 8.6 17.5"></path></svg>Connection Flow</h2>
@@ -704,19 +823,11 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
     <div class="card traffic-panel ops-panel">
       <h2>Traffic</h2>
       <div class="traffic-stats">
-        <div><div class="small">Request Trend</div><div id="requestTrend" class="value">Flat</div><div id="requestTrendText" class="muted">Awaiting request data.</div></div>
-        <div><div class="small">Rate</div><div id="requestRate" class="value">0</div><div class="muted">requests / min</div></div>
+        <div class="traffic-stat"><div class="small">Request Trend</div><div id="requestTrend" class="value">Flat</div><div id="requestTrendText" class="muted">Awaiting request data.</div></div>
+        <div class="traffic-stat"><div class="small">Rate</div><div id="requestRate" class="value">0</div><div class="muted">requests / min</div></div>
+        <div class="traffic-stat"><div class="small">Errors</div><div id="err" class="value">0</div><div class="muted">proxy request errors</div></div>
       </div>
-      <div class="muted">Average response time is summarized in the hero statistics row.</div>
-    </div>
-    <div id="resources" class="card ops-panel">
-      <h2>Resources</h2>
-      <div class="resource-stack">
-        <div class="speedometer"><div class="speedometer-label">CPU</div><div class="speedometer-shell"><div id="cpuBar" class="speedometer-arc"></div></div><div id="cpu" class="speedometer-value">--%</div><div class="speedometer-detail">Processor load</div></div>
-        <div class="speedometer"><div class="speedometer-label">RAM</div><div class="speedometer-shell"><div id="ramBar" class="speedometer-arc"></div></div><div id="ram" class="speedometer-value">--%</div><div id="ramText" class="speedometer-detail"></div></div>
-        <div class="speedometer"><div class="speedometer-label">VRAM</div><div class="speedometer-shell"><div id="gpuBar" class="speedometer-arc"></div></div><div id="gpu" class="speedometer-value">--</div><div id="vramText" class="speedometer-detail"></div></div>
-      </div>
-      <div class="resource-error"><span class="small">Errors</span><div id="err" class="value">0</div></div>
+      <div class="muted traffic-note">Average response time is summarized in the hero statistics row. Errors are tracked with request statistics.</div>
     </div>
     <div class="card conversation-compact ops-panel">
       <div class="health-title"><h2>Active Conversation</h2><a class="badge info" href="#conversations" data-page-link="conversations">Open</a></div>
@@ -788,6 +899,13 @@ const DASHBOARD_REFRESH_INTERVAL_MS = {settings.dashboard.refresh_interval_ms or
 const TOPOLOGY_PULSE_DURATION_MS = 1300;
 const REDUCED_MOTION_QUERY = window.matchMedia('(prefers-reduced-motion: reduce)');
 const ACTIVITY_TOPOLOGY_CLASSES = ['activity-starting','activity-connecting','activity-ready','activity-receiving','activity-thinking','activity-streaming','activity-finalizing','activity-idle'];
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const INSTRUMENT_GAUGE_SEGMENTS = [
+  {{ start:0, end:55, className:'good' }},
+  {{ start:55, end:75, className:'warn' }},
+  {{ start:75, end:90, className:'orange' }},
+  {{ start:90, end:100, className:'bad' }}
+];
 let lastTopologyRequestCount = null;
 let lastActivityState = null;
 let topologyPulseTimer = null;
@@ -821,7 +939,7 @@ function titleCase(value) {{
 }}
 function shouldAnimateTextUpdate(el) {{
   if (!motionAllowed()) return false;
-  return el.matches('.value,.hero-stat-value,.speedometer-value,.ops-health-status') || el.dataset.liveValue === 'true';
+  return el.matches('.value,.hero-stat-value,.ops-health-status') || el.dataset.liveValue === 'true';
 }}
 function setText(id, value, animate) {{
   const el = byId(id);
@@ -861,11 +979,6 @@ function setGauge(id, value) {{
 function setWidth(id, value) {{
   const el = byId(id);
   if (!el) return;
-  if (el.classList.contains('speedometer-arc')) {{
-    const numeric = Math.max(0, Math.min(100, Number.parseFloat(String(value)) || 0));
-    el.style.setProperty('--fill', (numeric / 2) + '%');
-    return;
-  }}
   el.style.width = value;
 }}
 function heroStateForStatus(status) {{
@@ -954,6 +1067,263 @@ function renderSparkline(requests) {{
   line.setAttribute('points', points);
   area.setAttribute('points', `0,48 ${{points}} 220,48`);
 }}
+function numberOrNull(value) {{
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : null;
+}}
+function formatMetricNumber(value, digits) {{
+  const numeric = numberOrNull(value);
+  if (numeric === null) return 'N/A';
+  const precision = digits ?? (Math.abs(numeric) >= 10 || Number.isInteger(numeric) ? 0 : 1);
+  return numeric.toFixed(precision).replace(/\\.0$/, '');
+}}
+function formatPercentValue(value) {{
+  const numeric = numberOrNull(value);
+  return numeric === null ? 'N/A' : formatMetricNumber(numeric) + '%';
+}}
+function formatTokenValue(value) {{
+  const numeric = numberOrNull(value);
+  return numeric === null ? 'N/A' : Math.round(numeric).toLocaleString();
+}}
+function formatGbPair(used, total) {{
+  const usedValue = numberOrNull(used);
+  const totalValue = numberOrNull(total);
+  if (usedValue === null || totalValue === null) return 'Memory capacity unavailable';
+  return formatMetricNumber(usedValue, 1) + ' / ' + formatMetricNumber(totalValue, 1) + ' GB';
+}}
+function setInstrumentCardState(cardId, state) {{
+  const card = byId(cardId);
+  if (!card) return;
+  const trendClass = card.classList.contains('instrument-trend-card') ? ' instrument-trend-card' : '';
+  card.className = 'card instrument-card' + trendClass + ' ' + safeClass(state || 'unavailable');
+}}
+function svgElement(tag, attrs) {{
+  const el = document.createElementNS(SVG_NS, tag);
+  Object.entries(attrs || {{}}).forEach(([key, value]) => el.setAttribute(key, value));
+  return el;
+}}
+function gaugePoint(percent, radius) {{
+  const clamped = Math.max(0, Math.min(100, Number(percent) || 0));
+  const angle = (180 - (clamped * 1.8)) * Math.PI / 180;
+  const r = radius ?? 48;
+  return {{
+    x: 60 + Math.cos(angle) * r,
+    y: 60 - Math.sin(angle) * r
+  }};
+}}
+function gaugePath(startPercent, endPercent) {{
+  const start = gaugePoint(startPercent);
+  const end = gaugePoint(endPercent);
+  return `M ${{start.x.toFixed(2)}} ${{start.y.toFixed(2)}} A 48 48 0 0 1 ${{end.x.toFixed(2)}} ${{end.y.toFixed(2)}}`;
+}}
+function initializeInstrumentGauges() {{
+  document.querySelectorAll('.instrument-gauge-shell').forEach(shell => {{
+    if (shell.dataset.initialized === 'true') return;
+    shell.dataset.initialized = 'true';
+    shell.setAttribute('role', 'img');
+    shell.setAttribute('aria-label', (shell.dataset.gaugeLabel || 'Gauge') + ': loading');
+    const svg = svgElement('svg', {{
+      class:'instrument-gauge-svg',
+      viewBox:'0 0 120 76',
+      preserveAspectRatio:'xMidYMid meet',
+      'aria-hidden':'true'
+    }});
+    svg.appendChild(svgElement('path', {{ class:'instrument-gauge-baseline', d:gaugePath(0, 100) }}));
+    INSTRUMENT_GAUGE_SEGMENTS.forEach(segment => {{
+      svg.appendChild(svgElement('path', {{
+        class:'instrument-gauge-segment ' + segment.className,
+        d:gaugePath(segment.start, segment.end)
+      }}));
+    }});
+    [0, 25, 50, 75, 100].forEach(tick => {{
+      const inner = gaugePoint(tick, 40);
+      const outer = gaugePoint(tick, 48);
+      svg.appendChild(svgElement('line', {{
+        class:'instrument-gauge-tick',
+        x1:inner.x.toFixed(2),
+        y1:inner.y.toFixed(2),
+        x2:outer.x.toFixed(2),
+        y2:outer.y.toFixed(2)
+      }}));
+    }});
+    svg.appendChild(svgElement('line', {{ class:'instrument-gauge-needle', x1:'60', y1:'60', x2:'60', y2:'18' }}));
+    svg.appendChild(svgElement('circle', {{ class:'instrument-gauge-pivot', cx:'60', cy:'60', r:'4.8' }}));
+    const center = svgElement('text', {{ class:'instrument-gauge-center', x:'60', y:'42' }});
+    center.textContent = '--';
+    svg.appendChild(center);
+    shell.replaceChildren(svg);
+  }});
+}}
+function updateInstrumentGauge(id, value, centerText, statusLabel) {{
+  const shell = byId(id);
+  if (!shell) return;
+  const numeric = numberOrNull(value);
+  const available = numeric !== null;
+  const clamped = available ? Math.max(0, Math.min(100, numeric)) : 0;
+  const needle = shell.querySelector('.instrument-gauge-needle');
+  const center = shell.querySelector('.instrument-gauge-center');
+  if (needle) needle.style.transform = `rotate(${{(-90 + (clamped * 1.8)).toFixed(2)}}deg)`;
+  if (center) center.textContent = centerText || (available ? formatPercentValue(clamped) : 'N/A');
+  shell.classList.toggle('is-unavailable', !available);
+  const label = shell.dataset.gaugeLabel || 'Gauge';
+  const stateText = statusLabel ? ', ' + statusLabel : '';
+  shell.setAttribute('aria-label', label + ': ' + (centerText || (available ? formatPercentValue(clamped) : 'unavailable')) + stateText);
+}}
+function normalizeInstrumentDetailLine(line, fallback) {{
+  if (line && typeof line === 'object') {{
+    const text = line.text === null || line.text === undefined ? '' : String(line.text).trim();
+    const title = line.title === null || line.title === undefined ? text : String(line.title).trim();
+    return {{ text:text || fallback, title:title || text || fallback }};
+  }}
+  const text = line === null || line === undefined ? '' : String(line).trim();
+  return {{ text:text || fallback, title:text || fallback }};
+}}
+function renderInstrumentSupport(id, detailLines, fallbackLines) {{
+  const support = byId(id);
+  if (!support) return;
+  const source = Array.isArray(detailLines) ? detailLines : [];
+  const fallbacks = Array.isArray(fallbackLines) && fallbackLines.length ? fallbackLines : ['Detail unavailable', 'Detail unavailable', 'Detail unavailable'];
+  support.querySelectorAll('[data-support-slot]').forEach((row, index) => {{
+    const fallback = fallbacks[index] || 'Detail unavailable';
+    const line = normalizeInstrumentDetailLine(source[index], fallback);
+    row.textContent = line.text;
+    if (line.title) row.setAttribute('title', line.title);
+    else row.removeAttribute('title');
+  }});
+}}
+function updateUtilizationInstrument(config, data) {{
+  const current = data || {{}};
+  const status = current.status || 'unavailable';
+  const label = current.status_label || titleCase(status);
+  const value = numberOrNull(current.usage_percent);
+  const valueText = value === null ? 'N/A' : formatPercentValue(value);
+  setInstrumentCardState(config.cardId, status);
+  setText(config.valueId, valueText);
+  setStatusBadge(config.statusId, status, label);
+  renderInstrumentSupport(config.supportId, current.detail_lines, config.supportFallbacks || [
+    current.message || config.emptyText || 'Telemetry unavailable.',
+    'Detail unavailable',
+    'Detail unavailable'
+  ]);
+  updateInstrumentGauge(config.gaugeId, value, valueText, label);
+}}
+function updateContextUsageInstrument(context) {{
+  const current = context || {{}};
+  const status = current.status || current.state || 'unavailable';
+  const label = current.status_label || titleCase(status);
+  const usage = numberOrNull(current.usage_percent);
+  const valueText = usage === null ? (current.state === 'disabled' ? 'Disabled' : 'N/A') : formatPercentValue(usage);
+  setInstrumentCardState('contextInstrumentCard', status);
+  setText('contextInstrumentValue', valueText);
+  setStatusBadge('contextInstrumentStatus', status, label);
+  renderInstrumentSupport('contextInstrumentSupport', current.detail_lines, [
+    current.message || 'Active context telemetry unavailable.',
+    current.active_model || 'Active model unknown',
+    'Warn ' + (current.warning_threshold_percent ?? '--') + '% · Compress ' + (current.compression_threshold_percent ?? '--') + '%'
+  ]);
+  updateInstrumentGauge('contextInstrumentGauge', usage, valueText, label);
+}}
+function updateCompressionInstrument(compression) {{
+  const current = compression || {{}};
+  const state = current.state || current.status || 'unavailable';
+  const label = current.status_label || titleCase(state);
+  const proximity = numberOrNull(current.proximity_percent);
+  setInstrumentCardState('compressionInstrumentCard', state);
+  setText('compressionInstrumentValue', label);
+  setStatusBadge('compressionInstrumentStatus', state, label);
+  renderInstrumentSupport('compressionInstrumentSupport', current.detail_lines, [
+    'Threshold ' + (current.threshold_percent ?? '--') + '%',
+    'Events ' + (current.event_count ?? 0),
+    current.message || 'Compression status unavailable.'
+  ]);
+  updateInstrumentGauge('compressionInstrumentGauge', proximity, label, 'Threshold proximity ' + (proximity === null ? 'unavailable' : formatPercentValue(proximity)));
+}}
+function renderContextTrend(trend) {{
+  const current = trend || {{}};
+  const state = current.state || 'empty';
+  const samples = Array.isArray(current.samples) ? current.samples : [];
+  const currentUsage = numberOrNull(current.current_usage_percent);
+  setInstrumentCardState('contextTrendCard', state);
+  setText('contextTrendValue', currentUsage === null ? '--' : formatPercentValue(currentUsage));
+  setStatusBadge('contextTrendStatus', state, state === 'ready' ? 'Ready' : titleCase(state));
+  setText('contextTrendDetail', current.estimate_label || current.message || 'Estimate unavailable');
+  setText('contextTrendThresholds', 'Warn ' + (current.warning_threshold_percent ?? '--') + '% · Compress ' + (current.compression_threshold_percent ?? '--') + '%');
+
+  const line = byId('contextTrendLine');
+  const area = byId('contextTrendArea');
+  const empty = byId('contextTrendEmpty');
+  const warning = byId('contextTrendWarning');
+  const compression = byId('contextTrendCompression');
+  const title = byId('contextTrendA11y');
+  if (!line || !area || !empty || !warning || !compression) return;
+
+  const width = 260;
+  const height = 72;
+  const pad = 8;
+  const yForPercent = percent => {{
+    const value = Math.max(0, Math.min(100, Number(percent) || 0));
+    return height - pad - ((value / 100) * (height - (pad * 2)));
+  }};
+  const warningY = yForPercent(current.warning_threshold_percent);
+  const compressionY = yForPercent(current.compression_threshold_percent);
+  warning.setAttribute('y1', warningY.toFixed(2));
+  warning.setAttribute('y2', warningY.toFixed(2));
+  compression.setAttribute('y1', compressionY.toFixed(2));
+  compression.setAttribute('y2', compressionY.toFixed(2));
+
+  const values = samples.map(sample => numberOrNull(sample.usage_percent)).filter(value => value !== null);
+  if (values.length < 2) {{
+    line.setAttribute('points', '');
+    area.setAttribute('points', '');
+    empty.style.display = 'grid';
+    empty.textContent = current.message || 'Collecting context history.';
+    if (title) title.textContent = current.message || 'Collecting context history.';
+    return;
+  }}
+
+  const points = values.map((value, index) => {{
+    const x = values.length === 1 ? width - pad : pad + ((index / (values.length - 1)) * (width - (pad * 2)));
+    const y = yForPercent(value);
+    return `${{x.toFixed(2)}},${{y.toFixed(2)}}`;
+  }}).join(' ');
+  line.setAttribute('points', points);
+  area.setAttribute('points', `${{pad}},${{height - pad}} ${{points}} ${{width - pad}},${{height - pad}}`);
+  empty.style.display = 'none';
+  if (title) title.textContent = 'Context trend with ' + values.length + ' sample(s). Current usage ' + (currentUsage === null ? 'unavailable' : formatPercentValue(currentUsage)) + '.';
+}}
+function updateInstrumentPanel(instrumentPanel) {{
+  const panel = instrumentPanel || {{}};
+  updateUtilizationInstrument({{
+    cardId:'cpuInstrumentCard',
+    gaugeId:'cpuInstrumentGauge',
+    valueId:'cpuInstrumentValue',
+    statusId:'cpuInstrumentStatus',
+    supportId:'cpuInstrumentSupport',
+    emptyText:'CPU telemetry unavailable.',
+    supportFallbacks:['CPU identity unavailable', 'Thread count unavailable', 'Temperature unavailable']
+  }}, panel.cpu);
+  updateUtilizationInstrument({{
+    cardId:'gpuInstrumentCard',
+    gaugeId:'gpuInstrumentGauge',
+    valueId:'gpuInstrumentValue',
+    statusId:'gpuInstrumentStatus',
+    supportId:'gpuInstrumentSupport',
+    emptyText:'GPU telemetry unavailable.',
+    supportFallbacks:['GPU unavailable', 'VRAM unavailable', 'Temperature unavailable']
+  }}, panel.gpu);
+  updateUtilizationInstrument({{
+    cardId:'memoryInstrumentCard',
+    gaugeId:'memoryInstrumentGauge',
+    valueId:'memoryInstrumentValue',
+    statusId:'memoryInstrumentStatus',
+    supportId:'memoryInstrumentSupport',
+    emptyText:'Memory telemetry unavailable.',
+    supportFallbacks:['Used memory unavailable', 'Total memory unavailable', 'Memory status unavailable']
+  }}, panel.memory);
+  updateContextUsageInstrument(panel.context_usage);
+  renderContextTrend(panel.context_trend);
+  updateCompressionInstrument(panel.compression_status);
+}}
 function showPage(pageName) {{
   const target = pageName || 'operations';
   document.querySelectorAll('[data-page]').forEach(page => page.classList.toggle('active', page.dataset.page === target));
@@ -1012,24 +1382,9 @@ async function refreshMetrics() {{
   const res = await fetch('/metrics');
   const data = await res.json();
   const r = data.requests;
-  const s = data.system;
   setText('req', r.total_requests);
   triggerTopologyPulse(r.total_requests);
   setText('err', r.total_errors);
-  setText('cpu', s.cpu_percent + '%');
-  setWidth('cpuBar', s.cpu_percent + '%');
-  setText('ram', s.ram_percent + '%');
-  setText('ramText', s.ram_used_gb + ' / ' + s.ram_total_gb + ' GB');
-  setWidth('ramBar', s.ram_percent + '%');
-  if (s.gpu) {{
-    setText('gpu', s.gpu.gpu_percent + '%');
-    setText('vramText', s.gpu.name + ' - ' + s.gpu.vram_used_gb + ' / ' + s.gpu.vram_total_gb + ' GB VRAM - ' + s.gpu.temperature_c + ' C');
-    setWidth('gpuBar', s.gpu.gpu_percent + '%');
-  }} else {{
-    setText('gpu', 'N/A');
-    setText('vramText', 'nvidia-smi not available');
-    setWidth('gpuBar', '0%');
-  }}
   renderSparkline(r.recent_requests);
   setHtml('recent', r.recent_requests.map(x => `<tr><td>${{escapeHtml(new Date(x.timestamp).toLocaleTimeString())}}</td><td>${{escapeHtml(x.client_host||'')}}</td><td>${{escapeHtml(x.endpoint)}}</td><td>${{escapeHtml(x.model||'')}}</td><td>${{escapeHtml(x.status_code)}}</td><td>${{escapeHtml(x.latency_ms)}} ms</td></tr>`).join(''));
 }}
@@ -1047,6 +1402,7 @@ async function refreshDashboardData() {{
   setGauge('contextGaugeArc', context.usage_percent);
   setText('compressionCount', compression.count);
   setText('compressionText', compression.history.length + ' recent compression event(s)');
+  updateInstrumentPanel(data.instrument_panel || {{}});
   refreshOperationalActivity(activity);
   refreshIntelligence(intelligence);
   refreshActiveConversation(data.active_conversation, intelligence.conversation_risk);
@@ -1157,6 +1513,7 @@ async function refresh() {{
   }}
 }}
 initializePages();
+initializeInstrumentGauges();
 refresh(); setInterval(refresh, DASHBOARD_REFRESH_INTERVAL_MS);
 </script>
 </body>

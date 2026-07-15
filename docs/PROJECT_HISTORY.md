@@ -66,7 +66,7 @@ Example: `Phase 6.5F-B4.2`
 | Live dashboard and intelligence | Completed | Dashboard routes, live metrics, health, insights, recommendations, trends, and timeline implemented. |
 | Windows executable/service foundation | Completed | PyInstaller spec, executable entry point, service runner, and service placeholder present. |
 | Setup wizard and installer | Completed | First-run wizard, Inno Setup foundation, and release build script present. |
-| Dashboard modernization | Active | Current branch is `phase-6-5f-b4-3-dashboard-operational-state-machine`; B4.3 adds a dedicated operational activity state machine while B4 remains active. |
+| Dashboard modernization | Active | Current branch is `phase-6-5f-b4-6-instrument-panel-standardization`; B4.6 standardizes the instrument-panel cards after the Overview layout convergence pass while B4 remains active. |
 | GitHub release preparation | Planned | Tentative Phase 7 work area. |
 | Version 1.0 release | Planned | Planned release target, not yet completed. |
 
@@ -521,7 +521,7 @@ Goal: Apply final visual polish and restrained micro-interactions without destab
 
 Current workstream:
 
-- Branch: `phase-6-5f-b4-3-dashboard-operational-state-machine`.
+- Branch: `phase-6-5f-b4-4-dashboard-instrument-panel`.
 - Base commit: `85dd3cf` (Phase 6.5F-B4.2 merged into `main`).
 - Overall B4 is not complete yet.
 
@@ -700,12 +700,107 @@ Evidence:
 - Test evidence: `tests/test_activity.py`, activity lifecycle assertions in `tests/test_proxy_tags.py`, dashboard API/UI assertions in `tests/test_app.py`.
 - This B4.3 work is active-branch work and should not be treated as merged until Git history confirms a merge.
 
+#### Phase 6.5F-B4.4 — Dashboard Instrument Panel
+
+Status: Implemented on the active feature branch; not yet merged
+
+Principal outcomes:
+
+- Added the approved six-card dashboard instrument panel to the existing Operations dashboard architecture without replacing the dashboard shell, sidebar, proxy flow, activity state machine, or existing secondary pages.
+- Implemented six instrument cards: CPU Usage, GPU Usage, Memory Usage, Context Usage, Context Trend, and Compression Status.
+- Extended system telemetry into structured dashboard-ready CPU, memory, and GPU detail payloads while preserving legacy metric keys used by existing dashboard widgets.
+- Added honest unavailable, partial, disabled, and empty states for resource telemetry, GPU collection, active context, context tracking, and compression readiness.
+- Added reusable SVG semicircle gauge architecture initialized from shared lightweight markup and used by CPU, GPU, memory, context usage, and compression status.
+- Added bounded in-memory rolling context-history support keyed by active conversation id; trend samples are recorded only from real active-context observations and are not backfilled or manufactured.
+- Added a compact SVG context trend card with warning and compression threshold guidance and a collecting/empty state when insufficient history exists.
+- Added compression-state visualization as an operational state (`Available`, `Disabled`, `Monitoring`, `Approaching`, `Completed`, `Unavailable`) rather than a fake utilization value.
+- Preserved reduced-motion support and the existing refresh cycle; the panel updates existing DOM nodes instead of rebuilding cards per poll.
+
+Backend/data payload changes:
+
+- `/dashboard/data` now includes an `instrument_panel` object with `cpu`, `gpu`, `memory`, `context_usage`, `context_trend`, and `compression_status` sections.
+- `system` metrics now include structured `cpu`, `memory`, and `gpu_detail` objects in addition to existing `cpu_percent`, `ram_percent`, `ram_used_gb`, `ram_total_gb`, and `gpu` keys.
+- Active conversation snapshots now use a model-specific configured context window when `settings.models[model].context_window_tokens` is available, falling back to the configured default context window.
+
+Validation:
+
+- Python syntax validation: `.\.venv\Scripts\python.exe -m py_compile src\ctxkeeper\diagnostics\metrics.py src\ctxkeeper\dashboard\routes.py src\ctxkeeper\dashboard\template.py tests\test_dashboard_instrument_panel.py`.
+- Rendered dashboard JavaScript syntax validation: extracted `<script>` from `render_dashboard_html(Settings())` and ran `node --check -`, passing.
+- New focused instrument-panel tests: `.\.venv\Scripts\python.exe -m pytest tests\test_dashboard_instrument_panel.py -q`, 10 tests passing, with one existing third-party `StarletteDeprecationWarning` from FastAPI/Starlette TestClient.
+- Broader dashboard/context-focused validation: `.\.venv\Scripts\python.exe -m pytest tests\test_app.py tests\test_dashboard_snapshots.py tests\test_dashboard_intelligence.py tests\test_context_monitor.py tests\test_context_meter.py -q`, 68 tests passing, with the same existing warning.
+- Full automated suite: `.\.venv\Scripts\python.exe -m pytest`, 171 tests passing, with the same existing warning.
+
+Follow-up:
+
+- Phase 6.5F-B4.5 superseded the earlier planned "Final UX Polish & Consistency Review" label with a narrower Overview Layout Convergence pass.
+- Manual browser validation should still cover wide desktop, narrower desktop, 100%, 75%, and 50% zoom-equivalent layouts, browser resize, no active conversation, active conversation, compression disabled/enabled, GPU telemetry unavailable, long hardware/model names, reduced motion, and absence of unexpected page or nested horizontal scrollbars.
+
+#### Phase 6.5F-B4.5 — Overview Layout Convergence
+
+Status: Implemented on the active feature branch; not yet merged
+
+This phase superseded the earlier planned "Final UX Polish & Consistency Review" label with a focused Overview layout convergence pass.
+
+Principal outcomes:
+
+- Removed the duplicate lower-dashboard Resources card now that CPU, GPU, memory, context, trend, and compression telemetry live authoritatively in the instrument panel.
+- Rebalanced the lower Operations layout into a wider Traffic panel and a narrower Active Conversation panel using an intentional approximately 60/40 split on desktop widths.
+- Expanded the Traffic panel presentation with clearer metric grouping, spacing, alignment, and an existing request-error count moved into the traffic context.
+- Expanded the Active Conversation panel presentation with cleaner metadata grouping, longer-value wrapping, improved spacing, and more room for context usage and risk text.
+- Improved the Overview information hierarchy by eliminating duplicate resource telemetry and keeping lower-dashboard space focused on traffic and active conversation state.
+- Removed stale Resources-card frontend selectors and JavaScript update paths for the deleted CPU/RAM/VRAM widgets.
+
+Validation:
+
+- Focused dashboard validation: `.\.venv\Scripts\python.exe -m pytest tests\test_dashboard_instrument_panel.py tests\test_app.py tests\test_dashboard_snapshots.py tests\test_dashboard_intelligence.py -q`, 63 tests passing, with one existing third-party `StarletteDeprecationWarning` from FastAPI/Starlette TestClient.
+- Python syntax validation: `.\.venv\Scripts\python.exe -m py_compile src\ctxkeeper\dashboard\template.py tests\test_dashboard_instrument_panel.py`.
+- Rendered dashboard JavaScript syntax validation: extracted `<script>` from `render_dashboard_html(Settings())` and ran `node --check -`, passing.
+- Full automated suite: `.\.venv\Scripts\python.exe -m pytest`, 172 tests passing, with the same existing warning.
+- Browser zoom/overflow validation at 100%, 75%, and 50% could not be executed in this environment because no Edge, Chrome, Chromium, or Firefox binary was available on PATH or standard Windows install paths.
+
+#### Phase 6.5F-B4.6 — Instrument Panel Standardization
+
+Status: Implemented on the active feature branch; not yet merged
+
+Principal outcomes:
+
+- Standardized the gauge-style instrument cards for CPU Usage, GPU Usage, Memory Usage, Context Usage, and Compression Status around a shared visual structure.
+- Added a strict three-support-line layout rule for gauge-style instruments so supporting details reserve the same vertical region across cards and missing data does not collapse the layout.
+- Corrected the visibly offset gauge root cause by replacing variable detail/footer card rows with a shared instrument row contract for header, gauge, primary reading, and support rows.
+- Simplified CPU visible hardware detail to dynamically detected CPU identity, thread count, and CPU temperature when a trustworthy sensor is available.
+- Preserved dynamic GPU model, VRAM, and temperature presentation while reducing supporting-detail clutter and keeping graceful unavailable/partial telemetry states.
+- Preserved the existing instrument-panel color language, gauge component, refresh cycle, reduced-motion behavior, responsive architecture, and `.dashboard-main` scroll-owner model.
+- Kept the Context Trend card behavior unchanged except for coexistence with the standardized gauge cards.
+
+Backend/data payload changes:
+
+- `system.cpu` now includes a cached static `thread_count` alias alongside `logical_processor_count`, plus `temperature_c` with a stable `None` fallback when trustworthy CPU temperature cannot be obtained.
+- CPU identity collection now prefers clean OS-exposed processor names, filters architecture/platform-only strings, and caches static hardware details to avoid repeated expensive probes.
+- CPU temperature collection uses the existing psutil diagnostics path when available and only accepts defensible CPU sensor mappings such as CPU package/core sensor groups.
+- `/dashboard/data.instrument_panel` now includes exactly three `detail_lines` for CPU, GPU, memory, context usage, and compression status. Each line carries display text and a title for long-name tooltips.
+- Missing CPU/GPU diagnostic fields now serialize into honest unavailable detail lines instead of collapsing frontend support text.
+
+Validation:
+
+- Python syntax validation: `.\.venv\Scripts\python.exe -m py_compile src\ctxkeeper\diagnostics\metrics.py src\ctxkeeper\dashboard\routes.py src\ctxkeeper\dashboard\template.py tests\test_diagnostics_metrics.py tests\test_dashboard_instrument_panel.py`.
+- Focused diagnostic tests: `.\.venv\Scripts\python.exe -m pytest tests\test_diagnostics_metrics.py -q`, 4 tests passing.
+- Focused dashboard/template validation: `.\.venv\Scripts\python.exe -m pytest tests\test_dashboard_instrument_panel.py tests\test_app.py tests\test_dashboard_snapshots.py tests\test_dashboard_intelligence.py -q`, 67 tests passing, with one existing third-party `StarletteDeprecationWarning` from FastAPI/Starlette TestClient.
+- Responsive/layout-related regression validation: `.\.venv\Scripts\python.exe -m pytest tests\test_dashboard_instrument_panel.py tests\test_dashboard_snapshots.py -q`, 17 tests passing, with the same existing warning.
+- Rendered dashboard JavaScript syntax validation: extracted `<script>` from `render_dashboard_html(Settings())` with UTF-8 output and ran `node --check -`, passing.
+- Full automated suite: `.\.venv\Scripts\python.exe -m pytest`, 180 tests passing, with the same existing warning.
+- Browser zoom/overflow validation at 100%, 75%, and 50% could not be executed in this environment because no Edge, Chrome, Chromium, or Firefox binary was available on PATH or standard Windows install paths.
+
+Follow-up:
+
+- Recommended next review step: Phase 6.5F-B4.7 — Manual Visual QA & Acceptance Review.
+- Steve should launch the dashboard locally and manually verify gauge alignment, long hardware names, unavailable CPU/GPU temperature states, 100%, 75%, and 50% zoom, browser resize, reduced motion, and absence of unexpected page or nested horizontal scrollbars.
+
 ## Current Project State
 
-- Current active branch: `phase-6-5f-b4-3-dashboard-operational-state-machine`.
-- Current active phase: Phase 6.5F-B4 — Dashboard Visual Polish & Micro-Interactions, currently in the B4.3 operational activity state-machine pass.
-- Latest verified automated test count: 161 tests passing during the B4.3 repeated model-switch acceptance-fix pass.
-- Dashboard status: modern operations-console dashboard with live proxy, Ollama, request, context, compression, conversation, intelligence, health, independent operational activity, trend, recommendation, timeline, resource surfaces, and restrained micro-interaction polish.
+- Current active branch: `phase-6-5f-b4-6-instrument-panel-standardization`.
+- Current active phase: Phase 6.5F-B4 — Dashboard Visual Polish & Micro-Interactions, currently in the B4.6 instrument-panel standardization pass.
+- Latest verified automated test count: 180 tests passing during the B4.6 instrument-panel standardization pass.
+- Dashboard status: modern operations-console dashboard with live proxy, Ollama, request, context, compression, conversation, intelligence, health, independent operational activity, trend, recommendation, timeline, six-card instrument panel, standardized three-line gauge support rows, converged lower Overview layout, reusable gauges, and restrained micro-interaction polish.
 - Major capabilities currently present:
   - FastAPI-based transparent Ollama proxy.
   - `/api/*` and `/v1/*` passthrough with streaming preservation for supported endpoints.
@@ -716,7 +811,6 @@ Evidence:
   - Windows service foundation, PyInstaller executable foundation, first-run setup wizard, Inno Setup installer foundation, and release build script.
 - Work still underway:
   - Overall Phase 6.5F-B4 visual polish and micro-interaction workstream.
-  - Phase 6.5F-B4.4 final UX polish and consistency review remains the next planned B4 pass.
   - Later rich dashboard widgets, customization, release polish, and public release preparation.
 
 Do not treat uncommitted active-branch work as merged, released, or available on `main` unless Git history later confirms that state.
@@ -725,7 +819,7 @@ Do not treat uncommitted active-branch work as merged, released, or available on
 
 This section is tentative and subject to refinement. These names and boundaries are planning labels, not completed commitments.
 
-- Phase 6.5F-B4.4 — Final UX Polish & Consistency Review.
+- Phase 6.5F-B4.7 — Manual Visual QA & Acceptance Review.
 - Phase 6.5F-B5 — Live Data Visualization & Rich Widgets.
 - Phase 6.5F-B6 — Dashboard Customization & User Preferences.
 - Phase 6.5F-B7 — Release Polish & Final UX Review.

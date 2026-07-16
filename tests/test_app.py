@@ -7,7 +7,7 @@ from ctxkeeper.context.compression_manager import ROLLING_SUMMARY_PREFIX
 from ctxkeeper.context.conversation_store import conversation_store
 from ctxkeeper.dashboard.intelligence import HealthEngine
 from ctxkeeper.dashboard.routes import _latest_applicable_model, build_dashboard_status
-from ctxkeeper.diagnostics.activity import activity_manager
+from ctxkeeper.diagnostics.activity import activity_manager, is_generation_activity_request
 from ctxkeeper.model_context import active_context_window_overrides, model_context_window_cache
 
 
@@ -65,6 +65,63 @@ def test_dashboard_endpoint() -> None:
     assert "ops-activity-summary" in response.text
     assert "No model observed yet" in response.text
     assert "No active model yet" not in response.text
+
+
+def test_dashboard_connection_flow_animation_contract() -> None:
+    app = create_app(Settings())
+    client = TestClient(app)
+    response = client.get("/dashboard")
+
+    assert response.status_code == 200
+    html = response.text
+    assert 'id="connections" class="card flow-panel ops-panel traffic-idle" data-traffic-state="idle" data-active-requests="0"' in html
+    assert 'id="flowNote"' in html
+    assert "Topology idle; connected paths show availability." in html
+    for node in ("client", "proxy", "ollama", "model"):
+        assert f'data-flow-node="{node}"' in html
+    for link in ("client-proxy", "proxy-ollama", "ollama-model"):
+        assert f'data-flow-link="{link}"' in html
+        assert f'data-flow-segment="{link}"' in html
+
+    assert "TOPOLOGY_OUTBOUND_DURATION_MS = 1300" in html
+    assert "TOPOLOGY_INBOUND_DURATION_MS = 1200" in html
+    assert "TOPOLOGY_FLOW_CLASSES = ['traffic-idle','traffic-outbound','traffic-processing','traffic-inbound']" in html
+    assert "function updateTopologyTraffic(activity)" in html
+    assert "current.active_request_count" in html
+    assert "panel.dataset.activeEndpoint = current.active_endpoint || ''" in html
+    assert "panel.dataset.activeGenerationSequence = current.active_generation_sequence ?? ''" in html
+    assert "panel.dataset.activeRequestId = current.active_request_id || ''" in html
+    assert "setTopologyTrafficState(panel, 'outbound')" in html
+    assert "setTopologyTrafficState(panel, 'processing')" in html
+    assert "setTopologyTrafficState(panel, 'inbound')" in html
+    assert "setTopologyTrafficState(panel, 'idle')" in html
+    assert "scheduleTopologySettle(panel, TOPOLOGY_OUTBOUND_DURATION_MS)" in html
+    assert "scheduleTopologySettle(panel, TOPOLOGY_INBOUND_DURATION_MS)" in html
+    assert "triggerTopologyPulse" not in html
+
+    assert ".flow-panel.traffic-outbound .flow-svg-packet" in html
+    assert ".flow-panel.traffic-inbound .flow-svg-packet" in html
+    assert ".flow-panel.traffic-processing [data-flow-segment=\"ollama-model\"]" in html
+    assert "flowPacketOutbound" in html
+    assert "flowPacketInbound" in html
+    assert "@media (prefers-reduced-motion: reduce)" in html
+    assert ".flow-panel.traffic-outbound .flow-svg-packet" in html
+    assert ".flow-panel.traffic-inbound .flow-svg-packet" in html
+    assert ".flow-panel.traffic-processing [data-flow-link=\"ollama-model\"]::after" in html
+
+    animation_block = html[
+        html.index(".flow-panel.traffic-outbound"):
+        html.index("@keyframes flowPacketOutbound")
+    ]
+    for layout_property in ("grid-template", "min-height:", "height:", "width:", "padding:", "margin:"):
+        assert layout_property not in animation_block
+
+    assert "requestTrafficSvg" in html
+    assert "renderRequestTraffic" in html
+    assert is_generation_activity_request("POST", "/api/chat") is True
+    assert is_generation_activity_request("POST", "/api/generate") is True
+    assert is_generation_activity_request("POST", "/api/show") is False
+    assert is_generation_activity_request("GET", "/api/tags") is False
 
 
 def test_dashboard_data_endpoint(monkeypatch) -> None:

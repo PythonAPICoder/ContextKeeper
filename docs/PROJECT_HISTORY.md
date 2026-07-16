@@ -67,7 +67,7 @@ Example: `Phase 6.5F-B4.2`
 | Windows executable/service foundation | Completed | PyInstaller spec, executable entry point, service runner, and service placeholder present. |
 | Setup wizard and installer | Completed | First-run wizard, Inno Setup foundation, and release build script present. |
 | Dashboard modernization B4 workstream | Completed | Phase 6.5F-B4.8 automatic model context discovery is complete on `main` and `origin/main` at commit `fdd9478`; later B5-B7 dashboard work remains planned. |
-| Live data visualization and rich widgets | Active | Phase 6.5F-B5.2 live request traffic visualization is implemented on `phase-6-5f-b5-2-live-request-traffic` and pending QA review; Phase 6.5F-B5.1 foundation is complete on `main` and `origin/main` at commit `e35e891`. |
+| Live data visualization and rich widgets | Active | Phase 6.5F-B5.3 live connection flow animation is implemented on `phase-6-5f-b5-3-live-connection-flow` and pending visual QA; Phase 6.5F-B5.2 is complete on `main` and `origin/main` at commit `7181b69`. |
 | Dashboard customization and user preferences | Planned | Phase 6.5F-B6 planned after B5. |
 | Release polish and final UX review | Planned | Phase 6.5F-B7 planned before historical memory retrieval and validation certification. |
 | Historical memory retrieval and detail preservation | Planned | Dedicated Phase 6.5G approved before Phase 6.6; no implementation exists yet. |
@@ -967,7 +967,7 @@ Validation:
 
 Branch: `phase-6-5f-b5-2-live-request-traffic`
 
-Status: Implemented on branch; pending QA review.
+Status: Completed; on `main` and `origin/main` at commit `7181b69`.
 
 Objective:
 
@@ -1003,6 +1003,62 @@ Validation:
 - Focused dashboard/rendering validation: `.\.venv\Scripts\python.exe -m pytest tests\test_dashboard_instrument_panel.py tests\test_app.py tests\test_dashboard_snapshots.py tests\test_dashboard_intelligence.py -q`, 93 tests passing, with the same existing warning.
 - Full automated suite: `.\.venv\Scripts\python.exe -m pytest -q`, 240 tests passing, with the same existing warning.
 
+### Phase 6.5F-B5.3 — Live Connection Flow Animation
+
+Branch: `phase-6-5f-b5-3-live-connection-flow`
+
+Status: Implemented on branch; pending Product Owner visual QA.
+
+Objective:
+
+- Animate the existing Mission Control connection topology so generation traffic direction is understandable without redesigning the dashboard, replacing widgets, changing dashboard polling, or adding backend state.
+- Represent outbound request flow as Client -> ContextKeeper -> Ollama -> Active Model.
+- Represent inbound response flow as Active Model -> Ollama -> ContextKeeper -> Client.
+- Keep idle topology calm and readable, and keep long-running active requests restrained rather than replaying the complete path continuously.
+
+Implementation summary:
+
+- Added explicit topology traffic states: `idle`, `outbound`, `processing`, and `inbound`.
+- Added stable markup hooks for topology nodes, connector pipes, and SVG path segments using `data-flow-node`, `data-flow-link`, and `data-flow-segment`.
+- Added a deterministic frontend transition state machine driven by `activity.active_request_count`.
+- Used the established applicable-generation activity payload from `/health` and `/dashboard/data`, including `active_request_count`, `active_endpoint`, `active_generation_sequence`, and `active_request_id`.
+- Removed the prior topology pulse trigger based on total request count so metadata requests and non-generation proxy requests cannot animate the conversational connection flow.
+- Preserved the B5.2 request-traffic visualization and its bounded `/metrics.recent_requests` source.
+- Preserved the existing dashboard refresh interval and polling endpoints.
+
+Topology state model:
+
+- Initial load with no active applicable request settles to `idle`.
+- A `0 -> positive` active request-count transition triggers `outbound`.
+- Sustained `positive -> positive` active traffic settles to `processing`.
+- A `positive -> 0` transition triggers `inbound`, then returns to `idle`.
+- If overlapping applicable requests keep the active request count positive, the topology stays in `processing` and does not show the inbound response sequence until the count reaches zero.
+- If a new applicable request starts while an inbound transition is still settling, the timer is superseded and the topology starts a new outbound transition.
+
+Reduced-motion behavior:
+
+- The new outbound, inbound, processing, pipe, and packet animations are covered by the existing `prefers-reduced-motion: reduce` media query.
+- Under reduced motion, traveling particles and sweeping stage movement are disabled while state text and restrained static connector/node emphasis remain available.
+
+Files changed:
+
+- `src/ctxkeeper/dashboard/template.py` for topology state markup, CSS animation states, reduced-motion coverage, and frontend transition logic.
+- `tests/test_app.py` for dashboard structural and behavior-contract coverage.
+- `docs/PROJECT_HISTORY.md` for this phase record and current-state updates.
+
+Validation:
+
+- Python syntax validation: `.\.venv\Scripts\python.exe -m py_compile src\ctxkeeper\dashboard\template.py`, passing.
+- Rendered dashboard JavaScript syntax validation: extracted `<script>` from `render_dashboard_html(Settings())` with UTF-8 output and ran `node --check -`, passing.
+- Focused dashboard flow-contract validation: `.\.venv\Scripts\python.exe -m pytest tests\test_app.py::test_dashboard_endpoint tests\test_app.py::test_dashboard_connection_flow_animation_contract -q`, 2 tests passing, with one existing third-party `StarletteDeprecationWarning` from FastAPI/Starlette TestClient.
+- Broader dashboard/activity/proxy validation: `.\.venv\Scripts\python.exe -m pytest tests\test_app.py tests\test_dashboard_instrument_panel.py tests\test_dashboard_snapshots.py tests\test_dashboard_intelligence.py tests\test_activity.py tests\test_proxy_tags.py -q`, 133 tests passing, with the same existing warning.
+- Full automated suite: `.\.venv\Scripts\python.exe -m pytest -q`, 241 tests passing, with the same existing warning.
+
+Visual QA requirement:
+
+- Final acceptance still requires Product Owner screenshot or live-browser validation at 50%, 75%, and 100% zoom/scaling equivalents, including idle, outbound, processing, inbound, rapid requests, and reduced-motion behavior.
+- This entry records implementation and automated validation only; it does not claim final visual acceptance.
+
 ### Phase 6.5G — Historical Memory Retrieval & Detail Preservation (Approved Plan)
 
 Status: Planned; approved for the roadmap, not implemented.
@@ -1026,8 +1082,9 @@ Approved roadmap sequence:
 
 - Phase 6.5F-B5 — Live Data Visualization & Rich Widgets.
   - Phase 6.5F-B5.1 — Live Visualization Foundation complete.
-  - Phase 6.5F-B5.2 — Live Request Traffic Visualization QA review.
-  - Later B5 rich widget implementation based on the B5.1 audit and B5.2 request-traffic visualization.
+  - Phase 6.5F-B5.2 — Live Request Traffic Visualization complete.
+  - Phase 6.5F-B5.3 — Live Connection Flow Animation QA review.
+  - Later B5 rich widget implementation based on the B5.1 audit, B5.2 request-traffic visualization, and B5.3 connection-flow animation.
 - Phase 6.5F-B6 — Dashboard Customization & User Preferences.
 - Phase 6.5F-B7 — Release Polish & Final UX Review.
 - Phase 6.5G — Historical Memory Retrieval & Detail Preservation.
@@ -1181,13 +1238,14 @@ Scope boundary:
 
 ## Current Project State
 
-- Current active branch: `phase-6-5f-b5-2-live-request-traffic`.
-- Current baseline: `main` and `origin/main` are at commit `e35e891`.
+- Current active branch: `phase-6-5f-b5-3-live-connection-flow`.
+- Current baseline: `main` and `origin/main` are at commit `7181b69`.
 - Phase 6.5F-B4.8 — Automatic Model Context Discovery is complete on `main`; the old local B4.8 feature branch has been deleted.
 - Phase 6.5F-B5.1 — Live Visualization Foundation is complete on `main` and `origin/main` at commit `e35e891`.
-- Current active implementation phase: Phase 6.5F-B5.2 — Live Request Traffic Visualization, implemented on branch and pending QA review.
-- Latest verified automated test count: 240 tests passing during the Phase 6.5F-B5.2 live request traffic visualization pass.
-- Dashboard status: modern operations-console dashboard with live proxy, Ollama, request, context, compression, conversation, intelligence, health, independent operational activity, trend, recommendation, timeline, six-card instrument panel, standardized three-line gauge support rows, refined inactive and no-active Context/Compression instruments, converged lower Overview layout, reusable gauges, visual QA overflow guards, automatic model context-window discovery, compact live request-traffic visualization, and restrained micro-interaction polish.
+- Phase 6.5F-B5.2 — Live Request Traffic Visualization is complete on `main` and `origin/main` at commit `7181b69`.
+- Current active implementation phase: Phase 6.5F-B5.3 — Live Connection Flow Animation, implemented on branch and pending Product Owner visual QA.
+- Latest verified automated test count: 241 tests passing during the Phase 6.5F-B5.3 live connection flow animation pass.
+- Dashboard status: modern operations-console dashboard with live proxy, Ollama, request, context, compression, conversation, intelligence, health, independent operational activity, trend, recommendation, timeline, six-card instrument panel, standardized three-line gauge support rows, refined inactive and no-active Context/Compression instruments, converged lower Overview layout, reusable gauges, visual QA overflow guards, automatic model context-window discovery, compact live request-traffic visualization, live connection-flow animation, and restrained micro-interaction polish.
 - Major capabilities currently present:
   - FastAPI-based transparent Ollama proxy.
   - `/api/*` and `/v1/*` passthrough with streaming preservation for supported endpoints.
@@ -1197,8 +1255,8 @@ Scope boundary:
   - Browser dashboard with live monitoring and intelligence.
   - Windows service foundation, PyInstaller executable foundation, first-run setup wizard, Inno Setup installer foundation, and release build script.
 - Planned work still ahead:
-  - QA review for Phase 6.5F-B5.2 — Live Request Traffic Visualization.
-  - Later Phase 6.5F-B5 rich live visualization/widget work based on the B5.1 audit and B5.2 traffic visualization.
+  - Product Owner visual QA for Phase 6.5F-B5.3 — Live Connection Flow Animation at 50%, 75%, and 100% zoom/scaling equivalents.
+  - Later Phase 6.5F-B5 rich live visualization/widget work based on the B5.1 audit, B5.2 traffic visualization, and B5.3 connection-flow animation.
   - Phase 6.5F-B6 — Dashboard Customization & User Preferences.
   - Phase 6.5F-B7 — Release Polish & Final UX Review.
   - Phase 6.5G — Historical Memory Retrieval & Detail Preservation.
@@ -1207,15 +1265,15 @@ Scope boundary:
   - Version 1.0 Release.
   - Version 2+ architectural ideas tracked in `docs/FUTURE_IDEAS.md`, intentionally outside the Version 1.0 release scope.
 
-Do not treat unmerged Phase 6.5F-B5.2 branch work, planned Phase 6.5G, Phase 6.6, or Version 2+ roadmap content as merged or released until Git history later confirms that state.
+Do not treat unmerged Phase 6.5F-B5.3 branch work, planned Phase 6.5G, Phase 6.6, or Version 2+ roadmap content as merged or released until Git history later confirms that state.
 
 ## Planned Next Steps
 
 This section is tentative and subject to refinement. These names and boundaries are planning labels, not completed commitments.
 
 - Phase 6.5F-B5 — Live Data Visualization & Rich Widgets.
-  - QA review for Phase 6.5F-B5.2 — Live Request Traffic Visualization.
-  - Later B5 visualization work based on the B5.1 audit and existing dashboard telemetry foundations.
+  - Product Owner visual QA for Phase 6.5F-B5.3 — Live Connection Flow Animation.
+  - Later B5 visualization work based on the B5.1 audit, B5.2 request-traffic visualization, and B5.3 connection-flow animation.
 - Phase 6.5F-B6 — Dashboard Customization & User Preferences.
 - Phase 6.5F-B7 — Release Polish & Final UX Review.
 - Phase 6.5G — Historical Memory Retrieval & Detail Preservation.

@@ -253,7 +253,7 @@ a.badge:focus-visible {{ outline:2px solid rgba(56,189,248,.72); outline-offset:
 table {{ width:100%; border-collapse:collapse; font-size:13px; table-layout:fixed; }}
 th,td {{ text-align:left; vertical-align:top; padding:7px 8px; border-bottom:1px solid rgba(255,255,255,.08); overflow-wrap:anywhere; word-break:break-word; }}
 th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.06em; }}
-.flow-panel {{ position:relative; display:grid; grid-template-rows:auto auto; gap:10px; min-height:0; overflow:hidden; padding:13px 14px; background:linear-gradient(145deg,rgba(15,23,42,.96),rgba(24,33,50,.86)); }}
+.flow-panel {{ --topology-flow-duration:1300ms; --topology-return-duration:1200ms; position:relative; display:grid; grid-template-rows:auto auto; gap:10px; min-height:0; overflow:hidden; padding:13px 14px; background:linear-gradient(145deg,rgba(15,23,42,.96),rgba(24,33,50,.86)); }}
 .flow-panel::before {{ content:""; position:absolute; inset:46px 14px 14px; border:1px solid rgba(56,189,248,.08); border-radius:10px; pointer-events:none; }}
 .flow-panel::after {{ content:""; position:absolute; inset:0; background:radial-gradient(circle at 50% 0%,rgba(56,189,248,.11),transparent 42%); pointer-events:none; }}
 .flow-panel > * {{ position:relative; z-index:1; }}
@@ -269,24 +269,35 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
 .flow-svg-line.flow-line-offline {{ stroke:rgba(239,68,68,.36); stroke-dasharray:3 8; }}
 .flow-svg-packet {{ fill:var(--accent); opacity:0; filter:drop-shadow(0 0 8px rgba(56,189,248,.55)); }}
 .flow-svg-packet {{ offset-path:path("M 55 90 C 180 90 200 90 325 90 C 450 90 470 90 595 90 C 720 90 740 90 945 90"); offset-rotate:0deg; }}
-.flow-panel.flow-active .flow-svg-packet {{ opacity:0; animation:none; }}
-.flow-panel.flow-waiting .flow-svg-packet {{ fill:var(--warn); opacity:0; animation:none; }}
-.flow-panel.flow-offline .flow-svg-packet {{ opacity:0; animation:none; }}
-.flow-panel.activity-streaming .flow-svg-packet {{ opacity:.46; animation:flowPacket 2400ms linear infinite; }}
+.flow-panel.flow-active .flow-svg-packet,.flow-panel.flow-waiting .flow-svg-packet,.flow-panel.flow-offline .flow-svg-packet,.flow-panel.traffic-idle .flow-svg-packet,.flow-panel.traffic-processing .flow-svg-packet {{ opacity:0; animation:none; }}
+.flow-panel.flow-waiting .flow-svg-packet {{ fill:var(--warn); }}
 .flow-panel.activity-thinking .flow-svg-line.flow-line-active,.flow-panel.activity-receiving .flow-svg-line.flow-line-active {{ stroke:rgba(125,211,252,.78); filter:drop-shadow(0 0 6px rgba(56,189,248,.3)); }}
 .flow-panel.activity-finalizing .pipe::after {{ background:rgba(125,211,252,.72); box-shadow:0 0 18px rgba(56,189,248,.4); }}
-.flow-panel.request-pulse .flow-stage::after {{ animation:flowStagePulse 1300ms ease-out 1; }}
-.flow-panel.request-pulse .flow-svg-packet {{ animation:flowPacketPulse 1300ms ease-out 1; opacity:.92; }}
-.flow-panel.request-pulse .flow-svg-line.flow-line-active,.flow-panel.request-pulse .flow-svg-line.flow-line-waiting {{ stroke:rgba(125,211,252,.86); filter:drop-shadow(0 0 7px rgba(56,189,248,.36)); }}
-.flow-panel.request-pulse .pipe {{ background:linear-gradient(90deg,rgba(45,58,79,.35),rgba(125,211,252,.9),rgba(45,58,79,.35)); }}
-.flow-panel.request-pulse .pipe::after {{ animation:pipeRequestPulse 1300ms ease-out 1; background:rgba(125,211,252,.82); box-shadow:0 0 22px rgba(56,189,248,.54); }}
-.flow-panel.request-pulse .flow-node {{ border-color:rgba(56,189,248,.36); box-shadow:var(--shadow-neutral-soft),var(--surface-inset-highlight),var(--glow-info); }}
-.flow-panel.request-pulse .flow-node-icon {{ border-color:rgba(56,189,248,.34); background:rgba(56,189,248,.14); box-shadow:0 0 0 3px rgba(56,189,248,.06),var(--glow-info); }}
+.flow-panel.traffic-outbound .flow-stage::after {{ animation:flowStageOutbound var(--topology-flow-duration) ease-out 1; }}
+.flow-panel.traffic-inbound .flow-stage::after {{ animation:flowStageInbound var(--topology-return-duration) ease-out 1; background:linear-gradient(90deg,transparent,rgba(167,139,250,.2),transparent); }}
+.flow-panel.traffic-outbound .flow-svg-packet {{ fill:var(--accent); opacity:.92; animation:flowPacketOutbound var(--topology-flow-duration) cubic-bezier(.2,0,0,1) 1; }}
+.flow-panel.traffic-inbound .flow-svg-packet {{ fill:#a78bfa; opacity:.92; animation:flowPacketInbound var(--topology-return-duration) cubic-bezier(.2,0,0,1) 1; }}
+.flow-panel.traffic-outbound .flow-svg-line.flow-line-active,.flow-panel.traffic-outbound .flow-svg-line.flow-line-waiting {{ stroke:rgba(125,211,252,.86); filter:drop-shadow(0 0 7px rgba(56,189,248,.36)); }}
+.flow-panel.traffic-inbound .flow-svg-line.flow-line-active,.flow-panel.traffic-inbound .flow-svg-line.flow-line-waiting {{ stroke:rgba(167,139,250,.82); filter:drop-shadow(0 0 7px rgba(167,139,250,.32)); }}
+.flow-panel.traffic-outbound [data-flow-link] {{ background:linear-gradient(90deg,rgba(45,58,79,.35),rgba(125,211,252,.9),rgba(45,58,79,.35)); }}
+.flow-panel.traffic-inbound [data-flow-link] {{ background:linear-gradient(270deg,rgba(45,58,79,.35),rgba(167,139,250,.86),rgba(45,58,79,.35)); }}
+.flow-panel.traffic-outbound [data-flow-link]::after {{ animation:pipeTrafficPulse var(--topology-flow-duration) ease-out 1; background:rgba(125,211,252,.82); box-shadow:0 0 22px rgba(56,189,248,.54); }}
+.flow-panel.traffic-inbound [data-flow-link]::after {{ animation:pipeTrafficPulse var(--topology-return-duration) ease-out 1; background:rgba(167,139,250,.78); box-shadow:0 0 22px rgba(167,139,250,.46); }}
+.flow-panel.traffic-processing [data-flow-segment="ollama-model"] {{ stroke:rgba(125,211,252,.86); filter:drop-shadow(0 0 8px rgba(56,189,248,.32)); animation:processingLinePulse 2400ms ease-in-out infinite; }}
+.flow-panel.traffic-processing [data-flow-link="ollama-model"]::after {{ background:rgba(125,211,252,.7); box-shadow:0 0 18px rgba(56,189,248,.36); animation:processingNodePulse 2600ms ease-in-out infinite; }}
+.flow-panel.traffic-processing [data-flow-node="ollama"],.flow-panel.traffic-processing [data-flow-node="model"] {{ border-color:rgba(56,189,248,.28); box-shadow:var(--shadow-neutral-soft),var(--surface-inset-highlight),0 0 14px rgba(56,189,248,.12); }}
+.flow-panel.traffic-outbound .flow-node,.flow-panel.traffic-inbound .flow-node {{ border-color:rgba(56,189,248,.32); box-shadow:var(--shadow-neutral-soft),var(--surface-inset-highlight),var(--glow-info); }}
+.flow-panel.traffic-inbound .flow-node {{ border-color:rgba(167,139,250,.28); box-shadow:var(--shadow-neutral-soft),var(--surface-inset-highlight),0 0 18px rgba(167,139,250,.14); }}
+.flow-panel.traffic-outbound .flow-node-icon,.flow-panel.traffic-inbound .flow-node-icon {{ border-color:rgba(56,189,248,.34); background:rgba(56,189,248,.14); box-shadow:0 0 0 3px rgba(56,189,248,.06),var(--glow-info); }}
+.flow-panel.traffic-inbound .flow-node-icon {{ border-color:rgba(167,139,250,.3); background:rgba(167,139,250,.12); box-shadow:0 0 0 3px rgba(167,139,250,.06),0 0 18px rgba(167,139,250,.16); }}
 .flow-node.status-pulse {{ animation:nodeStatusPulse 700ms ease-out 1; }}
-@keyframes flowPacket {{ 0% {{ offset-distance:0%; opacity:0; }} 10% {{ opacity:.72; }} 86% {{ opacity:.72; }} 100% {{ offset-distance:100%; opacity:0; }} }}
-@keyframes flowPacketPulse {{ 0% {{ offset-distance:0%; opacity:0; }} 12% {{ opacity:1; }} 82% {{ opacity:1; }} 100% {{ offset-distance:100%; opacity:0; }} }}
-@keyframes flowStagePulse {{ 0% {{ opacity:0; transform:translateX(-70%); }} 18% {{ opacity:.68; }} 72% {{ opacity:.26; }} 100% {{ opacity:0; transform:translateX(70%); }} }}
-@keyframes pipeRequestPulse {{ 0% {{ transform:translate(-50%,-50%) scale(.92); opacity:.74; }} 32% {{ transform:translate(-50%,-50%) scale(1.28); opacity:1; }} 100% {{ transform:translate(-50%,-50%) scale(1); opacity:.86; }} }}
+@keyframes flowPacketOutbound {{ 0% {{ offset-distance:0%; opacity:0; }} 12% {{ opacity:1; }} 82% {{ opacity:1; }} 100% {{ offset-distance:100%; opacity:0; }} }}
+@keyframes flowPacketInbound {{ 0% {{ offset-distance:100%; opacity:0; }} 12% {{ opacity:1; }} 82% {{ opacity:1; }} 100% {{ offset-distance:0%; opacity:0; }} }}
+@keyframes flowStageOutbound {{ 0% {{ opacity:0; transform:translateX(-70%); }} 18% {{ opacity:.68; }} 72% {{ opacity:.26; }} 100% {{ opacity:0; transform:translateX(70%); }} }}
+@keyframes flowStageInbound {{ 0% {{ opacity:0; transform:translateX(70%); }} 18% {{ opacity:.62; }} 72% {{ opacity:.24; }} 100% {{ opacity:0; transform:translateX(-70%); }} }}
+@keyframes pipeTrafficPulse {{ 0% {{ transform:translate(-50%,-50%) scale(.92); opacity:.74; }} 32% {{ transform:translate(-50%,-50%) scale(1.28); opacity:1; }} 100% {{ transform:translate(-50%,-50%) scale(1); opacity:.86; }} }}
+@keyframes processingLinePulse {{ 0%,100% {{ opacity:.8; }} 50% {{ opacity:1; }} }}
+@keyframes processingNodePulse {{ 0%,100% {{ transform:translate(-50%,-50%) scale(.96); opacity:.72; }} 50% {{ transform:translate(-50%,-50%) scale(1.16); opacity:1; }} }}
 @keyframes nodeStatusPulse {{ 0% {{ transform:translateY(0); }} 35% {{ transform:translateY(-1px); border-color:rgba(56,189,248,.38); }} 100% {{ transform:translateY(0); }} }}
 .flow-note {{ color:var(--muted); font-size:12px; }}
 .node {{ position:relative; background:radial-gradient(circle at 50% 0%,rgba(56,189,248,.13),transparent 46%),rgba(15,23,42,.92); border:1px solid var(--border-card); border-radius:8px; padding:12px; min-width:0; min-height:118px; box-shadow:var(--shadow-neutral-soft),var(--surface-inset-highlight); transition:border-color .18s ease, transform .18s ease, background .18s ease,box-shadow .18s ease; }}
@@ -313,7 +324,7 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
 .pipe {{ position:relative; height:2px; align-self:center; background:linear-gradient(90deg,rgba(45,58,79,.35),rgba(56,189,248,.85),rgba(45,58,79,.35)); border-radius:99px; opacity:.9; }}
 .pipe::before {{ content:""; position:absolute; inset:-12px 0; border-top:1px dashed rgba(148,163,184,.22); top:50%; }}
 .pipe::after {{ content:""; position:absolute; left:50%; top:50%; width:10px; height:10px; border-radius:50%; transform:translate(-50%,-50%); background:rgba(56,189,248,.5); box-shadow:0 0 18px rgba(56,189,248,.42); }}
-@media (prefers-reduced-motion: reduce) {{ html {{ scroll-behavior:auto; }} .flow-panel.flow-active .flow-svg-packet,.flow-panel.flow-waiting .flow-svg-packet,.flow-panel.activity-streaming .flow-svg-packet,.flow-panel.request-pulse .flow-svg-packet,.flow-panel.request-pulse .flow-stage::after,.flow-panel.request-pulse .pipe::after,.flow-node.status-pulse,.dot,.value-pop,.badge-update,.ops-activity-summary,.ops-activity-summary .ops-health-status,.ops-activity-summary::after {{ animation:none; }} .flow-svg-packet,.flow-stage::after {{ opacity:0; }} .nav a,.nav a::before,.topbar-status,.topbar-status-dot,.card,.node,.hero-status,.hero-status::before,.hero-status::after,.hero-stat-card,.hero-stat-icon,.hero-stat-value,.badge,.flow-svg-line,.gauge-progress,.fill,.ops-health-row,.ops-activity-summary,.panel-item,.timeline-item,.message,.instrument-gauge-needle,.instrument-gauge-pivot,.instrument-card-value,.trend-line,.trend-area,.request-traffic-bar {{ transition:none; }} .nav a:hover,.nav a:active,.card:hover,.node:hover,.hero-stat-card:hover,.hero-stat-card:focus-within,.hero-stat-card:focus-visible,.hero-stat-card:hover .hero-stat-icon,.hero-stat-card:focus-within .hero-stat-icon,.hero-stat-card:focus-visible .hero-stat-icon,a.badge:hover,a.badge:active,body.is-refreshing .topbar-status-dot {{ transform:none; }} }}
+@media (prefers-reduced-motion: reduce) {{ html {{ scroll-behavior:auto; }} .flow-panel.flow-active .flow-svg-packet,.flow-panel.flow-waiting .flow-svg-packet,.flow-panel.traffic-outbound .flow-svg-packet,.flow-panel.traffic-inbound .flow-svg-packet,.flow-panel.traffic-outbound .flow-stage::after,.flow-panel.traffic-inbound .flow-stage::after,.flow-panel.traffic-outbound [data-flow-link]::after,.flow-panel.traffic-inbound [data-flow-link]::after,.flow-panel.traffic-processing [data-flow-segment="ollama-model"],.flow-panel.traffic-processing [data-flow-link="ollama-model"]::after,.flow-node.status-pulse,.dot,.value-pop,.badge-update,.ops-activity-summary,.ops-activity-summary .ops-health-status,.ops-activity-summary::after {{ animation:none; }} .flow-svg-packet,.flow-stage::after {{ opacity:0; }} .nav a,.nav a::before,.topbar-status,.topbar-status-dot,.card,.node,.hero-status,.hero-status::before,.hero-status::after,.hero-stat-card,.hero-stat-icon,.hero-stat-value,.badge,.flow-svg-line,.gauge-progress,.fill,.ops-health-row,.ops-activity-summary,.panel-item,.timeline-item,.message,.instrument-gauge-needle,.instrument-gauge-pivot,.instrument-card-value,.trend-line,.trend-area,.request-traffic-bar {{ transition:none; }} .nav a:hover,.nav a:active,.card:hover,.node:hover,.hero-stat-card:hover,.hero-stat-card:focus-within,.hero-stat-card:focus-visible,.hero-stat-card:hover .hero-stat-icon,.hero-stat-card:focus-within .hero-stat-icon,.hero-stat-card:focus-visible .hero-stat-icon,a.badge:hover,a.badge:active,body.is-refreshing .topbar-status-dot {{ transform:none; }} }}
 .small {{ font-size:12px; color:var(--muted); overflow-wrap:anywhere; }}
 .traffic-panel {{ display:grid; grid-template-rows:auto auto 1fr; gap:12px; align-content:start; padding:14px; }}
 .traffic-stats {{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; align-items:stretch; }}
@@ -805,37 +816,37 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
     </div>
   </section>
 
-  <section id="connections" class="card flow-panel ops-panel">
+  <section id="connections" class="card flow-panel ops-panel traffic-idle" data-traffic-state="idle" data-active-requests="0">
     <div class="health-title dashboard-card-header">
       <h2 class="flow-heading dashboard-card-title"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"></path><path d="M18 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"></path><path d="M6 22a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"></path><path d="M8.6 6.5 15.4 10.5"></path><path d="M15.4 13.5 8.6 17.5"></path></svg>Connection Flow</h2>
-      <span class="flow-note">Request pulses appear only when traffic changes.</span>
+      <span id="flowNote" class="flow-note">Topology idle; connected paths show availability.</span>
     </div>
     <div class="flow-stage">
       <svg class="flow-svg-layer" viewBox="0 0 1000 180" preserveAspectRatio="none" aria-hidden="true">
-        <path id="flowLineClientProxy" class="flow-svg-line" d="M 55 90 C 180 90 200 90 325 90"></path>
-        <path id="flowLineProxyOllama" class="flow-svg-line" d="M 325 90 C 450 90 470 90 595 90"></path>
-        <path id="flowLineOllamaModel" class="flow-svg-line" d="M 595 90 C 720 90 740 90 945 90"></path>
+        <path id="flowLineClientProxy" class="flow-svg-line" data-flow-segment="client-proxy" d="M 55 90 C 180 90 200 90 325 90"></path>
+        <path id="flowLineProxyOllama" class="flow-svg-line" data-flow-segment="proxy-ollama" d="M 325 90 C 450 90 470 90 595 90"></path>
+        <path id="flowLineOllamaModel" class="flow-svg-line" data-flow-segment="ollama-model" d="M 595 90 C 720 90 740 90 945 90"></path>
         <circle id="flowPacket" class="flow-svg-packet" r="5" cx="0" cy="0"></circle>
       </svg>
-      <div class="node flow-node">
+      <div class="node flow-node" data-flow-node="client">
         <div class="flow-node-head"><div class="flow-node-title"><span id="clientDot" class="dot waiting"></span>Client</div><div class="flow-node-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"></rect><path d="M8 20h8"></path><path d="M12 16v4"></path></svg></div></div>
         <div class="flow-node-main"><div id="clientText" class="value">Waiting</div><div id="clientSub" class="small">No clients seen yet</div></div>
         <div class="flow-node-foot"><span class="flow-endpoint">Inbound requests</span><span id="clientStatusBadge" class="badge waiting flow-status">Waiting</span></div>
       </div>
-      <div class="pipe"></div>
-      <div class="node flow-node">
+      <div class="pipe" data-flow-link="client-proxy"></div>
+      <div class="node flow-node" data-flow-node="proxy">
         <div class="flow-node-head"><div class="flow-node-title"><span id="proxyDot" class="dot online"></span>ContextKeeper Status</div><div class="flow-node-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.4 8 8 9 4.6-1 8-4 8-9V6z"></path><path d="m9 12 2 2 4-5"></path></svg></div></div>
         <div class="flow-node-main"><div class="value ok">Online</div><div id="proxySub" class="small">Listening on port {settings.server.port}</div></div>
         <div class="flow-node-foot"><span class="flow-endpoint">Local proxy</span><span id="proxyStatusBadge" class="badge online flow-status">Online</span></div>
       </div>
-      <div class="pipe"></div>
-      <div class="node flow-node signal-node">
+      <div class="pipe" data-flow-link="proxy-ollama"></div>
+      <div class="node flow-node signal-node" data-flow-node="ollama">
         <div class="flow-node-head"><div class="flow-node-title"><span id="ollamaDot" class="dot waiting"></span>Ollama Status</div><div class="flow-node-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 2v4"></path><path d="M12 18v4"></path><path d="M4.9 4.9 7.8 7.8"></path><path d="m16.2 16.2 2.9 2.9"></path><path d="M2 12h4"></path><path d="M18 12h4"></path><circle cx="12" cy="12" r="4"></circle></svg></div></div>
         <div class="flow-node-main"><div id="ollamaText" class="value">Checking</div><div id="ollamaSub" class="small">{settings.ollama.base_url}</div></div>
         <div class="flow-node-foot"><span class="flow-endpoint">Upstream runtime</span><span id="ollamaStatusBadge" class="badge waiting flow-status">Checking</span></div>
       </div>
-      <div class="pipe"></div>
-      <div class="node flow-node">
+      <div class="pipe" data-flow-link="ollama-model"></div>
+      <div class="node flow-node" data-flow-node="model">
         <div class="flow-node-head"><div class="flow-node-title"><span id="modelDot" class="dot waiting"></span>Model</div><div class="flow-node-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 7h8"></path><path d="M8 12h8"></path><path d="M8 17h5"></path><rect x="4" y="3" width="16" height="18" rx="2"></rect></svg></div></div>
         <div class="flow-node-main"><div id="modelText" class="value">Waiting</div><div id="modelSub" class="small">No model observed yet</div></div>
         <div class="flow-node-foot"><span class="flow-endpoint">Active model</span><span id="modelStatusBadge" class="badge waiting flow-status">Waiting</span></div>
@@ -927,11 +938,19 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
 </div>
 <script>
 const DASHBOARD_REFRESH_INTERVAL_MS = {settings.dashboard.refresh_interval_ms or 1000};
-const TOPOLOGY_PULSE_DURATION_MS = 1300;
+const TOPOLOGY_OUTBOUND_DURATION_MS = 1300;
+const TOPOLOGY_INBOUND_DURATION_MS = 1200;
 const REQUEST_TRAFFIC_BUCKETS = 24;
 const REQUEST_TRAFFIC_WINDOW_MS = 60000;
 const REDUCED_MOTION_QUERY = window.matchMedia('(prefers-reduced-motion: reduce)');
 const ACTIVITY_TOPOLOGY_CLASSES = ['activity-starting','activity-connecting','activity-ready','activity-receiving','activity-thinking','activity-streaming','activity-finalizing','activity-idle'];
+const TOPOLOGY_FLOW_CLASSES = ['traffic-idle','traffic-outbound','traffic-processing','traffic-inbound'];
+const TOPOLOGY_FLOW_LABELS = {{
+  idle:'Topology idle; connected paths show availability.',
+  outbound:'Outbound request: Client -> ContextKeeper -> Ollama -> Model.',
+  processing:'Generation active; Ollama and the model are processing.',
+  inbound:'Inbound response: Model -> Ollama -> ContextKeeper -> Client.'
+}};
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const INSTRUMENT_GAUGE_SEGMENTS = [
   {{ start:0, end:55, className:'good' }},
@@ -939,9 +958,8 @@ const INSTRUMENT_GAUGE_SEGMENTS = [
   {{ start:75, end:90, className:'orange' }},
   {{ start:90, end:100, className:'bad' }}
 ];
-let lastTopologyRequestCount = null;
-let lastActivityState = null;
-let topologyPulseTimer = null;
+let lastTopologyActiveRequestCount = null;
+let topologyFlowTimer = null;
 let refreshInFlight = false;
 function byId(id) {{
   return document.getElementById(id);
@@ -1060,6 +1078,65 @@ function setConnectorState(id, status) {{
   const line = byId(id);
   if (line) line.setAttribute('class', connectorClass(status));
 }}
+function clearTopologyFlowTimer() {{
+  if (topologyFlowTimer !== null) {{
+    clearTimeout(topologyFlowTimer);
+    topologyFlowTimer = null;
+  }}
+}}
+function setTopologyTrafficState(panel, state) {{
+  if (!panel) return;
+  const next = TOPOLOGY_FLOW_CLASSES.includes('traffic-' + safeClass(state)) ? safeClass(state) : 'idle';
+  panel.classList.remove(...TOPOLOGY_FLOW_CLASSES);
+  panel.classList.add('traffic-' + next);
+  panel.dataset.trafficState = next;
+  setText('flowNote', TOPOLOGY_FLOW_LABELS[next] || TOPOLOGY_FLOW_LABELS.idle, false);
+}}
+function settleTopologyTraffic(panel) {{
+  const activeCount = Number(panel?.dataset?.activeRequests || 0);
+  setTopologyTrafficState(panel, activeCount > 0 ? 'processing' : 'idle');
+}}
+function scheduleTopologySettle(panel, durationMs) {{
+  clearTopologyFlowTimer();
+  topologyFlowTimer = setTimeout(() => {{
+    topologyFlowTimer = null;
+    settleTopologyTraffic(panel);
+  }}, durationMs);
+}}
+function updateTopologyTraffic(activity) {{
+  const panel = byId('connections');
+  if (!panel) return;
+  const current = activity || {{}};
+  const numericCount = Number(current.active_request_count || 0);
+  const activeCount = Number.isFinite(numericCount) && numericCount > 0 ? numericCount : 0;
+  const previousCount = lastTopologyActiveRequestCount;
+  panel.dataset.activeRequests = String(activeCount);
+  panel.dataset.activeEndpoint = current.active_endpoint || '';
+  panel.dataset.activeGenerationSequence = current.active_generation_sequence ?? '';
+  panel.dataset.activeRequestId = current.active_request_id || '';
+
+  if (previousCount === null) {{
+    clearTopologyFlowTimer();
+    setTopologyTrafficState(panel, activeCount > 0 ? 'processing' : 'idle');
+  }} else if (previousCount <= 0 && activeCount > 0) {{
+    clearTopologyFlowTimer();
+    setTopologyTrafficState(panel, 'outbound');
+    scheduleTopologySettle(panel, TOPOLOGY_OUTBOUND_DURATION_MS);
+  }} else if (previousCount > 0 && activeCount > 0) {{
+    if (!panel.classList.contains('traffic-outbound')) {{
+      clearTopologyFlowTimer();
+      setTopologyTrafficState(panel, 'processing');
+    }}
+  }} else if (previousCount > 0 && activeCount <= 0) {{
+    clearTopologyFlowTimer();
+    setTopologyTrafficState(panel, 'inbound');
+    scheduleTopologySettle(panel, TOPOLOGY_INBOUND_DURATION_MS);
+  }} else if (!panel.classList.contains('traffic-inbound')) {{
+    clearTopologyFlowTimer();
+    setTopologyTrafficState(panel, 'idle');
+  }}
+  lastTopologyActiveRequestCount = activeCount;
+}}
 function updateTopologyState(connections, activity) {{
   const panel = byId('connections');
   if (!panel || !connections) return;
@@ -1078,29 +1155,11 @@ function updateTopologyState(connections, activity) {{
 function updateActivityTopology(activity) {{
   const panel = byId('connections');
   if (!panel) return;
-  const state = safeClass(activity?.state || '');
+  const current = activity || {{}};
+  const state = safeClass(current.state || '');
   panel.classList.remove(...ACTIVITY_TOPOLOGY_CLASSES);
   if (state) panel.classList.add('activity-' + state);
-  if (state === 'receiving' && lastActivityState !== 'receiving' && motionAllowed()) {{
-    restartAnimation(panel, 'request-pulse');
-    clearTimeout(topologyPulseTimer);
-    topologyPulseTimer = setTimeout(() => panel.classList.remove('request-pulse'), TOPOLOGY_PULSE_DURATION_MS);
-  }}
-  lastActivityState = state;
-}}
-function triggerTopologyPulse(totalRequests) {{
-  const count = Number(totalRequests);
-  if (!Number.isFinite(count)) return;
-  const panel = byId('connections');
-  if (!panel) return;
-  if (lastTopologyRequestCount !== null && count > lastTopologyRequestCount) {{
-    if (motionAllowed()) {{
-      restartAnimation(panel, 'request-pulse');
-      clearTimeout(topologyPulseTimer);
-      topologyPulseTimer = setTimeout(() => panel.classList.remove('request-pulse'), TOPOLOGY_PULSE_DURATION_MS);
-    }}
-  }}
-  lastTopologyRequestCount = count;
+  updateTopologyTraffic(current);
 }}
 function renderSparkline(requests) {{
   const line = byId('requestSparkline');
@@ -1526,7 +1585,6 @@ async function refreshMetrics() {{
   const data = await res.json();
   const r = data.requests;
   setText('req', r.total_requests);
-  triggerTopologyPulse(r.total_requests);
   setText('err', r.total_errors);
   renderSparkline(r.recent_requests);
   renderRequestTraffic(r.recent_requests);

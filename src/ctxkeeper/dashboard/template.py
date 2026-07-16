@@ -313,7 +313,7 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
 .pipe {{ position:relative; height:2px; align-self:center; background:linear-gradient(90deg,rgba(45,58,79,.35),rgba(56,189,248,.85),rgba(45,58,79,.35)); border-radius:99px; opacity:.9; }}
 .pipe::before {{ content:""; position:absolute; inset:-12px 0; border-top:1px dashed rgba(148,163,184,.22); top:50%; }}
 .pipe::after {{ content:""; position:absolute; left:50%; top:50%; width:10px; height:10px; border-radius:50%; transform:translate(-50%,-50%); background:rgba(56,189,248,.5); box-shadow:0 0 18px rgba(56,189,248,.42); }}
-@media (prefers-reduced-motion: reduce) {{ html {{ scroll-behavior:auto; }} .flow-panel.flow-active .flow-svg-packet,.flow-panel.flow-waiting .flow-svg-packet,.flow-panel.activity-streaming .flow-svg-packet,.flow-panel.request-pulse .flow-svg-packet,.flow-panel.request-pulse .flow-stage::after,.flow-panel.request-pulse .pipe::after,.flow-node.status-pulse,.dot,.value-pop,.badge-update,.ops-activity-summary,.ops-activity-summary .ops-health-status,.ops-activity-summary::after {{ animation:none; }} .flow-svg-packet,.flow-stage::after {{ opacity:0; }} .nav a,.nav a::before,.topbar-status,.topbar-status-dot,.card,.node,.hero-status,.hero-status::before,.hero-status::after,.hero-stat-card,.hero-stat-icon,.hero-stat-value,.badge,.flow-svg-line,.gauge-progress,.fill,.ops-health-row,.ops-activity-summary,.panel-item,.timeline-item,.message,.instrument-gauge-needle,.instrument-gauge-pivot,.instrument-card-value,.trend-line,.trend-area {{ transition:none; }} .nav a:hover,.nav a:active,.card:hover,.node:hover,.hero-stat-card:hover,.hero-stat-card:focus-within,.hero-stat-card:focus-visible,.hero-stat-card:hover .hero-stat-icon,.hero-stat-card:focus-within .hero-stat-icon,.hero-stat-card:focus-visible .hero-stat-icon,a.badge:hover,a.badge:active,body.is-refreshing .topbar-status-dot {{ transform:none; }} }}
+@media (prefers-reduced-motion: reduce) {{ html {{ scroll-behavior:auto; }} .flow-panel.flow-active .flow-svg-packet,.flow-panel.flow-waiting .flow-svg-packet,.flow-panel.activity-streaming .flow-svg-packet,.flow-panel.request-pulse .flow-svg-packet,.flow-panel.request-pulse .flow-stage::after,.flow-panel.request-pulse .pipe::after,.flow-node.status-pulse,.dot,.value-pop,.badge-update,.ops-activity-summary,.ops-activity-summary .ops-health-status,.ops-activity-summary::after {{ animation:none; }} .flow-svg-packet,.flow-stage::after {{ opacity:0; }} .nav a,.nav a::before,.topbar-status,.topbar-status-dot,.card,.node,.hero-status,.hero-status::before,.hero-status::after,.hero-stat-card,.hero-stat-icon,.hero-stat-value,.badge,.flow-svg-line,.gauge-progress,.fill,.ops-health-row,.ops-activity-summary,.panel-item,.timeline-item,.message,.instrument-gauge-needle,.instrument-gauge-pivot,.instrument-card-value,.trend-line,.trend-area,.request-traffic-bar {{ transition:none; }} .nav a:hover,.nav a:active,.card:hover,.node:hover,.hero-stat-card:hover,.hero-stat-card:focus-within,.hero-stat-card:focus-visible,.hero-stat-card:hover .hero-stat-icon,.hero-stat-card:focus-within .hero-stat-icon,.hero-stat-card:focus-visible .hero-stat-icon,a.badge:hover,a.badge:active,body.is-refreshing .topbar-status-dot {{ transform:none; }} }}
 .small {{ font-size:12px; color:var(--muted); overflow-wrap:anywhere; }}
 .traffic-panel {{ display:grid; grid-template-rows:auto auto 1fr; gap:12px; align-content:start; padding:14px; }}
 .traffic-stats {{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; align-items:stretch; }}
@@ -321,6 +321,18 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
 .traffic-stat .small {{ font-size:11px; font-weight:850; letter-spacing:.06em; text-transform:uppercase; }}
 .traffic-stat .value {{ font-size:28px; line-height:1; }}
 .traffic-stat .muted {{ font-size:11px; line-height:1.22; }}
+.request-traffic-viz {{ min-height:82px; display:grid; grid-template-rows:1fr auto; gap:8px; padding:10px 11px; border:1px solid rgba(203,213,225,.08); border-radius:11px; background:linear-gradient(180deg,rgba(15,23,42,.42),rgba(2,6,23,.22)); box-shadow:var(--surface-inset-highlight); overflow:hidden; }}
+.request-traffic-svg {{ width:100%; height:48px; display:block; overflow:visible; }}
+.request-traffic-grid {{ stroke:rgba(148,163,184,.12); stroke-width:1; vector-effect:non-scaling-stroke; }}
+.request-traffic-baseline {{ stroke:rgba(148,163,184,.24); stroke-width:1.2; vector-effect:non-scaling-stroke; }}
+.request-traffic-bar {{ fill:rgba(56,189,248,.42); filter:drop-shadow(0 0 5px rgba(56,189,248,.18)); transition:height .2s ease,y .2s ease,fill .2s ease,opacity .2s ease; }}
+.request-traffic-bar.idle {{ fill:rgba(71,85,105,.38); opacity:.55; filter:none; }}
+.request-traffic-bar.active {{ fill:rgba(125,211,252,.76); opacity:.96; }}
+.request-traffic-bar.burst {{ fill:rgba(167,139,250,.84); opacity:1; filter:drop-shadow(0 0 8px rgba(167,139,250,.28)); }}
+.request-traffic-now {{ stroke:rgba(125,211,252,.5); stroke-width:1; stroke-dasharray:2 3; vector-effect:non-scaling-stroke; }}
+.request-traffic-footer {{ display:flex; justify-content:space-between; gap:12px; align-items:center; min-width:0; }}
+.request-traffic-status {{ min-width:0; font-size:11px; color:var(--text); font-weight:850; letter-spacing:.055em; text-transform:uppercase; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }}
+.request-traffic-caption {{ min-width:0; text-align:right; font-size:11px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }}
 .traffic-note {{ align-self:end; padding-top:8px; border-top:1px solid rgba(203,213,225,.08); line-height:1.35; }}
 .conversation-meta {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; margin-bottom:14px; }}
 .conversation-meta.compact {{ grid-template-columns:repeat(2,minmax(0,1fr)); margin-bottom:0; }}
@@ -839,6 +851,13 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
         <div class="traffic-stat"><div class="small">Rate</div><div id="requestRate" class="value">0</div><div class="muted">requests / min</div></div>
         <div class="traffic-stat"><div class="small">Errors</div><div id="err" class="value">0</div><div class="muted">proxy request errors</div></div>
       </div>
+      <div class="request-traffic-viz" aria-label="Live request traffic over the last minute">
+        <svg id="requestTrafficSvg" class="request-traffic-svg" viewBox="0 0 240 48" preserveAspectRatio="none" role="img" aria-label="Recent request frequency"></svg>
+        <div class="request-traffic-footer">
+          <div id="requestTrafficStatus" class="request-traffic-status">Idle</div>
+          <div id="requestTrafficCaption" class="request-traffic-caption">Waiting for request traffic</div>
+        </div>
+      </div>
       <div class="muted traffic-note">Average response time is summarized in the hero statistics row. Errors are tracked with request statistics.</div>
     </div>
     <div class="card conversation-compact ops-panel">
@@ -909,6 +928,8 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
 <script>
 const DASHBOARD_REFRESH_INTERVAL_MS = {settings.dashboard.refresh_interval_ms or 1000};
 const TOPOLOGY_PULSE_DURATION_MS = 1300;
+const REQUEST_TRAFFIC_BUCKETS = 24;
+const REQUEST_TRAFFIC_WINDOW_MS = 60000;
 const REDUCED_MOTION_QUERY = window.matchMedia('(prefers-reduced-motion: reduce)');
 const ACTIVITY_TOPOLOGY_CLASSES = ['activity-starting','activity-connecting','activity-ready','activity-receiving','activity-thinking','activity-streaming','activity-finalizing','activity-idle'];
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -1097,6 +1118,61 @@ function renderSparkline(requests) {{
   }}).join(' ');
   line.setAttribute('points', points);
   area.setAttribute('points', `0,48 ${{points}} 220,48`);
+}}
+function parseRequestTimestamp(value) {{
+  const timestamp = Date.parse(value || '');
+  return Number.isFinite(timestamp) ? timestamp : null;
+}}
+function requestCountLabel(count) {{
+  return count === 1 ? '1 request' : count + ' requests';
+}}
+function renderRequestTraffic(requests) {{
+  const svg = byId('requestTrafficSvg');
+  if (!svg) return;
+  const bucketCount = REQUEST_TRAFFIC_BUCKETS;
+  const width = 240;
+  const baselineY = 42;
+  const topPadding = 6;
+  const availableHeight = baselineY - topPadding;
+  const bucketMs = REQUEST_TRAFFIC_WINDOW_MS / bucketCount;
+  const now = Date.now();
+  const buckets = Array(bucketCount).fill(0);
+  let validHistoryCount = 0;
+  (requests || []).forEach(item => {{
+    const timestamp = parseRequestTimestamp(item?.timestamp);
+    if (timestamp === null) return;
+    validHistoryCount += 1;
+    const age = now - timestamp;
+    if (age < 0 || age > REQUEST_TRAFFIC_WINDOW_MS) return;
+    const index = Math.max(0, Math.min(bucketCount - 1, bucketCount - 1 - Math.floor(age / bucketMs)));
+    buckets[index] += 1;
+  }});
+  const recentCount = buckets.reduce((total, count) => total + count, 0);
+  const maxBucket = Math.max(...buckets, 1);
+  const barGap = 2;
+  const bucketWidth = width / bucketCount;
+  const barWidth = Math.max(2, bucketWidth - barGap);
+  const grid = [14, 26].map(y => `<line class="request-traffic-grid" x1="0" y1="${{y}}" x2="${{width}}" y2="${{y}}"></line>`).join('');
+  const bars = buckets.map((count, index) => {{
+    const x = index * bucketWidth + (barGap / 2);
+    const barHeight = count > 0 ? Math.max(4, (count / maxBucket) * availableHeight) : 2;
+    const y = baselineY - barHeight;
+    const className = count === 0 ? 'idle' : count >= 3 || (maxBucket > 1 && count === maxBucket) ? 'burst' : 'active';
+    return `<rect class="request-traffic-bar ${{className}}" x="${{x.toFixed(1)}}" y="${{y.toFixed(1)}}" width="${{barWidth.toFixed(1)}}" height="${{barHeight.toFixed(1)}}" rx="1.7"><title>${{requestCountLabel(count)}} in bucket ${{index + 1}}</title></rect>`;
+  }}).join('');
+  svg.innerHTML = `${{grid}}<line class="request-traffic-baseline" x1="0" y1="${{baselineY}}" x2="${{width}}" y2="${{baselineY}}"></line>${{bars}}<line class="request-traffic-now" x1="${{width - 1}}" y1="${{topPadding}}" x2="${{width - 1}}" y2="${{baselineY}}"></line>`;
+  if (recentCount === 0) {{
+    const label = validHistoryCount === 0 ? 'No request history yet' : 'No requests in the last minute';
+    setText('requestTrafficStatus', 'Idle', false);
+    setText('requestTrafficCaption', label, false);
+    svg.setAttribute('aria-label', label);
+    return;
+  }}
+  const status = maxBucket >= 3 ? 'Burst' : 'Active';
+  const peakText = maxBucket > 1 ? ' · peak ' + maxBucket : '';
+  setText('requestTrafficStatus', status, false);
+  setText('requestTrafficCaption', requestCountLabel(recentCount) + ' / 60 sec' + peakText, false);
+  svg.setAttribute('aria-label', requestCountLabel(recentCount) + ' over the last minute; peak bucket ' + maxBucket);
 }}
 function numberOrNull(value) {{
   const numeric = Number(value);
@@ -1453,6 +1529,7 @@ async function refreshMetrics() {{
   triggerTopologyPulse(r.total_requests);
   setText('err', r.total_errors);
   renderSparkline(r.recent_requests);
+  renderRequestTraffic(r.recent_requests);
   setHtml('recent', r.recent_requests.map(x => `<tr><td>${{escapeHtml(new Date(x.timestamp).toLocaleTimeString())}}</td><td>${{escapeHtml(x.client_host||'')}}</td><td>${{escapeHtml(x.endpoint)}}</td><td>${{escapeHtml(x.model||'')}}</td><td>${{escapeHtml(x.status_code)}}</td><td>${{escapeHtml(x.latency_ms)}} ms</td></tr>`).join(''));
 }}
 async function refreshDashboardData() {{

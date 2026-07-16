@@ -50,11 +50,18 @@ def test_dashboard_endpoint() -> None:
     assert "Recommendations" in response.text
     assert "Activity Timeline" in response.text
     assert "Request Trend" in response.text
+    assert "requestTrafficSvg" in response.text
+    assert "renderRequestTraffic" in response.text
+    assert "REQUEST_TRAFFIC_BUCKETS = 24" in response.text
+    assert "REQUEST_TRAFFIC_WINDOW_MS = 60000" in response.text
+    assert "Live request traffic over the last minute" in response.text
+    assert "Waiting for request traffic" in response.text
     assert "Current Activity" in response.text
     assert "currentActivityStatus" in response.text
     assert "refreshOperationalActivity" in response.text
     assert "activity-streaming" in response.text
     assert "@media (prefers-reduced-motion: reduce)" in response.text
+    assert response.text.count("setInterval(") == 1
     assert "ops-activity-summary" in response.text
     assert "No model observed yet" in response.text
     assert "No active model yet" not in response.text

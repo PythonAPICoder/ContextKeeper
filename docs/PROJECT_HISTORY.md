@@ -67,7 +67,7 @@ Example: `Phase 6.5F-B4.2`
 | Windows executable/service foundation | Completed | PyInstaller spec, executable entry point, service runner, and service placeholder present. |
 | Setup wizard and installer | Completed | First-run wizard, Inno Setup foundation, and release build script present. |
 | Dashboard modernization B4 workstream | Completed | Phase 6.5F-B4.8 automatic model context discovery is complete on `main` and `origin/main` at commit `fdd9478`; later B5-B7 dashboard work remains planned. |
-| Live data visualization and rich widgets | Active | Phase 6.5F-B5.1 live visualization foundation is underway on `phase-6-5f-b5-live-data-visualization`; no new visible widgets have been added. |
+| Live data visualization and rich widgets | Active | Phase 6.5F-B5.2 live request traffic visualization is implemented on `phase-6-5f-b5-2-live-request-traffic` and pending QA review; Phase 6.5F-B5.1 foundation is complete on `main` and `origin/main` at commit `e35e891`. |
 | Dashboard customization and user preferences | Planned | Phase 6.5F-B6 planned after B5. |
 | Release polish and final UX review | Planned | Phase 6.5F-B7 planned before historical memory retrieval and validation certification. |
 | Historical memory retrieval and detail preservation | Planned | Dedicated Phase 6.5G approved before Phase 6.6; no implementation exists yet. |
@@ -928,7 +928,7 @@ Validation:
 
 Branch: `phase-6-5f-b5-live-data-visualization`
 
-Status: Implemented on branch; pending QA review.
+Status: Completed; on `main` and `origin/main` at commit `e35e891`.
 
 Objective:
 
@@ -963,6 +963,46 @@ Validation:
 - Rendered dashboard JavaScript syntax validation: extracted `<script>` from `render_dashboard_html(Settings())` with UTF-8 output and ran `node --check -`, passing.
 - Full automated suite: `.\.venv\Scripts\python.exe -m pytest -q`, 240 tests passing, with the same existing warning.
 
+### Phase 6.5F-B5.2 — Live Request Traffic Visualization
+
+Branch: `phase-6-5f-b5-2-live-request-traffic`
+
+Status: Implemented on branch; pending QA review.
+
+Objective:
+
+- Add the first live visualization for the Mission Control dashboard, focused only on request traffic.
+- Build on the Phase 6.5F-B5.1 audit and reusable dashboard foundation without redesigning the dashboard, changing the card layout, replacing existing gauges, adding external charting frameworks, or changing refresh timing.
+- Communicate request frequency, recent activity, idle periods, and burst activity as compact operational telemetry.
+
+Implemented scope:
+
+- Added a compact SVG request-traffic strip inside the existing Traffic panel, preserving the existing Request Trend, Rate, and Errors statistics.
+- Reused the existing `/metrics.recent_requests` payload from `MetricsStore`; no new backend history store, endpoint, polling loop, or unbounded buffer was added.
+- Bucketed recent request timestamps client-side into 24 bounded buckets across the last 60 seconds so the visualization scrolls naturally as dashboard refreshes occur.
+- Added idle, active, and burst visual states, plus empty-state text for no request history and no recent requests in the last minute.
+- Preserved the existing dashboard refresh interval and single `setInterval()` refresh loop.
+- Preserved reduced-motion behavior by disabling request-traffic bar transitions when `prefers-reduced-motion: reduce` is active.
+- Added dashboard-rendering assertions for the request-traffic SVG, bounded-history constants, idle text, renderer wiring, and single refresh interval.
+
+Performance notes:
+
+- Rendering is limited to 24 SVG bars and two grid lines per refresh.
+- The visualization uses only the already bounded 50-event recent request list maintained by `MetricsStore`.
+- No expensive backend calculation, persistent storage migration, external dependency, chart framework, or extra network request was introduced.
+
+Deferred visualization opportunities:
+
+- Longer-duration request-rate trends, restart-stable traffic history, latency-history charts, health-state transition timelines, append-only compression events, and historical operational statistics still require additional backend history support in later B5 work.
+
+Validation:
+
+- Python syntax validation: `.\.venv\Scripts\python.exe -m py_compile src\ctxkeeper\dashboard\template.py tests\test_app.py`, passing.
+- Focused dashboard endpoint validation: `.\.venv\Scripts\python.exe -m pytest tests\test_app.py::test_dashboard_endpoint -q`, 1 test passing, with one existing third-party `StarletteDeprecationWarning` from FastAPI/Starlette TestClient.
+- Rendered dashboard JavaScript syntax validation: extracted `<script>` from `render_dashboard_html(Settings())` with UTF-8 output and ran `node --check -`, passing.
+- Focused dashboard/rendering validation: `.\.venv\Scripts\python.exe -m pytest tests\test_dashboard_instrument_panel.py tests\test_app.py tests\test_dashboard_snapshots.py tests\test_dashboard_intelligence.py -q`, 93 tests passing, with the same existing warning.
+- Full automated suite: `.\.venv\Scripts\python.exe -m pytest -q`, 240 tests passing, with the same existing warning.
+
 ### Phase 6.5G — Historical Memory Retrieval & Detail Preservation (Approved Plan)
 
 Status: Planned; approved for the roadmap, not implemented.
@@ -985,8 +1025,9 @@ Planning record:
 Approved roadmap sequence:
 
 - Phase 6.5F-B5 — Live Data Visualization & Rich Widgets.
-  - Phase 6.5F-B5.1 — Live Visualization Foundation QA review.
-  - Later B5 rich widget implementation based on the B5.1 audit.
+  - Phase 6.5F-B5.1 — Live Visualization Foundation complete.
+  - Phase 6.5F-B5.2 — Live Request Traffic Visualization QA review.
+  - Later B5 rich widget implementation based on the B5.1 audit and B5.2 request-traffic visualization.
 - Phase 6.5F-B6 — Dashboard Customization & User Preferences.
 - Phase 6.5F-B7 — Release Polish & Final UX Review.
 - Phase 6.5G — Historical Memory Retrieval & Detail Preservation.
@@ -1140,12 +1181,13 @@ Scope boundary:
 
 ## Current Project State
 
-- Current active branch: `phase-6-5f-b5-live-data-visualization`.
-- Current baseline: `main` and `origin/main` are at commit `2dd3fa9`.
+- Current active branch: `phase-6-5f-b5-2-live-request-traffic`.
+- Current baseline: `main` and `origin/main` are at commit `e35e891`.
 - Phase 6.5F-B4.8 — Automatic Model Context Discovery is complete on `main`; the old local B4.8 feature branch has been deleted.
-- Current active implementation phase: Phase 6.5F-B5.1 — Live Visualization Foundation, implemented on branch and pending QA review.
-- Latest verified automated test count: 240 tests passing during the Phase 6.5F-B5.1 live visualization foundation pass.
-- Dashboard status: modern operations-console dashboard with live proxy, Ollama, request, context, compression, conversation, intelligence, health, independent operational activity, trend, recommendation, timeline, six-card instrument panel, standardized three-line gauge support rows, refined inactive and no-active Context/Compression instruments, converged lower Overview layout, reusable gauges, visual QA overflow guards, automatic model context-window discovery, and restrained micro-interaction polish.
+- Phase 6.5F-B5.1 — Live Visualization Foundation is complete on `main` and `origin/main` at commit `e35e891`.
+- Current active implementation phase: Phase 6.5F-B5.2 — Live Request Traffic Visualization, implemented on branch and pending QA review.
+- Latest verified automated test count: 240 tests passing during the Phase 6.5F-B5.2 live request traffic visualization pass.
+- Dashboard status: modern operations-console dashboard with live proxy, Ollama, request, context, compression, conversation, intelligence, health, independent operational activity, trend, recommendation, timeline, six-card instrument panel, standardized three-line gauge support rows, refined inactive and no-active Context/Compression instruments, converged lower Overview layout, reusable gauges, visual QA overflow guards, automatic model context-window discovery, compact live request-traffic visualization, and restrained micro-interaction polish.
 - Major capabilities currently present:
   - FastAPI-based transparent Ollama proxy.
   - `/api/*` and `/v1/*` passthrough with streaming preservation for supported endpoints.
@@ -1155,8 +1197,8 @@ Scope boundary:
   - Browser dashboard with live monitoring and intelligence.
   - Windows service foundation, PyInstaller executable foundation, first-run setup wizard, Inno Setup installer foundation, and release build script.
 - Planned work still ahead:
-  - QA review for Phase 6.5F-B5.1 — Live Visualization Foundation.
-  - Later Phase 6.5F-B5 rich live visualization/widget work based on the B5.1 audit.
+  - QA review for Phase 6.5F-B5.2 — Live Request Traffic Visualization.
+  - Later Phase 6.5F-B5 rich live visualization/widget work based on the B5.1 audit and B5.2 traffic visualization.
   - Phase 6.5F-B6 — Dashboard Customization & User Preferences.
   - Phase 6.5F-B7 — Release Polish & Final UX Review.
   - Phase 6.5G — Historical Memory Retrieval & Detail Preservation.
@@ -1165,13 +1207,15 @@ Scope boundary:
   - Version 1.0 Release.
   - Version 2+ architectural ideas tracked in `docs/FUTURE_IDEAS.md`, intentionally outside the Version 1.0 release scope.
 
-Do not treat unmerged Phase 6.5F-B5.1 branch work, planned Phase 6.5G, Phase 6.6, or Version 2+ roadmap content as merged or released until Git history later confirms that state.
+Do not treat unmerged Phase 6.5F-B5.2 branch work, planned Phase 6.5G, Phase 6.6, or Version 2+ roadmap content as merged or released until Git history later confirms that state.
 
 ## Planned Next Steps
 
 This section is tentative and subject to refinement. These names and boundaries are planning labels, not completed commitments.
 
 - Phase 6.5F-B5 — Live Data Visualization & Rich Widgets.
+  - QA review for Phase 6.5F-B5.2 — Live Request Traffic Visualization.
+  - Later B5 visualization work based on the B5.1 audit and existing dashboard telemetry foundations.
 - Phase 6.5F-B6 — Dashboard Customization & User Preferences.
 - Phase 6.5F-B7 — Release Polish & Final UX Review.
 - Phase 6.5G — Historical Memory Retrieval & Detail Preservation.

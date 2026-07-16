@@ -24,6 +24,14 @@ Implemented:
 - First-run configuration wizard
 - Pytest smoke tests
 
+## Roadmap and Future Vision
+
+The approved Version 1 direction is focused on a production-quality local release: transparent Ollama-compatible proxy behavior, automatic context management, rolling summaries, context-window discovery, retrievable historical memory after compression, dashboard visibility, validation/AutoQA, Windows service and packaging, and release-quality documentation. Some of this work remains planned; the implemented list above is the current feature summary.
+
+The product direction is to compress active context without forgetting important information. Compression should reduce prompt size, while historical conversation details remain available for retrieval when relevant.
+
+Long-term v2+ ideas are tracked in [docs/FUTURE_IDEAS.md](docs/FUTURE_IDEAS.md). That document is planning direction, not a feature commitment.
+
 ## Quick Start
 
 ```powershell

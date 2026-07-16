@@ -66,9 +66,15 @@ Example: `Phase 6.5F-B4.2`
 | Live dashboard and intelligence | Completed | Dashboard routes, live metrics, health, insights, recommendations, trends, and timeline implemented. |
 | Windows executable/service foundation | Completed | PyInstaller spec, executable entry point, service runner, and service placeholder present. |
 | Setup wizard and installer | Completed | First-run wizard, Inno Setup foundation, and release build script present. |
-| Dashboard modernization | Active | Current branch is `phase-6-5f-b4-6-instrument-panel-standardization`; B4.6 standardizes the instrument-panel cards after the Overview layout convergence pass while B4 remains active. |
-| GitHub release preparation | Planned | Tentative Phase 7 work area. |
-| Version 1.0 release | Planned | Planned release target, not yet completed. |
+| Dashboard modernization B4 workstream | Completed | Phase 6.5F-B4.8 automatic model context discovery is complete on `main` and `origin/main` at commit `fdd9478`; later B5-B7 dashboard work remains planned. |
+| Live data visualization and rich widgets | Planned | Phase 6.5F-B5 planned before release polish and certification. |
+| Dashboard customization and user preferences | Planned | Phase 6.5F-B6 planned after B5. |
+| Release polish and final UX review | Planned | Phase 6.5F-B7 planned before historical memory retrieval and validation certification. |
+| Historical memory retrieval and detail preservation | Planned | Dedicated Phase 6.5G approved before Phase 6.6; no implementation exists yet. |
+| Validation framework and release certification | Planned | Dedicated Phase 6.6 approved after Phase 6.5G and before Phase 7; no implementation exists yet. |
+| GitHub release preparation | Planned | Phase 7 planned after Phase 6.6 certification. |
+| Version 1.0 release | Planned | Planned release target after Phase 7, not yet completed. |
+| Version 2+ architectural vision | Planned | Long-term approved ideas are captured in `docs/FUTURE_IDEAS.md`; these are planning concepts, not v1 commitments. |
 
 ## Phase History
 
@@ -843,7 +849,7 @@ Remaining deferred items:
 
 Branch: `phase-6-5f-b4-8-automatic-model-context-discovery`
 
-Status: Implemented after manual QA correction; pending repeat Steve review
+Status: Completed; merged to `main` at commit `fdd9478`
 
 Objective:
 
@@ -918,11 +924,186 @@ Validation:
 - Full automated suite: `.\.venv\Scripts\python.exe -m pytest -q`, 237 tests passing, with the same existing warning.
 - Diff hygiene: `git diff --check`, passing with line-ending normalization warnings only.
 
+### Phase 6.5G — Historical Memory Retrieval & Detail Preservation (Approved Plan)
+
+Status: Planned; approved for the roadmap, not implemented.
+
+Planning record:
+
+- Product Owner approved Phase 6.5G before the Validation Framework, GitHub release, and Version 1.0 release.
+- Reason: users should be able to use ContextKeeper throughout the day without manually restarting conversations or losing important details after compression.
+- Product direction was clarified so Version 1 historical compression must not permanently lose underlying details.
+- Approved Version 1 product principle: "Compress active context without forgetting important information."
+- Compression is not deletion. Rolling summaries reduce the amount of text sent to the model on every request, while original historical messages should remain durably available after they leave the active prompt.
+- Historical retrieval and active context compression are complementary systems. Active context management keeps prompts efficient; historical retrieval restores specific older details when needed.
+- ContextKeeper should be capable of retrieving relevant archived details when a later request depends on them.
+- ContextKeeper-controlled retrieval should be the default Version 1 design.
+- Version 1 should not require the selected model to support tool calling for basic historical retrieval.
+- A future model-invoked history-search tool may be considered later, but Version 1 should not depend upon it.
+- The goal is strong, testable detail preservation and retrieval, not perfect or infallible memory.
+- Phase 6.5G should be an integrated ContextKeeper capability, including dashboard visibility and user controls where appropriate, not a separate user-facing application.
+
+Approved roadmap sequence:
+
+- Phase 6.5F-B5 — Live Data Visualization & Rich Widgets.
+- Phase 6.5F-B6 — Dashboard Customization & User Preferences.
+- Phase 6.5F-B7 — Release Polish & Final UX Review.
+- Phase 6.5G — Historical Memory Retrieval & Detail Preservation.
+- Phase 6.6 — Validation Framework & Release Certification.
+- Phase 7 — GitHub Release.
+- Version 1.0 Release.
+
+Tentative sub-phases:
+
+- Phase 6.5G.1 — Durable Conversation Archive.
+- Phase 6.5G.2 — Historical Search & Ranking.
+- Phase 6.5G.3 — Retrieval-Aware Prompt Injection.
+- Phase 6.5G.4 — Fact Preservation & Importance Controls.
+- Phase 6.5G.5 — Memory Dashboard & User Controls.
+- Phase 6.5G.6 — Privacy, Retention & Recovery.
+
+Planned scope summary:
+
+- Preserve original messages after active-context compression.
+- Store durable message history with order, role, timestamps, model, conversation identity, and relevant metadata.
+- Keep clear boundaries between active messages, rolling summaries, and archived originals.
+- Search and rank archived conversation history with conversation-scoped retrieval, duplicate suppression, relevance ranking, deterministic fallback behavior, and strict prevention of cross-conversation leakage.
+- Inject a limited set of relevant archived excerpts into outgoing requests when useful, while preserving Ollama-compatible behavior and avoiding unnecessary context pressure.
+- Support important-fact detection or tagging, pinned facts, retention-priority metadata, user-approved corrections, and protection against fact mutation across repeated summaries.
+- Provide dashboard visibility and user controls for historical memory, retrieval status, retained facts, summaries, original archived messages, export, correction, deletion, and retrieval limits where practical.
+- Support privacy, retention, recovery, storage limits, corruption handling, local-only storage by default, and clear user control over what is retained.
+
+Multi-user preparation:
+
+- Multi-user support is a potential Version 2 capability, not a Version 1 implementation requirement.
+- Approved architectural preparation principle: "Every persistent ContextKeeper object should have an owner, even when Version 1 uses only one default owner."
+- Ownership may later support a hierarchy such as tenant or organization, user or owner, workspace, and conversation.
+- Version 1 may use a single implicit default owner and does not need to expose authentication, user accounts, permissions, organizations, or shared workspaces.
+- Version 1 architecture should avoid storage decisions that make later user and workspace isolation unnecessarily difficult.
+- Historical-memory design should prepare for future ownership and isolation without expanding Version 1 into a full multi-user product.
+
+AutoQA certification relationship:
+
+- Phase 6.6 must validate Phase 6.5G.
+- AutoQA should eventually test known fact injection early in a conversation, context-window filling, warning-threshold activation, compression-threshold activation, one or more rolling compression cycles, preservation of original archived messages, historical retrieval after compression, exact recall of identifiers, names, dates, decisions, and restrictions, semantic recall of meaning, missing facts, mutated facts, invented facts, continued conversation coherence, retrieval-budget behavior, duplicate suppression, conversation isolation, and restart/recovery behavior.
+- Deterministic test scenarios and known injected facts must remain authoritative for release certification.
+- A local LLM may generate realistic simulated-user conversations, produce exploratory variations, and assist with semantic evaluation.
+- Release certification must not depend solely on subjective LLM judgment. Objective telemetry, known facts, stored source messages, event records, request results, and deterministic assertions must remain authoritative.
+
+Scope boundary:
+
+- This entry does not claim durable conversation archiving, historical search, retrieval-aware prompt injection, memory dashboard controls, privacy controls, AutoQA validation of historical memory, or multi-user ownership behavior already exists.
+
+### Phase 6.6 — Validation Framework & Release Certification (Approved Plan)
+
+Status: Planned; approved for the roadmap, not implemented.
+
+Planning record:
+
+- Product Owner approved a dedicated Phase 6.6 after Phase 6.5G, before GitHub release, and before Version 1.0 release.
+- Reason: eliminate hours of manual chat entry needed to fill a model's context window and provide evidence that ContextKeeper preserves conversation quality through repeated compression cycles.
+- Phase 6.6 is intended to automate long-conversation, compression, memory-retention, historical-retrieval, stress, soak, recovery, and release-certification testing.
+- Phase 6.6 must validate Phase 6.5G historical memory retrieval and detail preservation.
+- Approved roadmap sequence:
+  - Phase 6.5F-B5 — Live Data Visualization & Rich Widgets.
+  - Phase 6.5F-B6 — Dashboard Customization & User Preferences.
+  - Phase 6.5F-B7 — Release Polish & Final UX Review.
+  - Phase 6.5G — Historical Memory Retrieval & Detail Preservation.
+  - Phase 6.6 — Validation Framework & Release Certification.
+  - Phase 7 — GitHub Release.
+  - Version 1.0 Release.
+- Validation will be built as a first-class modular subsystem and dashboard plugin inside ContextKeeper, not as a separate user-facing application.
+- The approved future left-navigation label is `Validation`. `AutoQA` is a capability inside the broader Validation area, not the navigation label.
+- The planned Validation page structure is: Dashboard, Scenarios, AutoQA, Stress Tests, Reports, History, and Settings. This is planning guidance and may be refined during implementation.
+- The planned dashboard navigation may eventually include Overview, Operations, Diagnostics, Conversations, Compression, Models, Validation, and Settings. This is an approved plan only and is not implemented by this documentation branch.
+
+Planned sub-phases:
+
+- Phase 6.6.1 — Validation Engine Foundation.
+- Phase 6.6.2 — AutoQA Conversation Engine.
+- Phase 6.6.3 — Memory & Compression Validation.
+- Phase 6.6.4 — Stress, Soak & Reliability Testing.
+- Phase 6.6.5 — Validation Dashboard Plugin.
+- Phase 6.6.6 — Reports & Release Certification.
+
+Architecture direction:
+
+- The planned module may eventually resemble `src/ctxkeeper/validation/` with `engine.py`, `runner.py`, `scenarios.py`, `generator.py`, `injector.py`, `verifier.py`, `evaluator.py`, `metrics.py`, and `reports.py`.
+- This file list is architectural direction, not an implementation commitment, and may be refined later.
+- The feature should use the existing ContextKeeper executable, installer, service, configuration system, logs, and dashboard.
+
+Validation principles:
+
+- “The Validation Engine should exercise ContextKeeper through its public Ollama-compatible APIs whenever practical. Internal interfaces should be used only for orchestration, metrics collection, controlled fault injection, and verification. This ensures AutoQA validates the same behavior experienced by AnythingLLM, Open WebUI, IDEs, Python clients, and other Ollama-compatible consumers.”
+- Deterministic scripted tests should be preferred for repeatable release certification.
+- Deterministic test scenarios and known injected facts must remain authoritative for release certification.
+- LLM-generated conversations may supplement scripted tests for realism and exploratory coverage.
+- A local LLM may generate realistic simulated-user conversations, produce exploratory variations, and assist with semantic evaluation.
+- A local evaluator model may provide semantic scoring, but release certification must not depend solely on subjective LLM judgment.
+- Objective telemetry, known injected facts, stored source messages, event records, request outcomes, and deterministic assertions must remain authoritative.
+- The framework should support seeded runs so failures can be reproduced.
+- Validation traffic must be clearly tagged or isolated so it is distinguishable from normal user conversations.
+- Destructive or disruptive scenarios must require explicit user selection.
+- Long-running AutoQA tests should be cancellable and must not block normal ContextKeeper shutdown.
+- AutoQA should be disabled by default in production installations until a user starts a validation run.
+- Sensitive prompts, secrets, and private documents must not be written into validation reports.
+- The framework should be extensible later for model routing, workspace memory, plugins, agents, and multi-server orchestration.
+
+Historical-memory validation scope:
+
+- AutoQA should eventually test known fact injection early in a conversation, context-window filling, warning-threshold activation, compression-threshold activation, one or more rolling compression cycles, preservation of original archived messages, historical retrieval after compression, exact recall of identifiers, names, dates, decisions, and restrictions, semantic recall of meaning, detection of missing facts, detection of mutated facts, detection of invented facts, continued conversation coherence, retrieval-budget behavior, duplicate suppression, conversation isolation, and restart/recovery behavior.
+
+Certification boundary:
+
+- Phase 6.6 is an approved planned phase only. This entry does not claim Validation code, AutoQA scenarios, dashboard navigation changes, reports, tests, historical-memory certification, or release-certification evidence already exist.
+
+### Version 2 Roadmap and Future Vision (Approved Plan)
+
+Status: Planned; approved future direction, not implemented.
+
+Planning record:
+
+- Product direction was clarified so Version 1 remains focused on a production-quality release rather than absorbing every future idea.
+- Ideas that are not required for Version 1.0 should be intentionally captured for later versions instead of expanding v1 unnecessarily.
+- Adopted a three-document planning structure:
+  - `docs/PROJECT_HISTORY.md` records what happened, what was approved, why decisions were made, and repository evidence for completed work.
+  - `docs/ROADMAP.md` records approved planned work, including committed or formally approved phases and milestones.
+  - `docs/FUTURE_IDEAS.md` records promising noncommitted concepts that should not be forgotten and may later be promoted, revised, deferred, combined, superseded, or rejected.
+- Created `docs/FUTURE_IDEAS.md` as a curated idea parking lot for future architectural ideas. It is not a feature commitment.
+- Version 1 direction now explicitly includes transparent Ollama-compatible proxy behavior, client-agnostic operation, diagnostics and operational visibility, context-window usage tracking, automatic model context-window discovery, authoritative context-window enforcement, rolling context summarization and compression, preservation of recent messages, durable preservation of original historical conversation details, historical detail retrieval after compression, automatic injection of relevant archived details when appropriate, live browser dashboard, Windows service, standalone executable, setup wizard, installer, Validation Framework, AutoQA, release certification, public documentation, GitHub release preparation, production stability, and release-quality documentation.
+- Version 1 is intended to solve context-window limitations without permanently losing historical conversation details.
+- Approved memory architecture principle: context compression should reduce active prompt size, compression should not permanently discard conversation history, historical information should remain searchable and retrievable, and ContextKeeper should retrieve relevant archived details automatically when appropriate.
+- Approved goal statement: "Compress active context without forgetting important information."
+- Version 2 direction includes multi-user architecture, authentication, user isolation, workspace isolation, multiple tenants or organizations, shared workspaces, roles and permissions, per-user configuration, per-user dashboards, auditability, cross-user data-leak prevention, workspace and project memory, validation extensions for isolation and security, intelligent routing, plugin platform capabilities, infrastructure expansion, agents and voice, and analytics/benchmarking.
+- Exact Version 2 scope and sequencing remain tentative.
+
+Architectural principles:
+
+- Every persistent object should have an owner, even if Version 1 uses a single default owner.
+- Compression is not deletion. Conversation history should remain available for retrieval.
+- Active context and durable historical memory serve different purposes.
+- Relevant historical details should be retrieved selectively rather than reloading an entire conversation.
+- Validation should exercise public APIs whenever practical.
+- Internal interfaces should be used for orchestration, controlled fault injection, metrics, and verification.
+- Deterministic evidence must remain authoritative for release certification.
+- LLM-based generation and judging may supplement, but not replace, objective validation.
+- Future features should extend the architecture instead of replacing it.
+- ContextKeeper should remain modular. New capabilities should become additional engines rather than expanding existing ones excessively.
+- Client transparency and Ollama API compatibility remain core constraints.
+- Sensitive prompts, credentials, private documents, and full conversation contents must not be exposed in routine logs or validation reports.
+
+Scope boundary:
+
+- This planning record does not move v2 work into v1.
+- This planning record does not claim any multi-user, workspace-memory, routing, plugin, multi-server, voice, agent, analytics, or v2 validation functionality is implemented.
+
 ## Current Project State
 
-- Current active branch: `phase-6-5f-b4-8-automatic-model-context-discovery`.
-- Current active phase: Phase 6.5F-B4 — Dashboard Visual Polish & Micro-Interactions, currently through the B4.8 automatic model context discovery final presentation pass.
-- Latest verified automated test count: 237 tests passing during the B4.8 automatic model context discovery final presentation pass.
+- Current active branch for this documentation update: `phase-v2-roadmap-and-future-vision`.
+- Current baseline: `main` and `origin/main` are at commit `fdd9478`.
+- Phase 6.5F-B4.8 — Automatic Model Context Discovery is complete on `main`; the old local B4.8 feature branch has been deleted.
+- Current active implementation phase: none recorded in Git. Phase 6.5G, Phase 6.6, and the Version 2+ future vision are approved planned direction, not implemented.
+- Latest verified automated test count: 237 tests passing during the completed B4.8 automatic model context discovery final presentation pass. This is historical validation evidence and was not re-run for this documentation-only roadmap update.
 - Dashboard status: modern operations-console dashboard with live proxy, Ollama, request, context, compression, conversation, intelligence, health, independent operational activity, trend, recommendation, timeline, six-card instrument panel, standardized three-line gauge support rows, refined inactive and no-active Context/Compression instruments, converged lower Overview layout, reusable gauges, visual QA overflow guards, automatic model context-window discovery, and restrained micro-interaction polish.
 - Major capabilities currently present:
   - FastAPI-based transparent Ollama proxy.
@@ -932,11 +1113,17 @@ Validation:
   - Summarizer-backed automatic rolling context compression.
   - Browser dashboard with live monitoring and intelligence.
   - Windows service foundation, PyInstaller executable foundation, first-run setup wizard, Inno Setup installer foundation, and release build script.
-- Work still underway:
-  - Overall Phase 6.5F-B4 visual polish and micro-interaction workstream.
-  - Later rich dashboard widgets, customization, release polish, and public release preparation.
+- Planned work still ahead:
+  - Phase 6.5F-B5 — Live Data Visualization & Rich Widgets.
+  - Phase 6.5F-B6 — Dashboard Customization & User Preferences.
+  - Phase 6.5F-B7 — Release Polish & Final UX Review.
+  - Phase 6.5G — Historical Memory Retrieval & Detail Preservation.
+  - Phase 6.6 — Validation Framework & Release Certification.
+  - Phase 7 — GitHub Release.
+  - Version 1.0 Release.
+  - Version 2+ architectural ideas tracked in `docs/FUTURE_IDEAS.md`, intentionally outside the Version 1.0 release scope.
 
-Do not treat uncommitted active-branch work as merged, released, or available on `main` unless Git history later confirms that state.
+Do not treat planned Phase 6.5G, Phase 6.6, or Version 2+ roadmap content as implemented, tested, merged, or released until Git history later confirms that state.
 
 ## Planned Next Steps
 
@@ -945,8 +1132,23 @@ This section is tentative and subject to refinement. These names and boundaries 
 - Phase 6.5F-B5 — Live Data Visualization & Rich Widgets.
 - Phase 6.5F-B6 — Dashboard Customization & User Preferences.
 - Phase 6.5F-B7 — Release Polish & Final UX Review.
+- Phase 6.5G — Historical Memory Retrieval & Detail Preservation.
+  - Phase 6.5G.1 — Durable Conversation Archive.
+  - Phase 6.5G.2 — Historical Search & Ranking.
+  - Phase 6.5G.3 — Retrieval-Aware Prompt Injection.
+  - Phase 6.5G.4 — Fact Preservation & Importance Controls.
+  - Phase 6.5G.5 — Memory Dashboard & User Controls.
+  - Phase 6.5G.6 — Privacy, Retention & Recovery.
+- Phase 6.6 — Validation Framework & Release Certification.
+  - Phase 6.6.1 — Validation Engine Foundation.
+  - Phase 6.6.2 — AutoQA Conversation Engine.
+  - Phase 6.6.3 — Memory & Compression Validation.
+  - Phase 6.6.4 — Stress, Soak & Reliability Testing.
+  - Phase 6.6.5 — Validation Dashboard Plugin.
+  - Phase 6.6.6 — Reports & Release Certification.
 - Phase 7 — GitHub Release.
 - Version 1.0 Release.
+- Post-v1: use `docs/FUTURE_IDEAS.md` to guide Version 2+ architectural planning without expanding the Version 1.0 release scope.
 
 Likely Phase 7 work areas:
 
@@ -981,15 +1183,37 @@ Planned phase names must remain clearly separated from completed work.
 
 ## Longer-Term Direction
 
-These ideas are repository-supported post-v1 directions, not current v1 commitments:
+These ideas are repository-supported post-v1 directions, not current v1 commitments. The detailed planning record is `docs/FUTURE_IDEAS.md`.
 
-- Improved token estimation.
-- Automatic model routing.
-- Project or workspace memory.
-- Plugin architecture.
-- Multi-server support.
-- Orchestration and load balancing.
-- Agent integration.
+Version 1 philosophy:
+
+- Deliver a production-quality Version 1.0 release before expanding scope.
+- Preserve the architecture needed to compress active context without forgetting important information.
+- Keep historical conversation details searchable and retrievable after compression.
+
+Version 2+ planning areas:
+
+- Multi-user and security: authentication, ownership, user isolation, workspace isolation, tenants or organizations, shared workspaces, roles and permissions, per-user configuration, per-user dashboards, auditability, and cross-user data-leak prevention.
+- Workspace and project memory: cross-conversation workspace memory, persistent project knowledge, workspace-level retrieval, authorized shared knowledge, pinned memories, prioritization, expiration and archival policies, improved semantic retrieval, source attribution, and provenance.
+- Validation extensions: multi-user AutoQA, workspace-isolation tests, permission tests, authentication tests, cross-user leakage tests, shared-workspace tests, and tenant-isolation certification.
+- Intelligent routing: automatic model routing, capability-aware model selection, context-window-aware routing, model-performance benchmarking, resource-aware routing, cost and latency optimization, and local-server availability awareness.
+- Plugin platform: plugin SDK, third-party integrations, custom validation scenarios, custom dashboard widgets, custom memory providers, custom routing policies, and controlled plugin permissions and isolation.
+- Infrastructure: multi-server support, load balancing, distributed ContextKeeper nodes, failover, remote execution, server health, and capability discovery.
+- Agents and voice: agent orchestration, autonomous workflows, voice-first interaction, Jarvis-style assistant integration, voice and visual input integrations, and coordination of specialized local agents.
+- Analytics and benchmarking: advanced model benchmarks, long-term usage analytics, model comparisons, historical performance trends, context-compression effectiveness metrics, memory-retrieval effectiveness metrics, and validation trend reporting.
+
+Architectural principles:
+
+- Every persistent object should have an owner, even if Version 1 uses a single default owner.
+- Compression is not deletion.
+- Active context and durable historical memory serve different purposes.
+- Relevant historical details should be retrieved selectively rather than reloading an entire conversation.
+- Validation should exercise public APIs whenever practical.
+- Deterministic evidence must remain authoritative for release certification.
+- LLM-based generation and judging may supplement, but not replace, objective validation.
+- Future features should extend the architecture instead of replacing it.
+- ContextKeeper should remain modular; new capabilities should become additional engines rather than expanding existing ones excessively.
+- Client transparency and Ollama API compatibility remain core constraints.
 
 ## Maintenance Rules
 

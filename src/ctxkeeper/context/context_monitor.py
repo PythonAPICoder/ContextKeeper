@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
 
@@ -51,10 +52,11 @@ class ContextMonitor:
             )
         )
 
-    def scan(self) -> ContextMonitorScan:
+    def scan(self, conversations: Sequence[Conversation] | None = None) -> ContextMonitorScan:
+        source_conversations = list(conversations) if conversations is not None else self.store.all()
         conversations = [
             self._monitor_conversation(conversation)
-            for conversation in self.store.all()
+            for conversation in source_conversations
         ]
         warning_conversations = [
             conversation

@@ -43,3 +43,20 @@ def test_active_snapshot_exposes_latest_conversation_read_only_state() -> None:
     assert data["recent_messages"][1]["content"] == "latest"
     assert data["context"]["usage_percent"] > 0
     assert store.get("active") is not None
+
+
+def test_active_snapshot_can_reuse_supplied_conversation_snapshot() -> None:
+    store = ConversationStore()
+    store.append_message("store-active", "user", "from store")
+    snapshot_store = ConversationStore()
+    snapshot_store.append_message("snapshot-active", "user", "from supplied snapshot")
+    supplied = snapshot_store.all()
+
+    snapshot = _provider(store).active_snapshot(
+        model_name="test-model",
+        conversations=supplied,
+    )
+    data = snapshot.to_dict()
+
+    assert data["conversation_id"] == "snapshot-active"
+    assert data["recent_messages"][0]["content"] == "from supplied snapshot"

@@ -64,6 +64,22 @@ def test_scan_reports_all_conversation_statistics() -> None:
     ]
 
 
+def test_scan_can_reuse_supplied_conversation_snapshot() -> None:
+    store = ConversationStore()
+    store.append_message("included", "user", "hello")
+    store.append_message("excluded", "user", "a" * 156)
+    included = store.get("included")
+    assert included is not None
+    monitor = _monitor(store)
+
+    scan = monitor.scan([included])
+
+    assert scan.statistics.conversation_count == 1
+    assert scan.statistics.message_count == 1
+    assert scan.statistics.compression_candidate_count == 0
+    assert [conversation.conversation_id for conversation in scan.conversations] == ["included"]
+
+
 def test_warning_conversations_include_warning_and_compression_states() -> None:
     store = ConversationStore()
     store.append_message("below", "user", "hello")

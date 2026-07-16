@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -90,8 +91,13 @@ class ConversationSnapshotProvider:
         self.meter = meter
         self.recent_message_limit = recent_message_limit
 
-    def active_snapshot(self, *, model_name: str | None) -> ConversationSnapshot:
-        conversation = self._active_conversation()
+    def active_snapshot(
+        self,
+        *,
+        model_name: str | None,
+        conversations: Sequence[Conversation] | None = None,
+    ) -> ConversationSnapshot:
+        conversation = self._active_conversation(conversations)
         if conversation is None:
             return ConversationSnapshot(
                 conversation_id=None,
@@ -115,11 +121,11 @@ class ConversationSnapshotProvider:
             context=context,
         )
 
-    def _active_conversation(self) -> Conversation | None:
-        conversations = self.store.all()
-        if not conversations:
+    def _active_conversation(self, conversations: Sequence[Conversation] | None = None) -> Conversation | None:
+        available_conversations = list(conversations) if conversations is not None else self.store.all()
+        if not available_conversations:
             return None
-        return max(conversations, key=lambda conversation: conversation.updated_at)
+        return max(available_conversations, key=lambda conversation: conversation.updated_at)
 
 
 def _latest_rolling_summary(conversation: Conversation) -> str | None:

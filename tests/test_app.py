@@ -97,6 +97,41 @@ def test_dashboard_data_endpoint(monkeypatch) -> None:
     assert data["refresh_interval_ms"] == 1000
 
 
+def test_dashboard_status_reuses_single_conversation_snapshot(monkeypatch) -> None:
+    conversation_store.append_message("dashboard-foundation", "user", "hello")
+    original_all = conversation_store.all
+    calls = 0
+
+    def counted_all() -> list[object]:
+        nonlocal calls
+        calls += 1
+        return original_all()
+
+    monkeypatch.setattr(conversation_store, "all", counted_all)
+    status = build_dashboard_status(
+        settings=Settings(),
+        metrics_snapshot={
+            "requests": {
+                "total_requests": 0,
+                "total_errors": 0,
+                "last_sequence": 0,
+                "last_generation_sequence": None,
+                "last_endpoint": None,
+                "last_model": None,
+                "last_latency_ms": None,
+                "last_status_code": None,
+                "recent_requests": [],
+            },
+            "system": {"cpu_percent": 0, "ram_percent": 0, "gpu": None},
+        },
+        ollama_status={"status": "online", "version": "test", "latency_ms": 1.0},
+    )
+
+    assert calls == 1
+    assert status["context"]["conversation_count"] == 1
+    assert status["active_conversation"]["conversation_id"] == "dashboard-foundation"
+
+
 def test_dashboard_data_exposes_activity_independently_from_health() -> None:
     activity_manager.reset()
     request_id = activity_manager.accept_request(

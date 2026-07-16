@@ -1498,17 +1498,18 @@ def build_dashboard_status(
     warmup_state = _detect_model_warmup(recent_requests)
     context_window_resolution = active_generation.context_window_resolution
     context_window_state = _context_window_state_for_model(context_window_resolution, active_model=active_model)
+    conversations = conversation_store.all()
     context_scan = _create_context_monitor(
         settings,
         context_window_tokens=context_window_resolution.tokens,
-    ).scan()
-    compression_history = _compression_history(conversation_store.all())
+    ).scan(conversations)
+    compression_history = _compression_history(conversations)
     context_stats = context_scan.statistics
     active_conversation = _create_conversation_snapshot_provider(
         settings,
         model_name=active_model,
         context_window_tokens=context_window_resolution.tokens,
-    ).active_snapshot(model_name=active_model)
+    ).active_snapshot(model_name=active_model, conversations=conversations)
     active_conversation_data = active_conversation.to_dict()
     if isinstance(active_conversation_data.get("context"), dict):
         active_conversation_data["context"]["context_window_state"] = context_window_state

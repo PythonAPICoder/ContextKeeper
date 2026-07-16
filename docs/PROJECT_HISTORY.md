@@ -67,7 +67,7 @@ Example: `Phase 6.5F-B4.2`
 | Windows executable/service foundation | Completed | PyInstaller spec, executable entry point, service runner, and service placeholder present. |
 | Setup wizard and installer | Completed | First-run wizard, Inno Setup foundation, and release build script present. |
 | Dashboard modernization B4 workstream | Completed | Phase 6.5F-B4.8 automatic model context discovery is complete on `main` and `origin/main` at commit `fdd9478`; later B5-B7 dashboard work remains planned. |
-| Live data visualization and rich widgets | Planned | Phase 6.5F-B5 planned before release polish and certification. |
+| Live data visualization and rich widgets | Active | Phase 6.5F-B5.1 live visualization foundation is underway on `phase-6-5f-b5-live-data-visualization`; no new visible widgets have been added. |
 | Dashboard customization and user preferences | Planned | Phase 6.5F-B6 planned after B5. |
 | Release polish and final UX review | Planned | Phase 6.5F-B7 planned before historical memory retrieval and validation certification. |
 | Historical memory retrieval and detail preservation | Planned | Dedicated Phase 6.5G approved before Phase 6.6; no implementation exists yet. |
@@ -924,6 +924,45 @@ Validation:
 - Full automated suite: `.\.venv\Scripts\python.exe -m pytest -q`, 237 tests passing, with the same existing warning.
 - Diff hygiene: `git diff --check`, passing with line-ending normalization warnings only.
 
+### Phase 6.5F-B5.1 — Live Visualization Foundation
+
+Branch: `phase-6-5f-b5-live-data-visualization`
+
+Status: Implemented on branch; pending QA review.
+
+Objective:
+
+- Audit the existing dashboard visualization pipeline before adding new live data widgets.
+- Determine what live metrics, stores, history buffers, request history, conversation history, context history, compression history, polling mechanisms, duplicated calculations, refresh-time costs, and missing histories already exist.
+- Prepare backend data flow for later richer widgets without redesigning the dashboard, replacing current widgets, adding external charting frameworks, or changing dashboard refresh timing.
+
+Audit findings:
+
+- Added `docs/DASHBOARD_VISUALIZATION_AUDIT.md` to preserve the B5.1 inventory of dashboard endpoints, exposed metrics, in-memory stores, rolling buffers, refresh behavior, duplicate calculations, expensive refresh-time work, missing history, and B5.2 visualization opportunities.
+- Confirmed current dashboard polling uses the configured dashboard interval, defaulting to 1000 ms, and concurrently calls `/health`, `/metrics`, and `/dashboard/data` with a client-side `refreshInFlight` guard.
+- Confirmed request metrics are retained in `MetricsStore` with aggregate counts and the 50 most recent request events.
+- Confirmed system metrics are collected live on each metrics snapshot and are not historically retained.
+- Confirmed operational activity is current-state oriented and does not retain a state-transition timeline.
+- Confirmed conversation history is in-memory and active-state oriented; compression can replace older active messages with rolling summaries, so it is not yet a durable historical archive.
+- Confirmed context trend history exists in `ContextHistoryStore` as a bounded in-memory per-conversation buffer of 30 samples, recorded from `/dashboard/data` refreshes.
+- Confirmed compression history for the dashboard is derived from current rolling-summary messages rather than a central append-only compression event store.
+- Confirmed future richer visualizations can reuse existing recent request history, context trend samples, activity state, model context-window metadata, active conversation snapshots, and instrument-panel data, but longer-duration request trends, durable latency trends, health-state transition timelines, append-only compression events, system resource trends, restart-stable trend history, and historical operational statistics will need additional backend support.
+
+Implemented foundation work:
+
+- Refactored `/dashboard/data` status assembly so it captures the conversation list once per dashboard status build and reuses that snapshot for context monitoring, compression history, and active-conversation snapshot creation.
+- Extended `ContextMonitor.scan()` to accept an optional supplied conversation snapshot while preserving existing behavior when no snapshot is supplied.
+- Extended `ConversationSnapshotProvider.active_snapshot()` to accept an optional supplied conversation snapshot while preserving existing behavior when no snapshot is supplied.
+- Added regression coverage confirming the reusable snapshot path works and that `build_dashboard_status()` reads the conversation store once per status build.
+- Preserved existing dashboard JSON shape, refresh interval, polling endpoints, visible widgets, and frontend implementation.
+
+Validation:
+
+- Focused reusable dashboard snapshot validation: `.\.venv\Scripts\python.exe -m pytest tests\test_context_monitor.py tests\test_dashboard_snapshots.py tests\test_app.py::test_dashboard_status_reuses_single_conversation_snapshot -q`, 11 tests passing, with one existing third-party `StarletteDeprecationWarning` from FastAPI/Starlette TestClient.
+- Broader dashboard/app/context validation: `.\.venv\Scripts\python.exe -m pytest tests\test_dashboard_instrument_panel.py tests\test_app.py tests\test_dashboard_snapshots.py tests\test_dashboard_intelligence.py tests\test_context_monitor.py -q`, 100 tests passing, with the same existing warning.
+- Rendered dashboard JavaScript syntax validation: extracted `<script>` from `render_dashboard_html(Settings())` with UTF-8 output and ran `node --check -`, passing.
+- Full automated suite: `.\.venv\Scripts\python.exe -m pytest -q`, 240 tests passing, with the same existing warning.
+
 ### Phase 6.5G — Historical Memory Retrieval & Detail Preservation (Approved Plan)
 
 Status: Planned; approved for the roadmap, not implemented.
@@ -946,6 +985,8 @@ Planning record:
 Approved roadmap sequence:
 
 - Phase 6.5F-B5 — Live Data Visualization & Rich Widgets.
+  - Phase 6.5F-B5.1 — Live Visualization Foundation QA review.
+  - Later B5 rich widget implementation based on the B5.1 audit.
 - Phase 6.5F-B6 — Dashboard Customization & User Preferences.
 - Phase 6.5F-B7 — Release Polish & Final UX Review.
 - Phase 6.5G — Historical Memory Retrieval & Detail Preservation.
@@ -1099,11 +1140,11 @@ Scope boundary:
 
 ## Current Project State
 
-- Current active branch for this documentation update: `phase-v2-roadmap-and-future-vision`.
-- Current baseline: `main` and `origin/main` are at commit `fdd9478`.
+- Current active branch: `phase-6-5f-b5-live-data-visualization`.
+- Current baseline: `main` and `origin/main` are at commit `2dd3fa9`.
 - Phase 6.5F-B4.8 — Automatic Model Context Discovery is complete on `main`; the old local B4.8 feature branch has been deleted.
-- Current active implementation phase: none recorded in Git. Phase 6.5G, Phase 6.6, and the Version 2+ future vision are approved planned direction, not implemented.
-- Latest verified automated test count: 237 tests passing during the completed B4.8 automatic model context discovery final presentation pass. This is historical validation evidence and was not re-run for this documentation-only roadmap update.
+- Current active implementation phase: Phase 6.5F-B5.1 — Live Visualization Foundation, implemented on branch and pending QA review.
+- Latest verified automated test count: 240 tests passing during the Phase 6.5F-B5.1 live visualization foundation pass.
 - Dashboard status: modern operations-console dashboard with live proxy, Ollama, request, context, compression, conversation, intelligence, health, independent operational activity, trend, recommendation, timeline, six-card instrument panel, standardized three-line gauge support rows, refined inactive and no-active Context/Compression instruments, converged lower Overview layout, reusable gauges, visual QA overflow guards, automatic model context-window discovery, and restrained micro-interaction polish.
 - Major capabilities currently present:
   - FastAPI-based transparent Ollama proxy.
@@ -1114,7 +1155,8 @@ Scope boundary:
   - Browser dashboard with live monitoring and intelligence.
   - Windows service foundation, PyInstaller executable foundation, first-run setup wizard, Inno Setup installer foundation, and release build script.
 - Planned work still ahead:
-  - Phase 6.5F-B5 — Live Data Visualization & Rich Widgets.
+  - QA review for Phase 6.5F-B5.1 — Live Visualization Foundation.
+  - Later Phase 6.5F-B5 rich live visualization/widget work based on the B5.1 audit.
   - Phase 6.5F-B6 — Dashboard Customization & User Preferences.
   - Phase 6.5F-B7 — Release Polish & Final UX Review.
   - Phase 6.5G — Historical Memory Retrieval & Detail Preservation.
@@ -1123,7 +1165,7 @@ Scope boundary:
   - Version 1.0 Release.
   - Version 2+ architectural ideas tracked in `docs/FUTURE_IDEAS.md`, intentionally outside the Version 1.0 release scope.
 
-Do not treat planned Phase 6.5G, Phase 6.6, or Version 2+ roadmap content as implemented, tested, merged, or released until Git history later confirms that state.
+Do not treat unmerged Phase 6.5F-B5.1 branch work, planned Phase 6.5G, Phase 6.6, or Version 2+ roadmap content as merged or released until Git history later confirms that state.
 
 ## Planned Next Steps
 

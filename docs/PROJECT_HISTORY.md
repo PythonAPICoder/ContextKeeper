@@ -839,12 +839,91 @@ Remaining deferred items:
 - Manual browser acceptance remains required for 50%, 75%, and 100% zoom, common desktop resolutions, Chromium-family rendering, reduced-motion mode, and visual confirmation of subtle animation timing.
 - No additional dashboard redesign, feature expansion, or proxy behavior changes were accepted during this QA pass.
 
+### Phase 6.5F-B4.8 — Automatic Model Context Discovery
+
+Branch: `phase-6-5f-b4-8-automatic-model-context-discovery`
+
+Status: Implemented after manual QA correction; pending repeat Steve review
+
+Objective:
+
+- Automatically discover Ollama model context-window sizes so context usage and compression thresholds use the effective model capacity instead of always falling back to `context.default_context_window_tokens`.
+
+Implemented scope:
+
+- Added isolated model context-window parsing, normalization, caching, and resolution logic.
+- Added diagnostics for incoming runtime `options.num_ctx`, while effective context-window resolution now uses model-specific configured overrides, auto-detected Ollama metadata, and global fallback in that order.
+- Parsed Ollama-compatible `/api/show` metadata including architecture-prefixed `*.context_length`, generic `context_length`, `num_ctx`, and `context_window_tokens` fields while ignoring malformed, boolean, zero, negative, implausible, and unrelated metadata values.
+- Cached discovered model context windows by normalized model name and preserved explicit user model overrides as authoritative over detected metadata.
+- Preserved `/api/show` passthrough response bodies while opportunistically caching usable metadata from them.
+- Added dashboard serialization fields for effective context-window tokens, compact label, and user-facing source labels such as Pre-defined, Discovered, and Default.
+- Updated active conversation and instrument-panel context calculations to use the resolved active model/request context window.
+- Documented automatic discovery, override behavior, outbound `num_ctx` enforcement, resolution priority, and fallback behavior in `docs/CONFIGURATION.md`.
+
+Manual QA correction:
+
+- Manual QA found that the Context Usage card could keep showing a stale prior model after a newer completed generation request and did not visibly show whether the context-window capacity came from Runtime, Configured, Detected, or Default resolution.
+- Corrected idle dashboard active-model selection so active in-flight requests still come from the activity manager, but completed idle state uses the newest applicable generation request from request metrics before falling back to activity history.
+- Preserved metadata exclusion so `/api/show`, `/api/tags`, and `/api/ps` cannot replace the active conversational model.
+- Verified the installed Ollama `/api/show` metadata fields: `gptoss.context_length=131072` for `gpt-oss:20b` and `llama.context_length=32768` for `llava:latest`.
+- Updated Context Usage presentation to visibly show model and source in support line 2 while keeping compact capacity available in the card presentation.
+- Strengthened discovery runtime behavior by retaining background discovery tasks until completion, adding lightweight retry/backoff after failed discovery attempts, and supporting `llava` / `llava:latest` cache alias resolution without collapsing non-latest tags.
+- Added serialization coverage confirming that the dashboard can show Default while discovery is pending and then update to Discovered on a later refresh without restarting ContextKeeper.
+
+Second manual QA correction:
+
+- A second manual QA pass still showed `gpt-oss:20b • Runtime 16K` after the client was switched to a Qwen model.
+- Existing logs from the failed window showed metadata traffic for Qwen but the only logged completed conversational `/api/chat` requests still carried `model=gpt-oss:20b`; earlier logging did not include request sequence, top-level keys, or `num_ctx`, so it could not prove whether the client sent Qwen through another compatibility shape.
+- Added privacy-safe `B4.8_DIAG` log lines for each conversational generation request, including monotonic generation sequence, endpoint, method, extracted model, model-field presence/path, top-level JSON keys, `num_ctx` presence/value, lifecycle event, metric sequence/timestamp, active runtime override register/cleanup, and dashboard-selected model/context source/capacity.
+- Added deterministic metric sequence numbers and changed dashboard generation-request ordering to prefer sequence over timestamps, preventing same-timestamp ties from selecting the wrong model.
+- Added a coherent dashboard `ActiveGenerationState` so model, endpoint, request sequence, runtime context value, resolved context-window source, and capacity are selected from one active/completed generation state instead of independent sources.
+- Added top-level `name` as a safe request model fallback after `model` for compatibility clients while preserving the exact observed model value.
+- Verified configured Ollama metadata: `qwen2.5:35b` is not installed and `/api/show` returns 404; installed `qwen2.5:32b` exposes `qwen2.context_length=32768`; installed `qwen3.6:latest` exposes `qwen35moe.context_length=262144`.
+- Added public proxy route coverage for `/api/chat`, `/api/generate`, `/v1/chat/completions`, streaming, model switches, equal timestamp ordering, runtime/default/detected source behavior, failure cleanup, cancellation cleanup, and no inheritance of model A runtime context by model B.
+
+Third intermittent manual QA correction:
+
+- Manual QA reproduced an intermittent sequence where a fresh GPT request selected `gpt-oss:20b`, an immediate switch to `qwen2.5:32b` failed to replace the displayed model, a different model switch did update, and Qwen later updated after an idle period.
+- Root cause: the proxy assigned a generation sequence at request entry, but that shared sequence was not preserved through active activity state, runtime context overrides, completed metrics, and dashboard selection. Dashboard selection still gave absolute priority to any active request, so an older still-active GPT observation could mask a newer completed Qwen generation.
+- Verified that the relevant sequence counters were in different namespaces: proxy generation sequence, metrics request sequence, and activity request identity. The correction uses the proxy generation sequence as the authoritative ordering key for generation observations and keeps metrics sequence only as a fallback.
+- No ContextKeeper five-minute TTL was found in the dashboard, activity manager, metrics store, or model-context cache. The approximate idle behavior matched an older active request eventually clearing outside the dashboard selection path; the fix removes correctness dependence on that expiration.
+- Added `generation_sequence` to activity snapshots, completed request metrics, active runtime override records, and dashboard `ActiveGenerationState` so model, endpoint, runtime context source, and capacity are selected from the same newest generation observation.
+- Added privacy-safe dashboard candidate-rejection diagnostics so a rejected active/completed candidate records candidate model, selected model, generation sequence, status, age, and rejection reason without logging prompts or message content.
+- Verified installed Qwen metadata against the configured Ollama server: exact model `qwen2.5:32b`, `/api/show` key `qwen2.context_length`, value `32768`, parser result `32768`, normalized cache key `qwen2.5:32b`, and dashboard lookup key `qwen2.5:32b`.
+- Recorded the then-current AnythingLLM runtime behavior that a client `options.num_ctx=16384` remained authoritative. This was later superseded by the product-owner authority revision below.
+- Added route-level and dashboard serialization regressions for GPT then immediate Qwen, same-conversation Qwen switching, Qwen with tools and `options.num_ctx=16384`, streaming generation sequence preservation, simulated five-minute idle, alternate-model switching between Qwen attempts, no wall-clock expiration dependency, and no cross-namespace sequence comparison.
+
+Product-owner authority revision:
+
+- Product direction changed so client-supplied `options.num_ctx` is diagnostics-only and no longer authoritative for effective context capacity.
+- New context-window priority: model-specific configured override, auto-detected `/api/show` model capability, then a 32,768-token global fallback.
+- ContextKeeper now overwrites outgoing conversational generation request bodies with the resolved authoritative `options.num_ctx` before forwarding to Ollama.
+- Configured model overrides remain authoritative over detected metadata so users can intentionally cap large models for RAM, VRAM, latency, or stability.
+- For uncached models without configured overrides, ContextKeeper performs a bounded first-call `/api/show` lookup before forwarding the generation request, shares in-flight discovery for concurrent requests to the same normalized model key, caches successful metadata, and falls back to 32K if discovery fails or times out.
+- Verified target behavior for `qwen3.6:latest`: client-supplied `options.num_ctx=16384` is overwritten when `/api/show` reports `qwen35moe.context_length=262144`, and the dashboard uses a 262,144-token denominator with a `Discovered` source.
+- Refined dashboard-visible context-window source labels for non-technical clarity: internal `detected` renders as `Discovered`, internal `configured` renders as `Pre-defined`, and `default` remains `Default`, with regression coverage for all three visible paths.
+- Manual QA then confirmed authoritative context discovery and enforcement live with `qwen3.6:latest`: client requested `num_ctx=16384`, Ollama reported `qwen35moe.context_length=262144`, ContextKeeper used `262144`, the dashboard denominator was `262,144 tokens`, source was discovered, and usage displayed at approximately 0.9%.
+- Final presentation polish moved the compact effective context-window capacity into a Context Usage header badge next to the info icon, leaving support line 1 as full token usage, support line 2 as `model • source`, and support line 3 as warning/compression thresholds.
+- Added frontend support for long model-name truncation in Context Usage line 2 so the model segment ellipsizes with a full-name tooltip while the source label remains visible.
+- Final startup-state refinement introduced an explicit `waiting` context-window presentation state so a fresh dashboard shows `--`, `No active conversation`, and `Waiting for model...` until the first conversational model is observed, rather than implying that the 32K Default fallback has already been selected.
+- Final card-header presentation pass normalized shared dashboard header typography and actions so instrument titles, related Operations card titles, optional badges, and info/action icons use one compact header pattern. This prevents `Context Usage` from truncating when the effective-capacity badge is present and does not change context-discovery behavior.
+- Updated the built-in config, sample `contextkeeper.yaml`, generated wizard config, configuration documentation, resolver tests, proxy route tests, dashboard serialization tests, and instrument-panel tests for the new 32K fallback and authoritative detected/configured behavior.
+
+Validation:
+
+- Focused dashboard/instrument validation: `.\.venv\Scripts\python.exe -m pytest tests\test_dashboard_instrument_panel.py -q`, 31 tests passing, with one existing third-party `StarletteDeprecationWarning` from FastAPI/Starlette TestClient.
+- Focused resolver/proxy/dashboard/app source-label validation: `.\.venv\Scripts\python.exe -m pytest tests\test_model_context.py tests\test_dashboard_instrument_panel.py tests\test_proxy_tags.py tests\test_app.py -q`, 108 tests passing, with the same existing warning.
+- Broader config/context/compression/dashboard/proxy validation: `.\.venv\Scripts\python.exe -m pytest tests\test_model_context.py tests\test_config.py tests\test_wizard.py tests\test_context_meter.py tests\test_context_monitor.py tests\test_compression_manager.py tests\test_dashboard_instrument_panel.py tests\test_dashboard_snapshots.py tests\test_dashboard_intelligence.py tests\test_app.py tests\test_proxy_tags.py tests\test_activity.py -q`, 197 tests passing, with the same existing warning.
+- Rendered dashboard JavaScript syntax validation: extracted `<script>` from `render_dashboard_html(Settings())` with UTF-8 output and ran `node --check -`, passing.
+- Full automated suite: `.\.venv\Scripts\python.exe -m pytest -q`, 237 tests passing, with the same existing warning.
+- Diff hygiene: `git diff --check`, passing with line-ending normalization warnings only.
+
 ## Current Project State
 
-- Current active branch: `phase-6-5f-b4-7-visual-qa-acceptance-review`.
-- Current active phase: Phase 6.5F-B4 — Dashboard Visual Polish & Micro-Interactions, currently through the B4.7 visual QA and acceptance review pass.
-- Latest verified automated test count: 183 tests passing during the B4.7 visual QA and acceptance review pass.
-- Dashboard status: modern operations-console dashboard with live proxy, Ollama, request, context, compression, conversation, intelligence, health, independent operational activity, trend, recommendation, timeline, six-card instrument panel, standardized three-line gauge support rows, refined inactive and no-active Context/Compression instruments, converged lower Overview layout, reusable gauges, visual QA overflow guards, and restrained micro-interaction polish.
+- Current active branch: `phase-6-5f-b4-8-automatic-model-context-discovery`.
+- Current active phase: Phase 6.5F-B4 — Dashboard Visual Polish & Micro-Interactions, currently through the B4.8 automatic model context discovery final presentation pass.
+- Latest verified automated test count: 237 tests passing during the B4.8 automatic model context discovery final presentation pass.
+- Dashboard status: modern operations-console dashboard with live proxy, Ollama, request, context, compression, conversation, intelligence, health, independent operational activity, trend, recommendation, timeline, six-card instrument panel, standardized three-line gauge support rows, refined inactive and no-active Context/Compression instruments, converged lower Overview layout, reusable gauges, visual QA overflow guards, automatic model context-window discovery, and restrained micro-interaction polish.
 - Major capabilities currently present:
   - FastAPI-based transparent Ollama proxy.
   - `/api/*` and `/v1/*` passthrough with streaming preservation for supported endpoints.

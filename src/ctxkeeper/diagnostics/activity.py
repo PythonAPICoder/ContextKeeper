@@ -67,6 +67,9 @@ class ActivitySnapshot:
     details: str
     active_model: str | None
     active_model_state: str
+    active_generation_sequence: int | None
+    active_endpoint: str | None
+    active_request_id: str | None
     latest_model: str | None
 
     def to_dict(self) -> dict[str, object]:
@@ -78,6 +81,9 @@ class ActivitySnapshot:
             "details": self.details,
             "active_model": self.active_model,
             "active_model_state": self.active_model_state,
+            "active_generation_sequence": self.active_generation_sequence,
+            "active_endpoint": self.active_endpoint,
+            "active_request_id": self.active_request_id,
             "latest_model": self.latest_model,
         }
 
@@ -88,6 +94,7 @@ class _TrackedRequest:
     method: str
     endpoint: str
     model: str | None
+    generation_sequence: int | None
     state: ActivityState
     accepted_at: datetime
     updated_at: datetime
@@ -144,6 +151,7 @@ class OperationalActivityManager:
         endpoint: str,
         model: str | None,
         request_id: str | None = None,
+        generation_sequence: int | None = None,
     ) -> str:
         """Register an accepted generation request in RECEIVING state."""
 
@@ -157,6 +165,7 @@ class OperationalActivityManager:
                 method=method.upper(),
                 endpoint=endpoint,
                 model=model,
+                generation_sequence=generation_sequence,
                 state=ActivityState.RECEIVING,
                 accepted_at=now,
                 updated_at=now,
@@ -188,7 +197,8 @@ class OperationalActivityManager:
         with self._lock:
             state = self._state
             active_request_count = len(self._requests)
-            active_model = self._active_model_locked()
+            active_request = self._active_request_locked()
+            active_model = active_request.model if active_request is not None else None
             details = self._details_locked(state)
             return ActivitySnapshot(
                 state=state,
@@ -198,6 +208,9 @@ class OperationalActivityManager:
                 details=details,
                 active_model=active_model,
                 active_model_state=_active_model_state(active_request_count, active_model),
+                active_generation_sequence=active_request.generation_sequence if active_request is not None else None,
+                active_endpoint=active_request.endpoint if active_request is not None else None,
+                active_request_id=active_request.request_id if active_request is not None else None,
                 latest_model=self._latest_model,
             )
 
@@ -263,7 +276,7 @@ class OperationalActivityManager:
             return None
         return max(candidates, key=lambda request: request.updated_at)
 
-    def _active_model_locked(self) -> str | None:
+    def _active_request_locked(self) -> _TrackedRequest | None:
         candidates = [
             request
             for request in self._requests.values()
@@ -271,7 +284,13 @@ class OperationalActivityManager:
         ]
         if not candidates:
             return None
-        return max(candidates, key=lambda request: request.accepted_at).model
+        return max(
+            candidates,
+            key=lambda request: (
+                request.generation_sequence if request.generation_sequence is not None else -1,
+                request.accepted_at,
+            ),
+        )
 
 
 def _utcnow() -> datetime:

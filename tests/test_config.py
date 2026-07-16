@@ -10,6 +10,7 @@ def test_default_settings_load() -> None:
     assert settings.app.name == "ContextKeeper"
     assert settings.server.port == 11500
     assert settings.context.enabled is True
+    assert settings.context.default_context_window_tokens == 32768
     assert settings.compression.enabled is True
 
 

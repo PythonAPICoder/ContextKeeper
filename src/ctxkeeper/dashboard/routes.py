@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections import deque
 from dataclasses import dataclass
 from datetime import datetime, timezone
+import logging
 import time
 from threading import Lock
 from typing import Any
@@ -18,6 +19,7 @@ from ..context.context_monitor import ContextMonitor
 from ..context.conversation_store import Conversation, conversation_store
 from ..diagnostics.activity import activity_manager
 from ..diagnostics.metrics import metrics_store
+from ..model_context import ContextWindowResolution, active_context_window_overrides, resolve_context_window
 from .insights import build_dashboard_insights
 from .intelligence import DashboardMetrics, HealthAssessment, HealthEngine, HealthStatus
 from .recommendations import build_recommendations
@@ -25,6 +27,8 @@ from .snapshots import ConversationSnapshotProvider
 from .timeline import TimelineEvent
 from .template import render_dashboard_html
 from .trends import RollingTrends
+
+logger = logging.getLogger("ctxkeeper.dashboard")
 
 _ACTIVE_MODEL_ENDPOINTS = {
     "/api/chat",
@@ -35,6 +39,8 @@ _ACTIVE_MODEL_ENDPOINTS = {
 _MODEL_WARMUP_SUCCESSFUL_REQUEST_GRACE = 1
 _PERSISTENT_LATENCY_SAMPLE_COUNT = 2
 _CONTEXT_HISTORY_MAX_SAMPLES = 30
+_DASHBOARD_SELECTION_LOG_LOCK = Lock()
+_LAST_DASHBOARD_SELECTION_SIGNATURE: tuple[object, ...] | None = None
 
 
 class ContextHistoryStore:
@@ -99,6 +105,38 @@ class ModelWarmupState:
         }
 
 
+@dataclass(frozen=True)
+class ActiveGenerationState:
+    """Coherent active/completed generation request selected for dashboard state."""
+
+    model_name: str | None
+    endpoint: str | None
+    request_sequence: int | None
+    generation_sequence: int | None
+    context_window_resolution: ContextWindowResolution
+    status: str
+    observed_at: datetime | None = None
+
+    def to_dict(self) -> dict[str, object]:
+        context_window_state = _context_window_state_for_model(
+            self.context_window_resolution,
+            active_model=self.model_name,
+        )
+        waiting_for_model = context_window_state == "waiting"
+        return {
+            "model_name": self.model_name,
+            "endpoint": self.endpoint,
+            "request_sequence": self.request_sequence,
+            "generation_sequence": self.generation_sequence,
+            "context_window_tokens": None if waiting_for_model else self.context_window_resolution.tokens,
+            "context_window_source": None if waiting_for_model else self.context_window_resolution.source,
+            "context_window_source_label": None if waiting_for_model else self.context_window_resolution.source_label,
+            "context_window_label": None if waiting_for_model else self.context_window_resolution.label,
+            "context_window_state": context_window_state,
+            "status": self.status,
+        }
+
+
 async def _check_ollama(settings: Settings) -> dict[str, object]:
     started = time.perf_counter()
     try:
@@ -114,37 +152,54 @@ async def _check_ollama(settings: Settings) -> dict[str, object]:
         return {"status": "offline", "version": None, "latency_ms": latency_ms, "detail": str(exc)}
 
 
-def _create_context_monitor(settings: Settings) -> ContextMonitor:
+def _create_context_monitor(settings: Settings, *, context_window_tokens: int | None = None) -> ContextMonitor:
     return ContextMonitor(
         store=conversation_store,
-        meter=_create_context_meter(settings),
+        meter=_create_context_meter(settings, context_window_tokens=context_window_tokens),
     )
 
 
-def _create_context_meter(settings: Settings, *, model_name: str | None = None) -> ContextMeter:
-    context_window_tokens, _ = _context_window_tokens_for_model(settings, model_name)
+def _create_context_meter(
+    settings: Settings,
+    *,
+    model_name: str | None = None,
+    context_window_tokens: int | None = None,
+) -> ContextMeter:
+    resolved_context_window_tokens = context_window_tokens
+    if resolved_context_window_tokens is None:
+        resolved_context_window_tokens = _context_window_resolution_for_model(settings, model_name).tokens
     return ContextMeter(
-        context_window_tokens=context_window_tokens,
+        context_window_tokens=resolved_context_window_tokens,
         warning_threshold_percent=settings.context.warning_threshold_percent,
         compression_threshold_percent=settings.context.compression_threshold_percent,
     )
 
 
-def _create_conversation_snapshot_provider(settings: Settings, *, model_name: str | None = None) -> ConversationSnapshotProvider:
+def _create_conversation_snapshot_provider(
+    settings: Settings,
+    *,
+    model_name: str | None = None,
+    context_window_tokens: int | None = None,
+) -> ConversationSnapshotProvider:
     return ConversationSnapshotProvider(
         store=conversation_store,
-        meter=_create_context_meter(settings, model_name=model_name),
+        meter=_create_context_meter(settings, model_name=model_name, context_window_tokens=context_window_tokens),
+    )
+
+
+def _context_window_resolution_for_model(
+    settings: Settings,
+    model_name: str | None,
+) -> ContextWindowResolution:
+    return resolve_context_window(
+        settings,
+        model_name=model_name,
     )
 
 
 def _context_window_tokens_for_model(settings: Settings, model_name: str | None) -> tuple[int, str]:
-    if model_name:
-        model_config = settings.models.get(model_name)
-        if isinstance(model_config, dict):
-            context_window_tokens = model_config.get("context_window_tokens")
-            if isinstance(context_window_tokens, int) and context_window_tokens > 0:
-                return context_window_tokens, "model_config"
-    return settings.context.default_context_window_tokens, "default_config"
+    resolution = _context_window_resolution_for_model(settings, model_name)
+    return resolution.tokens, resolution.source
 
 
 def _compression_history(conversations: list[Conversation]) -> list[dict[str, Any]]:
@@ -322,11 +377,13 @@ def _build_instrument_panel(
     active_conversation: dict[str, Any],
     compression_history: list[dict[str, Any]],
     active_model: str | None,
+    context_window_resolution: ContextWindowResolution,
 ) -> dict[str, Any]:
     context_usage = _context_usage_instrument(
         settings=settings,
         active_conversation=active_conversation,
         active_model=active_model,
+        context_window_resolution=context_window_resolution,
     )
     return {
         "cpu": _cpu_instrument(system_metrics),
@@ -343,10 +400,21 @@ def _build_instrument_panel(
     }
 
 
-def _instrument_detail_line(text: str | None, *, fallback: str, title: str | None = None) -> dict[str, str]:
+def _instrument_detail_line(
+    text: str | None,
+    *,
+    fallback: str,
+    title: str | None = None,
+    **extra: str | None,
+) -> dict[str, str]:
     display = _string_or_none(text) or fallback
     full_title = _string_or_none(title) or display
-    return {"text": display, "title": full_title}
+    line = {"text": display, "title": full_title}
+    for key, value in extra.items():
+        normalized = _string_or_none(value)
+        if normalized is not None:
+            line[key] = normalized
+    return line
 
 
 def _instrument_detail_lines(*lines: dict[str, str]) -> list[dict[str, str]]:
@@ -354,6 +422,49 @@ def _instrument_detail_lines(*lines: dict[str, str]) -> list[dict[str, str]]:
     while len(normalized) < 3:
         normalized.append(_instrument_detail_line(None, fallback="Not reported"))
     return normalized
+
+
+def _context_window_source_line(
+    resolution: ContextWindowResolution,
+    *,
+    active_model: str | None,
+) -> str:
+    if active_model:
+        return f"{active_model} • {resolution.source_label}"
+    return f"{resolution.source_label} context window"
+
+
+def _context_window_source_detail_line(
+    resolution: ContextWindowResolution,
+    *,
+    active_model: str | None,
+    fallback: str,
+) -> dict[str, str]:
+    text = _context_window_source_line(resolution, active_model=active_model)
+    if active_model:
+        return _instrument_detail_line(
+            text,
+            fallback=fallback,
+            title=text,
+            kind="model_source",
+            model_name=active_model,
+            source_label=resolution.source_label,
+        )
+    return _instrument_detail_line(text, fallback=fallback, title=text)
+
+
+def _context_window_state_for_model(
+    resolution: ContextWindowResolution,
+    *,
+    active_model: str | None,
+) -> str:
+    if not active_model:
+        return "waiting"
+    if resolution.source == "configured":
+        return "pre-defined"
+    if resolution.source == "detected":
+        return "discovered"
+    return "default"
 
 
 def _cpu_instrument(system_metrics: dict[str, Any]) -> dict[str, Any]:
@@ -507,14 +618,37 @@ def _context_usage_instrument(
     settings: Settings,
     active_conversation: dict[str, Any],
     active_model: str | None,
+    context_window_resolution: ContextWindowResolution,
 ) -> dict[str, Any]:
     warning_threshold = settings.context.warning_threshold_percent
     compression_threshold = settings.context.compression_threshold_percent
-    context_window_tokens, context_window_source = _context_window_tokens_for_model(settings, active_model)
+    context_window_tokens = context_window_resolution.tokens
+    context_window_source = context_window_resolution.source
+    context_window_state = _context_window_state_for_model(
+        context_window_resolution,
+        active_model=active_model,
+    )
+    waiting_for_model = settings.context.enabled and context_window_state == "waiting"
+    context_window_source_label = None if waiting_for_model else context_window_resolution.source_label
+    context_window_label = None if waiting_for_model else context_window_resolution.label
+    header_badge = "--" if waiting_for_model else context_window_resolution.label
+    header_badge_title = (
+        "Waiting for first conversational model"
+        if waiting_for_model
+        else (
+            f"Effective context window: {context_window_tokens:,} tokens "
+            f"({context_window_resolution.source_label})"
+        )
+    )
     base = {
         "warning_threshold_percent": warning_threshold,
         "compression_threshold_percent": compression_threshold,
-        "context_window_source": context_window_source,
+        "context_window_state": context_window_state,
+        "context_window_source": None if waiting_for_model else context_window_source,
+        "context_window_source_label": context_window_source_label,
+        "context_window_label": context_window_label,
+        "header_badge": header_badge,
+        "header_badge_title": header_badge_title,
         "active_model": active_model,
     }
     if not settings.context.enabled:
@@ -530,8 +664,9 @@ def _context_usage_instrument(
             "message": "Context Tracking OFF",
             "detail_lines": _instrument_detail_lines(
                 _instrument_detail_line("Context Tracking OFF", fallback="Context Tracking OFF"),
-                _instrument_detail_line(
-                    _format_context_window(context_window_tokens),
+                _context_window_source_detail_line(
+                    context_window_resolution,
+                    active_model=None,
                     fallback="Context window unavailable",
                 ),
                 _instrument_detail_line(
@@ -551,12 +686,15 @@ def _context_usage_instrument(
             "conversation_id": None,
             "usage_percent": 0.0,
             "estimated_tokens": None,
-            "context_window_tokens": context_window_tokens,
+            "context_window_tokens": None if waiting_for_model else context_window_tokens,
             "message": "No active conversation",
             "detail_lines": _instrument_detail_lines(
                 _instrument_detail_line("No active conversation", fallback="No active conversation"),
-                _instrument_detail_line(
-                    _format_context_window(context_window_tokens),
+                _instrument_detail_line("Waiting for model...", fallback="Waiting for model...")
+                if waiting_for_model
+                else _context_window_source_detail_line(
+                    context_window_resolution,
+                    active_model=active_model,
                     fallback="Context window unavailable",
                 ),
                 _instrument_detail_line(
@@ -585,7 +723,11 @@ def _context_usage_instrument(
                     f"{estimated_tokens:,} estimated tokens" if estimated_tokens is not None else None,
                     fallback="Token estimate unavailable",
                 ),
-                _instrument_detail_line("Context window unknown", fallback="Context window unknown"),
+                _context_window_source_detail_line(
+                    context_window_resolution,
+                    active_model=active_model,
+                    fallback="Context window unknown",
+                ),
                 _instrument_detail_line(
                     _format_thresholds(warning_threshold, compression_threshold),
                     fallback="Thresholds unavailable",
@@ -601,12 +743,14 @@ def _context_usage_instrument(
         "critical": "Critical",
         "unavailable": "Unavailable",
     }[status]
-    if context_window_source == "model_config":
-        window_message = "model-specific context window"
+    if context_window_source == "configured":
+        window_message = "pre-defined model context window"
+    elif context_window_source == "detected":
+        window_message = "discovered model context window"
     elif active_model:
-        window_message = "configured default context window; model-specific size unavailable"
+        window_message = "default context window; model-specific size unavailable"
     else:
-        window_message = "configured default context window; active model unknown"
+        window_message = "default context window; active model unknown"
     token_message = (
         f"{estimated_tokens:,} / {active_context_window_tokens:,} estimated tokens"
         if estimated_tokens is not None
@@ -627,7 +771,11 @@ def _context_usage_instrument(
                 _format_context_tokens(estimated_tokens, active_context_window_tokens),
                 fallback="Token estimate unavailable",
             ),
-            _instrument_detail_line(active_model, fallback="Active model unknown", title=active_model),
+            _context_window_source_detail_line(
+                context_window_resolution,
+                active_model=active_model,
+                fallback="Active model unknown",
+            ),
             _instrument_detail_line(
                 _format_thresholds(warning_threshold, compression_threshold),
                 fallback="Thresholds unavailable",
@@ -640,6 +788,11 @@ def _context_trend_instrument(*, settings: Settings, context_usage: dict[str, An
     thresholds = {
         "warning_threshold_percent": settings.context.warning_threshold_percent,
         "compression_threshold_percent": settings.context.compression_threshold_percent,
+        "context_window_tokens": context_usage.get("context_window_tokens"),
+        "context_window_source": context_usage.get("context_window_source"),
+        "context_window_source_label": context_usage.get("context_window_source_label"),
+        "context_window_label": context_usage.get("context_window_label"),
+        "context_window_state": context_usage.get("context_window_state"),
     }
     if context_usage.get("state") == "disabled":
         return {
@@ -741,6 +894,11 @@ def _compression_status_instrument(
         "event_count": event_count,
         "active_conversation_event_count": _int_or_none(active_history.get("compression_count")) if active_history else 0,
         "proximity_percent": proximity_percent,
+        "context_window_tokens": context_usage.get("context_window_tokens"),
+        "context_window_source": context_usage.get("context_window_source"),
+        "context_window_source_label": context_usage.get("context_window_source_label"),
+        "context_window_label": context_usage.get("context_window_label"),
+        "context_window_state": context_usage.get("context_window_state"),
         "message": message,
         "detail_lines": _compression_detail_lines(
             state=state,
@@ -920,19 +1078,20 @@ def _is_applicable_model_request(request: object) -> bool:
 
 def _applicable_model_requests(recent_requests: list[dict[str, Any]]) -> list[dict[str, Any]]:
     applicable_requests = [request for request in recent_requests if _is_applicable_model_request(request)]
-    decorated: list[tuple[datetime | None, int, dict[str, Any]]] = [
-        (_parse_timestamp(request.get("timestamp")), index, request)
-        for index, request in enumerate(applicable_requests)
-    ]
-    if not any(timestamp is not None for timestamp, _, _ in decorated):
+    if not applicable_requests:
         return applicable_requests
 
     oldest = datetime.min.replace(tzinfo=timezone.utc)
     return [
         request
-        for timestamp, _, request in sorted(
-            decorated,
-            key=lambda item: (item[0] or oldest, -item[1]),
+        for _, request in sorted(
+            enumerate(applicable_requests),
+            key=lambda item: (
+                _request_generation_sequence(item[1]) or -1,
+                _request_sequence(item[1]) or -1,
+                _parse_timestamp(item[1].get("timestamp")) or oldest,
+                -item[0],
+            ),
             reverse=True,
         )
     ]
@@ -1099,6 +1258,189 @@ def _latest_applicable_model(request_metrics: dict[str, Any]) -> str | None:
     return None
 
 
+def _request_sequence(request: dict[str, Any] | None) -> int | None:
+    if not isinstance(request, dict):
+        return None
+    return _int_or_none(request.get("sequence"))
+
+
+def _request_generation_sequence(request: dict[str, Any] | None) -> int | None:
+    if not isinstance(request, dict):
+        return None
+    return _int_or_none(request.get("generation_sequence"))
+
+
+def _latest_applicable_generation_request(request_metrics: dict[str, Any]) -> dict[str, Any] | None:
+    recent_requests = request_metrics.get("recent_requests", [])
+    if isinstance(recent_requests, list):
+        applicable = _applicable_model_requests(recent_requests)
+        if applicable:
+            return applicable[0]
+
+    last_endpoint = request_metrics.get("last_endpoint")
+    last_model = request_metrics.get("last_model")
+    if last_endpoint in _ACTIVE_MODEL_ENDPOINTS and isinstance(last_model, str) and last_model:
+        return {
+            "endpoint": last_endpoint,
+            "model": last_model,
+            "sequence": _int_or_none(request_metrics.get("last_sequence")),
+            "generation_sequence": _int_or_none(request_metrics.get("last_generation_sequence")),
+        }
+    return None
+
+
+def _active_generation_state(
+    *,
+    settings: Settings,
+    request_metrics: dict[str, Any],
+    recent_requests: list[dict[str, Any]],
+    activity_snapshot: object | None,
+) -> ActiveGenerationState:
+    active_candidate: ActiveGenerationState | None = None
+    active_request_count = getattr(activity_snapshot, "active_request_count", 0)
+    if isinstance(active_request_count, int) and active_request_count > 0:
+        active_model = getattr(activity_snapshot, "active_model", None)
+        model_name = active_model if isinstance(active_model, str) and active_model else None
+        active_generation_sequence = _int_or_none(getattr(activity_snapshot, "active_generation_sequence", None))
+        active_override = active_context_window_overrides.latest_for_generation_sequence(active_generation_sequence)
+        if active_override is None:
+            active_override = active_context_window_overrides.latest_for_model(model_name)
+        resolution = active_override or _context_window_resolution_for_model(settings, model_name)
+        endpoint = getattr(activity_snapshot, "active_endpoint", None)
+        observed_at = getattr(activity_snapshot, "updated_at", None)
+        active_candidate = ActiveGenerationState(
+            model_name=model_name,
+            endpoint=endpoint if isinstance(endpoint, str) and endpoint else None,
+            request_sequence=None,
+            generation_sequence=active_generation_sequence,
+            context_window_resolution=resolution,
+            status="active" if model_name else "active_unknown",
+            observed_at=observed_at if isinstance(observed_at, datetime) else None,
+        )
+
+    completed_candidate: ActiveGenerationState | None = None
+    latest_request = _latest_applicable_generation_request(request_metrics)
+    if latest_request is not None:
+        model_name = _string_or_none(latest_request.get("model"))
+        resolution = _context_window_resolution_for_model(settings, model_name)
+        completed_candidate = ActiveGenerationState(
+            model_name=model_name,
+            endpoint=_string_or_none(latest_request.get("endpoint")),
+            request_sequence=_request_sequence(latest_request),
+            generation_sequence=_request_generation_sequence(latest_request),
+            context_window_resolution=resolution,
+            status="completed",
+            observed_at=_parse_timestamp(latest_request.get("timestamp")),
+        )
+
+    selected = _select_generation_state(active_candidate, completed_candidate)
+    if selected is not None:
+        rejected = completed_candidate if selected is active_candidate else active_candidate
+        if rejected is not None:
+            _log_dashboard_candidate_rejection(rejected, selected)
+        return selected
+
+    latest_activity_model = getattr(activity_snapshot, "latest_model", None)
+    model_name = latest_activity_model if isinstance(latest_activity_model, str) and latest_activity_model else None
+    resolution = _context_window_resolution_for_model(settings, model_name)
+    return ActiveGenerationState(
+        model_name=model_name,
+        endpoint=None,
+        request_sequence=None,
+        generation_sequence=None,
+        context_window_resolution=resolution,
+        status="activity_history" if model_name else "none",
+    )
+
+
+def _select_generation_state(
+    active: ActiveGenerationState | None,
+    completed: ActiveGenerationState | None,
+) -> ActiveGenerationState | None:
+    if active is None:
+        return completed
+    if completed is None:
+        return active
+
+    active_generation_sequence = active.generation_sequence
+    completed_generation_sequence = completed.generation_sequence
+    if active_generation_sequence is not None and completed_generation_sequence is not None:
+        return active if active_generation_sequence >= completed_generation_sequence else completed
+
+    if active_generation_sequence is not None:
+        return active
+    if completed_generation_sequence is not None:
+        return completed
+
+    return active
+
+
+def _state_age_seconds(state: ActiveGenerationState) -> float | None:
+    if state.observed_at is None:
+        return None
+    return max(0.0, round((datetime.now(timezone.utc) - state.observed_at).total_seconds(), 2))
+
+
+def _log_dashboard_candidate_rejection(
+    rejected: ActiveGenerationState,
+    selected: ActiveGenerationState,
+) -> None:
+    rejected_key = rejected.generation_sequence if rejected.generation_sequence is not None else rejected.request_sequence
+    selected_key = selected.generation_sequence if selected.generation_sequence is not None else selected.request_sequence
+    reason = "older_generation_sequence"
+    if rejected.generation_sequence is None or selected.generation_sequence is None:
+        reason = "legacy_unsequenced_candidate"
+    logger.info(
+        "B4.8_DIAG event=dashboard_candidate_rejected candidate_model=%s candidate_gen_seq=%s selected_model=%s selected_gen_seq=%s rejection_reason=%s candidate_status=%s selected_status=%s candidate_age_seconds=%s selected_age_seconds=%s candidate_key=%s selected_key=%s",
+        rejected.model_name,
+        rejected.generation_sequence,
+        selected.model_name,
+        selected.generation_sequence,
+        reason,
+        rejected.status,
+        selected.status,
+        _state_age_seconds(rejected),
+        _state_age_seconds(selected),
+        rejected_key,
+        selected_key,
+    )
+
+
+def _log_dashboard_selection(state: ActiveGenerationState) -> None:
+    global _LAST_DASHBOARD_SELECTION_SIGNATURE
+    context_window_state = _context_window_state_for_model(
+        state.context_window_resolution,
+        active_model=state.model_name,
+    )
+    waiting_for_model = context_window_state == "waiting"
+    signature = (
+        state.generation_sequence,
+        state.request_sequence,
+        state.endpoint,
+        state.model_name,
+        context_window_state,
+        None if waiting_for_model else state.context_window_resolution.source,
+        None if waiting_for_model else state.context_window_resolution.tokens,
+        state.status,
+    )
+    with _DASHBOARD_SELECTION_LOG_LOCK:
+        if signature == _LAST_DASHBOARD_SELECTION_SIGNATURE:
+            return
+        _LAST_DASHBOARD_SELECTION_SIGNATURE = signature
+    logger.info(
+        "B4.8_DIAG event=dashboard_selection gen_seq=%s request_seq=%s endpoint=%s model=%s status=%s context_state=%s context_source=%s context_tokens=%s context_label=%s",
+        state.generation_sequence,
+        state.request_sequence,
+        state.endpoint,
+        state.model_name,
+        state.status,
+        context_window_state,
+        None if waiting_for_model else state.context_window_resolution.source,
+        None if waiting_for_model else state.context_window_resolution.tokens,
+        None if waiting_for_model else state.context_window_resolution.label,
+    )
+
+
 def _latest_observed_model(
     request_metrics: dict[str, Any],
     activity_snapshot: object | None = None,
@@ -1108,10 +1450,14 @@ def _latest_observed_model(
         active_model = getattr(activity_snapshot, "active_model", None)
         return active_model if isinstance(active_model, str) and active_model else None
 
+    latest_metrics_model = _latest_applicable_model(request_metrics)
+    if latest_metrics_model:
+        return latest_metrics_model
+
     latest_activity_model = getattr(activity_snapshot, "latest_model", None)
     if isinstance(latest_activity_model, str) and latest_activity_model:
         return latest_activity_model
-    return _latest_applicable_model(request_metrics)
+    return None
 
 
 def _dashboard_model_state(activity_snapshot: object | None, model: str | None) -> str:
@@ -1139,17 +1485,42 @@ def build_dashboard_status(
     activity_snapshot = activity_manager.snapshot()
     request_metrics = metrics_snapshot["requests"]
     recent_requests = list(request_metrics.get("recent_requests", []))
-    active_model = _latest_observed_model(request_metrics, activity_snapshot)
+    active_generation = _active_generation_state(
+        settings=settings,
+        request_metrics=request_metrics,
+        recent_requests=recent_requests,
+        activity_snapshot=activity_snapshot,
+    )
+    _log_dashboard_selection(active_generation)
+    active_model = active_generation.model_name
     model_state = _dashboard_model_state(activity_snapshot, active_model)
     model_label = _dashboard_model_label(active_model, model_state)
     warmup_state = _detect_model_warmup(recent_requests)
-    context_scan = _create_context_monitor(settings).scan()
+    context_window_resolution = active_generation.context_window_resolution
+    context_window_state = _context_window_state_for_model(context_window_resolution, active_model=active_model)
+    context_scan = _create_context_monitor(
+        settings,
+        context_window_tokens=context_window_resolution.tokens,
+    ).scan()
     compression_history = _compression_history(conversation_store.all())
     context_stats = context_scan.statistics
-    active_conversation = _create_conversation_snapshot_provider(settings, model_name=active_model).active_snapshot(
-        model_name=active_model
-    )
+    active_conversation = _create_conversation_snapshot_provider(
+        settings,
+        model_name=active_model,
+        context_window_tokens=context_window_resolution.tokens,
+    ).active_snapshot(model_name=active_model)
     active_conversation_data = active_conversation.to_dict()
+    if isinstance(active_conversation_data.get("context"), dict):
+        active_conversation_data["context"]["context_window_state"] = context_window_state
+        if context_window_state == "waiting":
+            active_conversation_data["context"]["context_window_tokens"] = None
+            active_conversation_data["context"]["context_window_source"] = None
+            active_conversation_data["context"]["context_window_source_label"] = None
+            active_conversation_data["context"]["context_window_label"] = None
+        else:
+            active_conversation_data["context"]["context_window_source"] = context_window_resolution.source
+            active_conversation_data["context"]["context_window_source_label"] = context_window_resolution.source_label
+            active_conversation_data["context"]["context_window_label"] = context_window_resolution.label
     system_metrics = metrics_snapshot["system"]
 
     return {
@@ -1172,6 +1543,7 @@ def build_dashboard_status(
             "last_latency_ms": request_metrics.get("last_latency_ms"),
             "last_status_code": request_metrics.get("last_status_code"),
             "model_transition": warmup_state.to_dict(),
+            "active_generation": active_generation.to_dict(),
         },
         "context": {
             "usage_percent": context_stats.max_usage_percent,
@@ -1181,6 +1553,11 @@ def build_dashboard_status(
             "estimated_tokens": context_stats.total_estimated_tokens,
             "warning_count": context_stats.warning_count,
             "compression_candidate_count": context_stats.compression_candidate_count,
+            "context_window_tokens": None if context_window_state == "waiting" else context_window_resolution.tokens,
+            "context_window_source": None if context_window_state == "waiting" else context_window_resolution.source,
+            "context_window_source_label": None if context_window_state == "waiting" else context_window_resolution.source_label,
+            "context_window_label": None if context_window_state == "waiting" else context_window_resolution.label,
+            "context_window_state": context_window_state,
         },
         "compression": {
             "count": sum(item["compression_count"] for item in compression_history),
@@ -1204,6 +1581,7 @@ def build_dashboard_status(
             active_conversation=active_conversation_data,
             compression_history=compression_history,
             active_model=active_model,
+            context_window_resolution=context_window_resolution,
         ),
         "refresh_interval_ms": settings.dashboard.refresh_interval_ms or 1000,
     }
@@ -1222,7 +1600,13 @@ def create_dashboard_router(settings: Settings) -> APIRouter:
         ollama_status = await _check_ollama(settings)
         activity_manager.observe_ollama_status(ollama_status.get("status"))
         activity_snapshot = activity_manager.snapshot()
-        last_model = _latest_observed_model(requests, activity_snapshot)
+        active_generation = _active_generation_state(
+            settings=settings,
+            request_metrics=requests,
+            recent_requests=list(recent) if isinstance(recent, list) else [],
+            activity_snapshot=activity_snapshot,
+        )
+        last_model = active_generation.model_name
         model_state = _dashboard_model_state(activity_snapshot, last_model)
         model_label = _dashboard_model_label(last_model, model_state)
         client_status = "online" if client_count > 0 else "waiting"

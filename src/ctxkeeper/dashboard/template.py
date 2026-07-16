@@ -149,6 +149,11 @@ h1 {{ margin:0; font-size:25px; }}
 .hero-stat-card:hover::before,.hero-stat-card:focus-within::before,.hero-stat-card:focus-visible::before {{ opacity:.92; }}
 .hero-stat-card:hover .hero-stat-value,.hero-stat-card:focus-within .hero-stat-value,.hero-stat-card:focus-visible .hero-stat-value {{ color:#fff; }}
 .card h2 {{ margin:0 0 7px; font-size:13px; letter-spacing:.02em; }}
+.dashboard-card-header {{ display:flex; align-items:center; justify-content:space-between; gap:5px; min-width:0; min-height:18px; }}
+.dashboard-card-title,.card h2.dashboard-card-title {{ flex:1 1 auto; min-width:0; margin:0; color:var(--soft); font-family:inherit; font-size:9.5px; line-height:18px; font-weight:850; letter-spacing:.055em; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }}
+.dashboard-card-header-actions {{ flex:0 0 auto; display:flex; align-items:center; justify-content:flex-end; gap:4px; min-width:0; }}
+.dashboard-header-badge {{ display:inline-flex; align-items:center; justify-content:center; min-width:0; max-width:46px; min-height:16px; padding:0 5px; border-radius:999px; border:1px solid rgba(56,189,248,.18); color:#bfdbfe; background:rgba(56,189,248,.08); box-shadow:inset 0 1px 0 rgba(255,255,255,.05); font-size:9.5px; line-height:1; font-weight:850; letter-spacing:.015em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }}
+.dashboard-header-badge.is-neutral {{ border-color:rgba(148,163,184,.16); color:var(--muted); background:rgba(15,23,42,.42); box-shadow:inset 0 1px 0 rgba(255,255,255,.035); }}
 .ops-panel {{ min-height:0; overflow:hidden; }}
 .operations-lower > .ops-panel {{ height:100%; overflow:hidden; }}
 .compact-card {{ min-height:0; padding:11px; }}
@@ -170,8 +175,6 @@ h1 {{ margin:0; font-size:25px; }}
 .instrument-card.warning,.instrument-card.approaching,.instrument-card.waiting {{ --instrument-accent:var(--warn); }}
 .instrument-card.critical,.instrument-card.error {{ --instrument-accent:var(--bad); }}
 .instrument-card.disabled,.instrument-card.unavailable,.instrument-card.empty {{ --instrument-accent:var(--muted); }}
-.instrument-head {{ display:flex; align-items:center; justify-content:space-between; gap:8px; min-width:0; min-height:18px; }}
-.instrument-title {{ min-width:0; color:var(--soft); font-size:11px; font-weight:850; letter-spacing:.075em; text-transform:uppercase; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }}
 .instrument-info {{ flex:0 0 auto; display:grid; place-items:center; width:18px; height:18px; border-radius:50%; border:1px solid rgba(148,163,184,.18); color:var(--muted); font-size:11px; font-weight:850; background:rgba(15,23,42,.58); }}
 .instrument-body {{ display:grid; justify-items:center; align-content:center; min-width:0; min-height:var(--instrument-gauge-h); }}
 .instrument-reading {{ display:flex; align-items:center; justify-content:center; flex-wrap:nowrap; gap:5px 7px; min-width:0; min-height:var(--instrument-reading-h); text-align:center; }}
@@ -181,6 +184,10 @@ h1 {{ margin:0; font-size:25px; }}
 .instrument-support {{ display:grid; grid-template-rows:repeat(3,var(--instrument-support-line-h)); gap:2px; min-width:0; min-height:calc((var(--instrument-support-line-h) * 3) + 4px); align-content:start; }}
 .instrument-support-row {{ min-width:0; color:var(--muted); font-size:10px; line-height:var(--instrument-support-line-h); text-align:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }}
 .instrument-support-row.primary {{ color:#dbeafe; font-weight:750; }}
+.instrument-support-row.model-source {{ display:flex; align-items:center; justify-content:center; gap:4px; }}
+.instrument-support-model {{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }}
+.instrument-support-separator,.instrument-support-source {{ flex:0 0 auto; white-space:nowrap; }}
+.instrument-support-source {{ color:#cbd5e1; }}
 .instrument-gauge-shell {{ width:var(--instrument-gauge-w); max-width:100%; height:var(--instrument-gauge-h); display:grid; place-items:center; overflow:visible; }}
 .instrument-gauge-svg {{ width:var(--instrument-gauge-w); max-width:100%; height:var(--instrument-gauge-h); overflow:visible; shape-rendering:geometricPrecision; }}
 .instrument-gauge-segment {{ fill:none; stroke-width:9; stroke-linecap:butt; vector-effect:non-scaling-stroke; opacity:.9; }}
@@ -450,7 +457,7 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
   .action-panel {{ grid-area:actions; padding:8px 10px; }}
   .instrument-panel {{ gap:6px; }}
   .instrument-card {{ --instrument-gauge-w:98px; --instrument-gauge-h:58px; --instrument-support-line-h:12px; --instrument-reading-h:21px; min-height:126px; padding:8px; }}
-  .instrument-title {{ font-size:10px; }}
+  .dashboard-card-title,.card h2.dashboard-card-title {{ font-size:9.5px; }}
   .instrument-card-value {{ font-size:18px; }}
   .instrument-support-row {{ font-size:9px; }}
   .trend-chart,.trend-chart-wrap {{ min-height:62px; height:62px; }}
@@ -654,9 +661,9 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
         <span class="badge busy">Live refresh</span>
       </div>
       <div id="systemHealthCard" class="card health-card signal-card compact-card ops-health-panel">
-        <div class="health-title">
-          <h2 class="ops-health-heading"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.4 8 8 9 4.6-1 8-4 8-9V6z"></path><path d="m9 12 2 2 4-5"></path></svg>System Health</h2>
-          <span id="systemHealthBadge" class="badge">Checking</span>
+        <div class="health-title dashboard-card-header">
+          <h2 class="ops-health-heading dashboard-card-title"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.4 8 8 9 4.6-1 8-4 8-9V6z"></path><path d="m9 12 2 2 4-5"></path></svg>System Health</h2>
+          <div class="dashboard-card-header-actions"><span id="systemHealthBadge" class="badge">Checking</span></div>
         </div>
         <div class="ops-health-body">
           <div class="ops-health-primary">
@@ -690,7 +697,7 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
         </div>
       </div>
     </div>
-    <div class="card compact-card action-panel"><div class="health-title"><h2><span class="icon-label"><span class="icon-mark">!</span>Recommendations</span></h2><span class="badge">Action</span></div><div id="recommendationsList" class="panel-list"><div class="muted">No operator action queued.</div></div><div class="small">Open Analytics for full insight history.</div></div>
+    <div class="card compact-card action-panel"><div class="health-title dashboard-card-header"><h2 class="dashboard-card-title"><span class="icon-label"><span class="icon-mark">!</span>Recommendations</span></h2><div class="dashboard-card-header-actions"><span class="badge">Action</span></div></div><div id="recommendationsList" class="panel-list"><div class="muted">No operator action queued.</div></div><div class="small">Open Analytics for full insight history.</div></div>
     <div class="hero-stats-grid" aria-label="Hero statistics">
       <div class="card hero-stat-card">
         <div class="hero-stat-top"><div class="hero-stat-label">Total Requests</div><div class="hero-stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h10"></path><path d="M4 12h16"></path><path d="M4 17h7"></path><path d="m16 15 3-3-3-3"></path></svg></div></div>
@@ -717,7 +724,7 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
 
   <section id="instrumentPanel" class="instrument-panel" aria-label="Dashboard instrument panel">
     <div id="cpuInstrumentCard" class="card instrument-card">
-      <div class="instrument-head"><div class="instrument-title">CPU Usage</div><div class="instrument-info" title="Processor utilization and hardware detail">i</div></div>
+      <div class="instrument-head dashboard-card-header"><div class="instrument-title dashboard-card-title">CPU Usage</div><div class="instrument-head-actions dashboard-card-header-actions"><div class="instrument-info" title="Processor utilization and hardware detail">i</div></div></div>
       <div class="instrument-body"><div id="cpuInstrumentGauge" class="instrument-gauge-shell" data-gauge-label="CPU Usage"></div></div>
       <div class="instrument-reading"><div id="cpuInstrumentValue" class="instrument-card-value" data-live-value="true">--</div><span id="cpuInstrumentStatus" class="badge">Loading</span></div>
       <div id="cpuInstrumentSupport" class="instrument-support" data-instrument-support="cpu" aria-label="CPU supporting details">
@@ -727,7 +734,7 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
       </div>
     </div>
     <div id="gpuInstrumentCard" class="card instrument-card">
-      <div class="instrument-head"><div class="instrument-title">GPU Usage</div><div class="instrument-info" title="GPU utilization, VRAM, and temperature when available">i</div></div>
+      <div class="instrument-head dashboard-card-header"><div class="instrument-title dashboard-card-title">GPU Usage</div><div class="instrument-head-actions dashboard-card-header-actions"><div class="instrument-info" title="GPU utilization, VRAM, and temperature when available">i</div></div></div>
       <div class="instrument-body"><div id="gpuInstrumentGauge" class="instrument-gauge-shell" data-gauge-label="GPU Usage"></div></div>
       <div class="instrument-reading"><div id="gpuInstrumentValue" class="instrument-card-value" data-live-value="true">--</div><span id="gpuInstrumentStatus" class="badge">Loading</span></div>
       <div id="gpuInstrumentSupport" class="instrument-support" data-instrument-support="gpu" aria-label="GPU supporting details">
@@ -737,7 +744,7 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
       </div>
     </div>
     <div id="memoryInstrumentCard" class="card instrument-card">
-      <div class="instrument-head"><div class="instrument-title">Memory Usage</div><div class="instrument-info" title="System memory utilization">i</div></div>
+      <div class="instrument-head dashboard-card-header"><div class="instrument-title dashboard-card-title">Memory Usage</div><div class="instrument-head-actions dashboard-card-header-actions"><div class="instrument-info" title="System memory utilization">i</div></div></div>
       <div class="instrument-body"><div id="memoryInstrumentGauge" class="instrument-gauge-shell" data-gauge-label="Memory Usage"></div></div>
       <div class="instrument-reading"><div id="memoryInstrumentValue" class="instrument-card-value" data-live-value="true">--</div><span id="memoryInstrumentStatus" class="badge">Loading</span></div>
       <div id="memoryInstrumentSupport" class="instrument-support" data-instrument-support="memory" aria-label="Memory supporting details">
@@ -747,7 +754,7 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
       </div>
     </div>
     <div id="contextInstrumentCard" class="card instrument-card">
-      <div class="instrument-head"><div class="instrument-title">Context Usage</div><div class="instrument-info" title="Active conversation token pressure">i</div></div>
+      <div class="instrument-head dashboard-card-header"><div class="instrument-title dashboard-card-title">Context Usage</div><div class="instrument-head-actions dashboard-card-header-actions"><span id="contextInstrumentCapacity" class="instrument-header-badge dashboard-header-badge" title="Effective context window capacity">--</span><div class="instrument-info" title="Active conversation token pressure">i</div></div></div>
       <div class="instrument-body"><div id="contextInstrumentGauge" class="instrument-gauge-shell" data-gauge-label="Context Usage"></div></div>
       <div class="instrument-reading"><div id="contextInstrumentValue" class="instrument-card-value" data-live-value="true">--</div><span id="contextInstrumentStatus" class="badge">Loading</span></div>
       <div id="contextInstrumentSupport" class="instrument-support" data-instrument-support="context" aria-label="Context supporting details">
@@ -757,7 +764,7 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
       </div>
     </div>
     <div id="contextTrendCard" class="card instrument-card instrument-trend-card">
-      <div class="instrument-head"><div class="instrument-title">Context Trend</div><div class="instrument-info" title="Rolling active-context history">i</div></div>
+      <div class="instrument-head dashboard-card-header"><div class="instrument-title dashboard-card-title">Context Trend</div><div class="instrument-head-actions dashboard-card-header-actions"><div class="instrument-info" title="Rolling active-context history">i</div></div></div>
       <div class="trend-body">
         <div class="trend-summary"><div id="contextTrendValue" class="trend-current" data-live-value="true">0%</div><span id="contextTrendStatus" class="badge waiting">Waiting</span></div>
         <div class="trend-chart-wrap">
@@ -775,7 +782,7 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
       </div>
     </div>
     <div id="compressionInstrumentCard" class="card instrument-card">
-      <div class="instrument-head"><div class="instrument-title">Compression Status</div><div class="instrument-info" title="Compression readiness and threshold proximity">i</div></div>
+      <div class="instrument-head dashboard-card-header"><div class="instrument-title dashboard-card-title">Compression Status</div><div class="instrument-head-actions dashboard-card-header-actions"><div class="instrument-info" title="Compression readiness and threshold proximity">i</div></div></div>
       <div class="instrument-body"><div id="compressionInstrumentGauge" class="instrument-gauge-shell" data-gauge-label="Compression Status"></div></div>
       <div class="instrument-reading"><div id="compressionInstrumentValue" class="instrument-card-value" data-live-value="true">--</div><span id="compressionInstrumentStatus" class="badge">Loading</span></div>
       <div id="compressionInstrumentSupport" class="instrument-support" data-instrument-support="compression" aria-label="Compression supporting details">
@@ -787,8 +794,8 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
   </section>
 
   <section id="connections" class="card flow-panel ops-panel">
-    <div class="health-title">
-      <h2 class="flow-heading"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"></path><path d="M18 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"></path><path d="M6 22a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"></path><path d="M8.6 6.5 15.4 10.5"></path><path d="M15.4 13.5 8.6 17.5"></path></svg>Connection Flow</h2>
+    <div class="health-title dashboard-card-header">
+      <h2 class="flow-heading dashboard-card-title"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"></path><path d="M18 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"></path><path d="M6 22a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"></path><path d="M8.6 6.5 15.4 10.5"></path><path d="M15.4 13.5 8.6 17.5"></path></svg>Connection Flow</h2>
       <span class="flow-note">Request pulses appear only when traffic changes.</span>
     </div>
     <div class="flow-stage">
@@ -826,7 +833,7 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
 
   <section class="operations-lower">
     <div class="card traffic-panel ops-panel">
-      <h2>Traffic</h2>
+      <div class="dashboard-card-header"><h2 class="dashboard-card-title">Traffic</h2></div>
       <div class="traffic-stats">
         <div class="traffic-stat"><div class="small">Request Trend</div><div id="requestTrend" class="value">Flat</div><div id="requestTrendText" class="muted">Awaiting request data.</div></div>
         <div class="traffic-stat"><div class="small">Rate</div><div id="requestRate" class="value">0</div><div class="muted">requests / min</div></div>
@@ -835,7 +842,7 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
       <div class="muted traffic-note">Average response time is summarized in the hero statistics row. Errors are tracked with request statistics.</div>
     </div>
     <div class="card conversation-compact ops-panel">
-      <div class="health-title"><h2>Active Conversation</h2><a class="badge info" href="#conversations" data-page-link="conversations">Open</a></div>
+      <div class="health-title dashboard-card-header"><h2 class="dashboard-card-title">Active Conversation</h2><div class="dashboard-card-header-actions"><a class="badge info" href="#conversations" data-page-link="conversations">Open</a></div></div>
       <div class="conversation-meta compact">
         <div><div class="small">Conversation ID</div><div id="opsActiveConversationId" class="muted">None</div></div>
         <div><div class="small">Model</div><div id="opsActiveModelName" class="muted">None</div></div>
@@ -975,6 +982,20 @@ function setInstrumentReadingNeutral(valueId, neutral) {{
   const valueEl = byId(valueId);
   const reading = valueEl ? valueEl.closest('.instrument-reading') : null;
   if (reading) reading.classList.toggle('is-neutral', Boolean(neutral));
+}}
+function updateContextHeaderBadge(current) {{
+  const badge = byId('contextInstrumentCapacity');
+  if (!badge) return;
+  const label = current && (current.header_badge || current.context_window_label)
+    ? String(current.header_badge || current.context_window_label)
+    : '--';
+  const title = current && current.header_badge_title
+    ? String(current.header_badge_title)
+    : 'Effective context window capacity';
+  setText('contextInstrumentCapacity', label, false);
+  badge.setAttribute('title', title);
+  badge.setAttribute('aria-label', title);
+  badge.classList.toggle('is-neutral', label === '--' || (current && current.context_window_state === 'waiting'));
 }}
 function setHtml(id, html) {{
   const el = byId(id);
@@ -1183,10 +1204,19 @@ function normalizeInstrumentDetailLine(line, fallback) {{
   if (line && typeof line === 'object') {{
     const text = line.text === null || line.text === undefined ? '' : String(line.text).trim();
     const title = line.title === null || line.title === undefined ? text : String(line.title).trim();
-    return {{ text:text || fallback, title:title || text || fallback }};
+    const kind = line.kind === null || line.kind === undefined ? '' : String(line.kind).trim();
+    const modelName = line.model_name === null || line.model_name === undefined ? '' : String(line.model_name).trim();
+    const sourceLabel = line.source_label === null || line.source_label === undefined ? '' : String(line.source_label).trim();
+    return {{
+      text:text || fallback,
+      title:title || text || fallback,
+      kind,
+      model_name:modelName,
+      source_label:sourceLabel
+    }};
   }}
   const text = line === null || line === undefined ? '' : String(line).trim();
-  return {{ text:text || fallback, title:text || fallback }};
+  return {{ text:text || fallback, title:text || fallback, kind:'', model_name:'', source_label:'' }};
 }}
 function renderInstrumentSupport(id, detailLines, fallbackLines) {{
   const support = byId(id);
@@ -1196,7 +1226,23 @@ function renderInstrumentSupport(id, detailLines, fallbackLines) {{
   support.querySelectorAll('[data-support-slot]').forEach((row, index) => {{
     const fallback = fallbacks[index] || 'Detail unavailable';
     const line = normalizeInstrumentDetailLine(source[index], fallback);
-    row.textContent = line.text;
+    row.classList.toggle('model-source', line.kind === 'model_source' && Boolean(line.model_name) && Boolean(line.source_label));
+    row.replaceChildren();
+    if (line.kind === 'model_source' && line.model_name && line.source_label) {{
+      const modelSpan = document.createElement('span');
+      modelSpan.className = 'instrument-support-model';
+      modelSpan.textContent = line.model_name;
+      modelSpan.setAttribute('title', line.model_name);
+      const separator = document.createElement('span');
+      separator.className = 'instrument-support-separator';
+      separator.textContent = '•';
+      const sourceSpan = document.createElement('span');
+      sourceSpan.className = 'instrument-support-source';
+      sourceSpan.textContent = line.source_label;
+      row.append(modelSpan, separator, sourceSpan);
+    }} else {{
+      row.textContent = line.text;
+    }}
     if (line.title) row.setAttribute('title', line.title);
     else row.removeAttribute('title');
   }});
@@ -1227,12 +1273,13 @@ function updateContextUsageInstrument(context) {{
   const valueText = disabled ? '' : (usage === null ? 'N/A' : formatPercentValue(usage));
   const centerText = disabled ? '0%' : valueText;
   setInstrumentCardState('contextInstrumentCard', status);
+  updateContextHeaderBadge(current);
   setInstrumentReadingNeutral('contextInstrumentValue', disabled);
   setText('contextInstrumentValue', valueText);
   setStatusBadge('contextInstrumentStatus', status, label);
   renderInstrumentSupport('contextInstrumentSupport', current.detail_lines, [
     current.message || 'Active context telemetry unavailable.',
-    current.active_model || 'Active model unknown',
+    (current.active_model ? current.active_model + ' • ' : '') + (current.context_window_source_label || 'Default'),
     'Warn ' + (current.warning_threshold_percent ?? '--') + '% • Compress ' + (current.compression_threshold_percent ?? '--') + '%'
   ]);
   updateInstrumentGauge('contextInstrumentGauge', gaugeValue, centerText, label);

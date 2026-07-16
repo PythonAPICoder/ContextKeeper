@@ -27,7 +27,7 @@ dashboard:
 
 context:
   enabled: true
-  default_context_window_tokens: 16384
+  default_context_window_tokens: 32768
   warning_threshold_percent: 75
   compression_threshold_percent: 85
   keep_recent_messages: 8

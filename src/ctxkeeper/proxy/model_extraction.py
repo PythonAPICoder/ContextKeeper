@@ -19,7 +19,9 @@ def inspect_request_model(body: bytes) -> RequestModelInfo:
     """Extract model metadata from supported Ollama/OpenAI-compatible payloads.
 
     ContextKeeper currently supports the Ollama and OpenAI-compatible request
-    shapes where the selected model is carried in the top-level ``model`` field.
+    shapes where the selected model is carried in the top-level ``model`` field,
+    with ``name`` as a compatibility fallback for clients that use Ollama model
+    naming terminology in request bodies.
     Prompt text and message contents are intentionally ignored.
     """
 
@@ -34,9 +36,13 @@ def inspect_request_model(body: bytes) -> RequestModelInfo:
 
     keys = tuple(sorted(str(key) for key in data.keys()))
     model = _normalized_model(data.get("model"))
+    field_path = "model" if model else None
+    if model is None:
+        model = _normalized_model(data.get("name"))
+        field_path = "name" if model else None
     return RequestModelInfo(
         model=model,
-        field_path="model" if model else None,
+        field_path=field_path,
         top_level_keys=keys,
         is_json_object=True,
     )

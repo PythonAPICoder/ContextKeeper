@@ -8,14 +8,19 @@ from ctxkeeper.context.conversation_store import conversation_store
 from ctxkeeper.dashboard.intelligence import HealthEngine
 from ctxkeeper.dashboard.routes import _latest_applicable_model, build_dashboard_status
 from ctxkeeper.diagnostics.activity import activity_manager
+from ctxkeeper.model_context import active_context_window_overrides, model_context_window_cache
 
 
 @pytest.fixture(autouse=True)
 def clear_conversation_store() -> None:
     activity_manager.reset()
     conversation_store.clear()
+    model_context_window_cache.clear()
+    active_context_window_overrides.clear()
     yield
     conversation_store.clear()
+    model_context_window_cache.clear()
+    active_context_window_overrides.clear()
     activity_manager.reset()
 
 
@@ -572,6 +577,13 @@ def test_completed_model_switch_persists_over_later_metadata_requests() -> None:
                 {
                     "timestamp": "2026-07-11T18:01:02+00:00",
                     "endpoint": "/api/chat",
+                    "model": "llava:latest",
+                    "status_code": 200,
+                    "latency_ms": 90.0,
+                },
+                {
+                    "timestamp": "2026-07-11T18:01:01+00:00",
+                    "endpoint": "/api/chat",
                     "model": "qwen2.5:32b",
                     "status_code": 200,
                     "latency_ms": 100.0,
@@ -593,6 +605,98 @@ def test_completed_model_switch_persists_over_later_metadata_requests() -> None:
     assert status["requests"]["last_observed_model"] == "qwen2.5:32b"
 
 
+def test_completed_generation_metrics_take_priority_over_stale_activity_latest_model() -> None:
+    first = activity_manager.accept_request(
+        method="POST",
+        endpoint="/api/chat",
+        model="gpt-oss:20b",
+    )
+    activity_manager.complete_request(first, ollama_available=True)
+    metrics_snapshot = {
+        "requests": {
+            "total_requests": 3,
+            "total_errors": 0,
+            "last_endpoint": "/api/show",
+            "last_model": "gpt-oss:20b",
+            "last_latency_ms": 40.0,
+            "last_status_code": 200,
+            "recent_requests": [
+                {
+                    "timestamp": "2026-07-15T12:02:00+00:00",
+                    "endpoint": "/api/show",
+                    "model": "gpt-oss:20b",
+                    "status_code": 200,
+                    "latency_ms": 40.0,
+                },
+                {
+                    "timestamp": "2026-07-15T12:01:00+00:00",
+                    "endpoint": "/api/chat",
+                    "model": "llava:latest",
+                    "status_code": 200,
+                    "latency_ms": 90.0,
+                },
+                {
+                    "timestamp": "2026-07-15T12:00:00+00:00",
+                    "endpoint": "/api/chat",
+                    "model": "gpt-oss:20b",
+                    "status_code": 200,
+                    "latency_ms": 100.0,
+                },
+            ],
+        },
+        "system": {"cpu_percent": 0, "ram_percent": 0, "gpu": None},
+    }
+
+    status = build_dashboard_status(
+        settings=Settings(),
+        metrics_snapshot=metrics_snapshot,
+        ollama_status={"status": "online"},
+    )
+
+    assert status["activity"]["latest_model"] == "gpt-oss:20b"
+    assert status["requests"]["last_model"] == "llava:latest"
+    assert status["active_conversation"]["model_name"] == "llava:latest"
+
+
+def test_completed_generate_request_can_update_dashboard_active_model() -> None:
+    metrics_snapshot = {
+        "requests": {
+            "total_requests": 2,
+            "total_errors": 0,
+            "last_endpoint": "/api/generate",
+            "last_model": "llava:latest",
+            "last_latency_ms": 90.0,
+            "last_status_code": 200,
+            "recent_requests": [
+                {
+                    "timestamp": "2026-07-15T12:01:00+00:00",
+                    "endpoint": "/api/generate",
+                    "model": "llava:latest",
+                    "status_code": 200,
+                    "latency_ms": 90.0,
+                },
+                {
+                    "timestamp": "2026-07-15T12:00:00+00:00",
+                    "endpoint": "/api/chat",
+                    "model": "gpt-oss:20b",
+                    "status_code": 200,
+                    "latency_ms": 100.0,
+                },
+            ],
+        },
+        "system": {"cpu_percent": 0, "ram_percent": 0, "gpu": None},
+    }
+
+    status = build_dashboard_status(
+        settings=Settings(),
+        metrics_snapshot=metrics_snapshot,
+        ollama_status={"status": "online"},
+    )
+
+    assert status["requests"]["last_model"] == "llava:latest"
+    assert status["active_conversation"]["model_name"] == "llava:latest"
+
+
 def test_latest_applicable_model_uses_newest_timestamp_not_list_position() -> None:
     metrics = {
         "last_endpoint": "/api/chat",
@@ -612,6 +716,325 @@ def test_latest_applicable_model_uses_newest_timestamp_not_list_position() -> No
     }
 
     assert _latest_applicable_model(metrics) == "llava:latest"
+
+
+def test_latest_applicable_model_uses_sequence_when_timestamps_tie() -> None:
+    metrics = {
+        "last_endpoint": "/api/chat",
+        "last_model": "gpt-oss:20b",
+        "recent_requests": [
+            {
+                "sequence": 10,
+                "timestamp": "2026-07-15T12:00:00+00:00",
+                "endpoint": "/api/chat",
+                "model": "gpt-oss:20b",
+            },
+            {
+                "sequence": 11,
+                "timestamp": "2026-07-15T12:00:00+00:00",
+                "endpoint": "/api/chat",
+                "model": "qwen2.5:32b",
+            },
+        ],
+    }
+
+    assert _latest_applicable_model(metrics) == "qwen2.5:32b"
+
+
+def test_dashboard_active_generation_state_keeps_model_and_authoritative_context_from_same_request() -> None:
+    conversation_store.append_message("coherent-state", "user", "hello")
+    model_context_window_cache.store("qwen2.5:32b", 32768)
+    metrics_snapshot = {
+        "requests": {
+            "total_requests": 2,
+            "total_errors": 0,
+            "last_sequence": 2,
+            "last_endpoint": "/api/chat",
+            "last_model": "qwen2.5:32b",
+            "last_latency_ms": 90.0,
+            "last_status_code": 200,
+            "recent_requests": [
+                {
+                    "sequence": 2,
+                    "timestamp": "2026-07-15T12:00:00+00:00",
+                    "endpoint": "/api/chat",
+                    "model": "qwen2.5:32b",
+                    "status_code": 200,
+                    "context_window_tokens": 32768,
+                    "context_window_source": "detected",
+                    "context_window_source_label": "Discovered",
+                },
+                {
+                    "sequence": 1,
+                    "timestamp": "2026-07-15T12:00:00+00:00",
+                    "endpoint": "/api/chat",
+                    "model": "gpt-oss:20b",
+                    "status_code": 200,
+                    "context_window_tokens": 32768,
+                    "context_window_source": "default",
+                    "context_window_source_label": "Default",
+                },
+            ],
+        },
+        "system": {"cpu_percent": 0, "ram_percent": 0, "gpu": None},
+    }
+
+    status = build_dashboard_status(
+        settings=Settings(),
+        metrics_snapshot=metrics_snapshot,
+        ollama_status={"status": "online"},
+    )
+
+    active_generation = status["requests"]["active_generation"]
+    assert active_generation["request_sequence"] == 2
+    assert active_generation["model_name"] == "qwen2.5:32b"
+    assert active_generation["context_window_tokens"] == 32768
+    assert active_generation["context_window_source"] == "detected"
+    assert status["instrument_panel"]["context_usage"]["active_model"] == "qwen2.5:32b"
+    assert status["instrument_panel"]["context_usage"]["context_window_tokens"] == 32768
+
+
+def test_newer_completed_qwen_beats_older_still_active_gpt_request() -> None:
+    model_context_window_cache.store("qwen2.5:32b", 32768)
+    activity_manager.accept_request(
+        method="POST",
+        endpoint="/api/chat",
+        model="gpt-oss:20b",
+        generation_sequence=1,
+    )
+    metrics_snapshot = {
+        "requests": {
+            "total_requests": 2,
+            "total_errors": 0,
+            "last_sequence": 2,
+            "last_generation_sequence": 2,
+            "last_endpoint": "/api/chat",
+            "last_model": "qwen2.5:32b",
+            "last_latency_ms": 90.0,
+            "last_status_code": 200,
+            "recent_requests": [
+                {
+                    "sequence": 2,
+                    "generation_sequence": 2,
+                    "timestamp": "2026-07-15T12:00:01+00:00",
+                    "endpoint": "/api/chat",
+                    "model": "qwen2.5:32b",
+                    "status_code": 200,
+                    "context_window_tokens": 32768,
+                    "context_window_source": "detected",
+                    "context_window_source_label": "Discovered",
+                },
+                {
+                    "sequence": 1,
+                    "generation_sequence": 1,
+                    "timestamp": "2026-07-15T12:00:00+00:00",
+                    "endpoint": "/api/chat",
+                    "model": "gpt-oss:20b",
+                    "status_code": 200,
+                    "context_window_tokens": 32768,
+                    "context_window_source": "default",
+                    "context_window_source_label": "Default",
+                },
+            ],
+        },
+        "system": {"cpu_percent": 0, "ram_percent": 0, "gpu": None},
+    }
+
+    status = build_dashboard_status(
+        settings=Settings(),
+        metrics_snapshot=metrics_snapshot,
+        ollama_status={"status": "online"},
+    )
+
+    assert status["activity"]["active_model"] == "gpt-oss:20b"
+    active_generation = status["requests"]["active_generation"]
+    assert active_generation["generation_sequence"] == 2
+    assert active_generation["model_name"] == "qwen2.5:32b"
+    assert active_generation["context_window_source"] == "detected"
+    assert active_generation["context_window_tokens"] == 32768
+    assert status["requests"]["last_model"] == "qwen2.5:32b"
+    assert status["instrument_panel"]["context_usage"]["active_model"] == "qwen2.5:32b"
+    assert status["instrument_panel"]["context_usage"]["header_badge"] == "32K"
+    assert "qwen2.5:32b • Discovered" in status["instrument_panel"]["context_usage"]["detail_lines"][1]["text"]
+
+
+def test_immediate_qwen_switch_same_conversation_does_not_wait_for_idle_expiration() -> None:
+    conversation_store.append_message("shared-thread", "user", "gpt prompt")
+    conversation_store.append_message("shared-thread", "assistant", "gpt response")
+    conversation_store.append_message("shared-thread", "user", "qwen prompt")
+    activity_manager.accept_request(
+        method="POST",
+        endpoint="/api/chat",
+        model="gpt-oss:20b",
+        generation_sequence=1,
+    )
+    metrics_snapshot = {
+        "requests": {
+            "total_requests": 3,
+            "total_errors": 0,
+            "last_sequence": 3,
+            "last_generation_sequence": 2,
+            "last_endpoint": "/api/show",
+            "last_model": "gpt-oss:20b",
+            "last_latency_ms": 22.0,
+            "last_status_code": 200,
+            "recent_requests": [
+                {
+                    "sequence": 3,
+                    "timestamp": "2026-07-15T12:00:02+00:00",
+                    "endpoint": "/api/show",
+                    "model": "qwen2.5:32b",
+                    "status_code": 200,
+                },
+                {
+                    "sequence": 2,
+                    "generation_sequence": 2,
+                    "timestamp": "2026-07-15T12:00:01+00:00",
+                    "endpoint": "/api/chat",
+                    "model": "qwen2.5:32b",
+                    "status_code": 200,
+                    "context_window_tokens": 32768,
+                    "context_window_source": "default",
+                    "context_window_source_label": "Default",
+                },
+                {
+                    "sequence": 1,
+                    "generation_sequence": 1,
+                    "timestamp": "2026-07-15T12:00:00+00:00",
+                    "endpoint": "/api/chat",
+                    "model": "gpt-oss:20b",
+                    "status_code": 200,
+                    "context_window_tokens": 32768,
+                    "context_window_source": "default",
+                    "context_window_source_label": "Default",
+                },
+            ],
+        },
+        "system": {"cpu_percent": 0, "ram_percent": 0, "gpu": None},
+    }
+
+    status = build_dashboard_status(
+        settings=Settings(),
+        metrics_snapshot=metrics_snapshot,
+        ollama_status={"status": "online"},
+    )
+
+    assert status["activity"]["active_model"] == "gpt-oss:20b"
+    assert status["requests"]["active_generation"]["generation_sequence"] == 2
+    assert status["requests"]["last_model"] == "qwen2.5:32b"
+    assert status["active_conversation"]["model_name"] == "qwen2.5:32b"
+
+
+def test_exact_b48_qa_sequence_uses_newest_generation_without_five_minute_expiration() -> None:
+    activity_manager.accept_request(
+        method="POST",
+        endpoint="/api/chat",
+        model="gpt-oss:20b",
+        generation_sequence=1,
+    )
+    base_requests = [
+        {
+            "sequence": 1,
+            "generation_sequence": 1,
+            "timestamp": "2026-07-15T12:00:00+00:00",
+            "endpoint": "/api/chat",
+            "model": "gpt-oss:20b",
+            "status_code": 200,
+            "context_window_tokens": 32768,
+            "context_window_source": "default",
+            "context_window_source_label": "Default",
+        },
+        {
+            "sequence": 2,
+            "generation_sequence": 2,
+            "timestamp": "2026-07-15T12:00:01+00:00",
+            "endpoint": "/api/chat",
+            "model": "qwen2.5:32b",
+            "status_code": 200,
+            "context_window_tokens": 32768,
+            "context_window_source": "default",
+            "context_window_source_label": "Default",
+        },
+        {
+            "sequence": 3,
+            "generation_sequence": 3,
+            "timestamp": "2026-07-15T12:00:02+00:00",
+            "endpoint": "/api/chat",
+            "model": "llava:latest",
+            "status_code": 200,
+            "context_window_tokens": 32768,
+            "context_window_source": "default",
+            "context_window_source_label": "Default",
+        },
+        {
+            "sequence": 4,
+            "generation_sequence": 4,
+            "timestamp": "2026-07-15T12:05:02+00:00",
+            "endpoint": "/api/chat",
+            "model": "qwen2.5:32b",
+            "status_code": 200,
+            "context_window_tokens": 32768,
+            "context_window_source": "default",
+            "context_window_source_label": "Default",
+        },
+    ]
+
+    def status_for(requests: list[dict[str, object]]) -> dict[str, object]:
+        latest = requests[-1]
+        return build_dashboard_status(
+            settings=Settings(),
+            metrics_snapshot={
+                "requests": {
+                    "total_requests": len(requests),
+                    "total_errors": 0,
+                    "last_sequence": latest["sequence"],
+                    "last_generation_sequence": latest["generation_sequence"],
+                    "last_endpoint": latest["endpoint"],
+                    "last_model": latest["model"],
+                    "last_latency_ms": 90.0,
+                    "last_status_code": 200,
+                    "recent_requests": list(reversed(requests)),
+                },
+                "system": {"cpu_percent": 0, "ram_percent": 0, "gpu": None},
+            },
+            ollama_status={"status": "online"},
+        )
+
+    immediate_qwen = status_for(base_requests[:2])
+    other_model = status_for(base_requests[:3])
+    later_qwen = status_for(base_requests)
+
+    assert immediate_qwen["requests"]["last_model"] == "qwen2.5:32b"
+    assert immediate_qwen["requests"]["active_generation"]["generation_sequence"] == 2
+    assert other_model["requests"]["last_model"] == "llava:latest"
+    assert other_model["requests"]["active_generation"]["generation_sequence"] == 3
+    assert later_qwen["requests"]["last_model"] == "qwen2.5:32b"
+    assert later_qwen["requests"]["active_generation"]["generation_sequence"] == 4
+
+
+def test_generation_sequence_orders_models_when_metric_sequence_namespace_would_mislead() -> None:
+    metrics = {
+        "last_endpoint": "/api/chat",
+        "last_model": "qwen2.5:32b",
+        "recent_requests": [
+            {
+                "sequence": 100,
+                "generation_sequence": 1,
+                "timestamp": "2026-07-15T12:00:00+00:00",
+                "endpoint": "/api/chat",
+                "model": "gpt-oss:20b",
+            },
+            {
+                "sequence": 2,
+                "generation_sequence": 2,
+                "timestamp": "2026-07-15T12:00:00+00:00",
+                "endpoint": "/api/chat",
+                "model": "qwen2.5:32b",
+            },
+        ],
+    }
+
+    assert _latest_applicable_model(metrics) == "qwen2.5:32b"
 
 
 def test_health_and_dashboard_data_use_same_active_generation_model(monkeypatch) -> None:

@@ -93,7 +93,7 @@ class DashboardConfig(BaseModel):
 
 class ContextConfig(BaseModel):
     enabled: bool = True
-    default_context_window_tokens: int = 16384
+    default_context_window_tokens: int = 32768
     warning_threshold_percent: int = 75
     compression_threshold_percent: int = 85
     minimum_threshold_percent: int = 10

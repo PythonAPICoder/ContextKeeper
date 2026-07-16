@@ -30,6 +30,7 @@ def test_settings_to_yaml_generates_valid_existing_schema() -> None:
     assert data["server"]["port"] == 11600
     assert data["dashboard"]["enabled"] is False
     assert data["context"]["enabled"] is True
+    assert data["context"]["default_context_window_tokens"] == 32768
     assert data["compression"]["enabled"] is True
     assert data["logging"]["level"] == "DEBUG"
 
@@ -45,6 +46,7 @@ def test_write_config_yaml_can_be_loaded_by_existing_loader(tmp_path: Path) -> N
     assert settings.server.port == 11601
     assert settings.logging.level == "WARNING"
     assert settings.ollama.base_url == "http://localhost:11434"
+    assert settings.context.default_context_window_tokens == 32768
 
 
 def test_prompt_for_config_accepts_defaults() -> None:

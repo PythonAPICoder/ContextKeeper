@@ -38,6 +38,8 @@ def estimate_text_tokens(text: str) -> int:
 class RequestMetrics:
     total_requests: int = 0
     total_errors: int = 0
+    last_sequence: int = 0
+    last_generation_sequence: int | None = None
     last_endpoint: str | None = None
     last_model: str | None = None
     last_latency_ms: float | None = None
@@ -59,32 +61,50 @@ class MetricsStore:
         status_code: int,
         latency_ms: float,
         client_host: str | None,
-    ) -> None:
-        event = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "method": method,
-            "endpoint": endpoint,
-            "model": model,
-            "status_code": status_code,
-            "latency_ms": round(latency_ms, 2),
-            "client_host": client_host,
-        }
+        context_window_tokens: int | None = None,
+        context_window_source: str | None = None,
+        context_window_source_label: str | None = None,
+        generation_sequence: int | None = None,
+    ) -> dict[str, Any]:
         with self._lock:
             self.requests.total_requests += 1
+            sequence = self.requests.total_requests
+            event = {
+                "sequence": sequence,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "method": method,
+                "endpoint": endpoint,
+                "model": model,
+                "status_code": status_code,
+                "latency_ms": round(latency_ms, 2),
+                "client_host": client_host,
+            }
+            if generation_sequence is not None:
+                event["generation_sequence"] = generation_sequence
+            if context_window_tokens is not None and context_window_source is not None:
+                event["context_window_tokens"] = context_window_tokens
+                event["context_window_source"] = context_window_source
+                event["context_window_source_label"] = context_window_source_label
             if status_code >= 400:
                 self.requests.total_errors += 1
+            self.requests.last_sequence = sequence
+            if generation_sequence is not None:
+                self.requests.last_generation_sequence = generation_sequence
             self.requests.last_endpoint = endpoint
             self.requests.last_model = model
             self.requests.last_latency_ms = latency_ms
             self.requests.last_status_code = status_code
             self.requests.recent_requests.insert(0, event)
             self.requests.recent_requests = self.requests.recent_requests[:50]
+            return dict(event)
 
     def snapshot(self) -> dict[str, Any]:
         with self._lock:
             request_data = {
                 "total_requests": self.requests.total_requests,
                 "total_errors": self.requests.total_errors,
+                "last_sequence": self.requests.last_sequence,
+                "last_generation_sequence": self.requests.last_generation_sequence,
                 "last_endpoint": self.requests.last_endpoint,
                 "last_model": self.requests.last_model,
                 "last_latency_ms": self.requests.last_latency_ms,

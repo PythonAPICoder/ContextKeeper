@@ -11,6 +11,8 @@ from ctxkeeper.diagnostics.activity import (
     OperationalActivityManager,
     is_generation_activity_request,
 )
+from ctxkeeper.config import Settings
+from ctxkeeper.model_context import active_context_window_overrides, resolve_context_window
 from ctxkeeper.proxy.routes import _track_streaming_response
 
 
@@ -69,9 +71,11 @@ def test_latest_model_updates_on_request_acceptance_and_persists_after_completio
     active = manager.snapshot()
     assert active.active_model == "llava:latest"
     assert active.active_model_state == "known"
+    assert active.active_generation_sequence is None
     assert active.latest_model == "llava:latest"
     assert active.to_dict()["active_model"] == "llava:latest"
     assert active.to_dict()["active_model_state"] == "known"
+    assert active.to_dict()["active_generation_sequence"] is None
     assert active.to_dict()["latest_model"] == "llava:latest"
 
     manager.complete_request(second, ollama_available=True)
@@ -81,6 +85,31 @@ def test_latest_model_updates_on_request_acceptance_and_persists_after_completio
     assert idle.active_model is None
     assert idle.active_model_state == "none"
     assert idle.latest_model == "llava:latest"
+
+
+def test_active_snapshot_exposes_latest_generation_sequence() -> None:
+    manager = OperationalActivityManager()
+    manager.observe_ollama_status("online")
+    manager.accept_request(
+        method="POST",
+        endpoint="/api/chat",
+        model="gpt-oss:20b",
+        generation_sequence=10,
+    )
+    manager.accept_request(
+        method="POST",
+        endpoint="/api/chat",
+        model="qwen2.5:32b",
+        generation_sequence=11,
+    )
+
+    active = manager.snapshot()
+
+    assert active.active_model == "qwen2.5:32b"
+    assert active.active_generation_sequence == 11
+    assert active.active_endpoint == "/api/chat"
+    assert isinstance(active.active_request_id, str)
+    assert active.to_dict()["active_generation_sequence"] == 11
 
 
 def test_active_request_without_model_is_unknown_without_overwriting_latest_model() -> None:
@@ -116,6 +145,8 @@ def test_streaming_begins_on_first_actual_streamed_chunk() -> None:
         manager.observe_ollama_status("online")
         request_id = manager.accept_request(method="POST", endpoint="/api/chat", model="llava:latest")
         manager.mark_thinking(request_id)
+        context_resolution = resolve_context_window(Settings(), model_name="llava:latest")
+        active_context_window_overrides.register(request_id, context_resolution)
 
         import ctxkeeper.proxy.routes as proxy_routes
 
@@ -131,6 +162,7 @@ def test_streaming_begins_on_first_actual_streamed_chunk() -> None:
                 model="llava:latest",
                 upstream_status_code=200,
                 client_host="127.0.0.1",
+                context_resolution=context_resolution,
             )
             chunk = await stream.__anext__()
             assert chunk == b"first-token"
@@ -249,8 +281,10 @@ def test_cancellation_cleanup_returns_to_valid_non_stale_state() -> None:
             snapshot = manager.snapshot()
             assert snapshot.state is ActivityState.IDLE
             assert snapshot.active_request_count == 0
+            assert active_context_window_overrides.latest_for_model("llava:latest") is None
         finally:
             proxy_routes.activity_manager = original_manager
+            active_context_window_overrides.clear()
 
     asyncio.run(run())
 

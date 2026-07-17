@@ -1,6 +1,6 @@
 # ContextKeeper Roadmap
 
-Status: Current through Phase 6.5F-B6.1.
+Status: Current through Phase 6.5F-B6.2.
 
 This document records approved product direction. It is not a claim that planned work already exists. For completed implementation details, use [Project History](PROJECT_HISTORY.md).
 
@@ -23,7 +23,7 @@ Version 1 must preserve:
 
 ## Completed foundation
 
-Completed work through Phase 6.5F-B6.1 includes:
+Completed work through Phase 6.5F-B6.2 includes:
 
 - Transparent Ollama-compatible proxy.
 - `/api/*` and `/v1/*` passthrough.
@@ -45,7 +45,7 @@ Completed work through Phase 6.5F-B6.1 includes:
 - Conversation Inspector foundation.
 - Conversation Inspector Overview and deterministic Intelligence.
 - Documentation audit and synchronization through B5.6.
-- Read-only dashboard Settings Snapshot and `/api/dashboard/settings` API foundation.
+- Dashboard Settings Snapshot plus read and validated in-memory update APIs on `/api/dashboard/settings`.
 - First-run configuration wizard.
 - PyInstaller executable foundation.
 - Windows service host foundation.
@@ -53,22 +53,22 @@ Completed work through Phase 6.5F-B6.1 includes:
 
 ## Current milestone
 
-### Phase 6.5F-B6.1 — Settings State & Read API
+### Phase 6.5F-B6.2 — Runtime Settings Update API
 
 Status: Current implementation phase.
 
 Objective:
 
-- Establish the backend foundation for the future Settings dashboard.
-- Expose a read-only authoritative settings snapshot for approved Context, Compression, and Dashboard settings.
-- Include display metadata, effective values, built-in defaults, data types, validation limits, runtime-editability flags, and restart-required flags.
+- Extend the B6.1 Settings Snapshot foundation with validated runtime updates.
+- Support partial `PATCH /api/dashboard/settings` updates for approved Context, Compression, and Dashboard settings.
+- Validate complete proposed settings before mutation and apply valid updates atomically.
+- Return the canonical settings snapshot after successful updates.
 
 Scope:
 
-- Read-only API only.
 - No UI editing.
 - No persistence.
-- No runtime settings updates.
+- No YAML writing or restart restoration.
 - No changes to proxy, context, compression, dashboard visualization, or Conversation Inspector behavior.
 
 ## Completed Phase 6.5F-B5 live visualization workstream
@@ -101,13 +101,13 @@ Phase 6.5G must occur before Phase 6.6 so the Validation Framework can certify h
 
 ## Phase 6.5F-B6 — Dashboard Customization & User Preferences
 
-Status: Active; B6.1 provides the read-only Settings Snapshot and API foundation.
+Status: Active; B6.1 provides the Settings Snapshot/read foundation and B6.2 provides the validated in-memory update API.
 
 Planned scope:
 
 - User-facing dashboard customization and preference controls.
-- Future Settings dashboard UI built on the B6.1 read API.
-- Future editing, validation, persistence, and restart guidance after explicit approval.
+- Future Settings dashboard UI built on the B6.1/B6.2 API foundation.
+- Future persistence, reset/default controls, and restart guidance after explicit approval.
 - Preserve existing Operations dashboard behavior.
 - Avoid destabilizing B5 live widgets.
 - Keep preferences local and understandable.

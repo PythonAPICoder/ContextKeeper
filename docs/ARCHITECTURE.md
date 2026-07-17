@@ -1,6 +1,6 @@
 # ContextKeeper Architecture
 
-Status: Current through Phase 6.5F-B6.1.
+Status: Current through Phase 6.5F-B6.2.
 
 ContextKeeper is a local FastAPI application that presents an Ollama-compatible API to clients while observing, measuring, and managing conversation context before requests reach Ollama.
 
@@ -151,6 +151,7 @@ The dashboard exposes:
 - `GET /metrics`
 - `GET /dashboard/data`
 - `GET /api/dashboard/settings`
+- `PATCH /api/dashboard/settings`
 - `GET /dashboard`
 
 `/dashboard/data` builds one coherent dashboard status payload from current metrics, current Ollama status, current activity, one conversation-store snapshot, context scan results, derived compression history, active conversation data, timeline events, inspector metadata/intelligence, and instrument-panel data.
@@ -161,7 +162,7 @@ Important constraints:
 - The conversation list is captured once per dashboard payload build and reused for context, compression, active-conversation, timeline, and inspector derivation.
 - Timeline and inspector data are deterministic views of existing state.
 - No additional polling loop was introduced for the Conversation Inspector.
-- The settings snapshot is read-only and exposes only approved Context, Compression, and Dashboard configuration metadata. It does not expose environment variables, config paths, secrets, server settings, Ollama base URLs, logging paths, model override maps, or runtime mutation controls.
+- The settings snapshot and update API expose only approved Context, Compression, and Dashboard configuration metadata. They do not expose environment variables, config paths, secrets, server settings, Ollama base URLs, logging paths, model override maps, or startup-only controls.
 
 ## Settings snapshot path
 
@@ -170,10 +171,11 @@ Source:
 - `src/ctxkeeper/dashboard/settings_snapshot.py`
 - `src/ctxkeeper/dashboard/routes.py`
 
-Phase 6.5F-B6.1 adds the backend foundation for the future Settings dashboard. The read API is:
+Phase 6.5F-B6.1 added the backend foundation for the future Settings dashboard. Phase 6.5F-B6.2 adds validated in-memory runtime updates on the same settings resource:
 
 ```text
 GET /api/dashboard/settings
+PATCH /api/dashboard/settings
 ```
 
 The endpoint returns:
@@ -182,14 +184,25 @@ The endpoint returns:
 - ordered categories: Context, Compression, Dashboard;
 - setting id, category, display name, description, value, built-in default value, data type, minimum/maximum validation metadata where applicable, runtime-editable flag, and restart-required flag.
 
-Current B6.1 boundary:
+Runtime settings architecture:
 
-- Read-only API only.
-- No UI controls.
-- No editing.
-- No persistence.
-- No runtime updates.
-- All exposed settings are marked `runtime_editable: false` and `restart_required: true`.
+- `src/ctxkeeper/dashboard/settings_snapshot.py` owns the canonical dashboard settings snapshot and runtime update models.
+- `GET /api/dashboard/settings` returns the complete sanitized snapshot.
+- `PATCH /api/dashboard/settings` accepts partial updates using the same Context, Compression, and Dashboard category nesting.
+- Omitted settings retain their current in-memory values.
+- The update path merges submitted values into a proposed complete `Settings` state, validates the complete proposal, and mutates the shared in-memory `Settings` instance only after validation succeeds.
+- Failed validation is atomic: no partial setting changes are applied.
+- Successful updates return the same canonical snapshot shape as the read API and are immediately visible to a subsequent GET.
+- Exposed runtime settings are marked `runtime_editable: true` and `restart_required: false`.
+
+Current B6.2 boundary:
+
+- No Settings dashboard UI controls.
+- No configuration persistence.
+- No YAML writing.
+- No browser storage.
+- No authentication or multi-user setting ownership.
+- No startup restoration of runtime overrides.
 
 ## Dashboard visualization path
 

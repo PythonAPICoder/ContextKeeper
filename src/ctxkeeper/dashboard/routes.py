@@ -24,7 +24,12 @@ from .insights import build_dashboard_insights
 from .inspector import build_conversation_inspector_snapshot
 from .intelligence import DashboardMetrics, HealthAssessment, HealthEngine, HealthStatus
 from .recommendations import build_recommendations
-from .settings_snapshot import build_dashboard_settings_snapshot
+from .settings_snapshot import (
+    RuntimeSettingsUpdate,
+    RuntimeSettingsUpdateError,
+    build_dashboard_settings_snapshot,
+    update_runtime_settings,
+)
 from .snapshots import ConversationSnapshotProvider
 from .timeline import LIVE_CONVERSATION_TIMELINE_MAX_EVENTS, TimelineEvent, build_live_conversation_timeline
 from .template import render_dashboard_html
@@ -1677,9 +1682,16 @@ def create_dashboard_router(settings: Settings) -> APIRouter:
     async def dashboard_settings() -> dict[str, object]:
         return build_dashboard_settings_snapshot(settings).to_dict()
 
-    @router.api_route("/api/dashboard/settings", methods=["POST", "PUT", "PATCH", "DELETE"])
+    @router.patch("/api/dashboard/settings")
+    async def update_dashboard_settings(payload: RuntimeSettingsUpdate) -> dict[str, object]:
+        try:
+            return update_runtime_settings(settings, payload).to_dict()
+        except RuntimeSettingsUpdateError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+
+    @router.api_route("/api/dashboard/settings", methods=["POST", "PUT", "DELETE"])
     async def dashboard_settings_read_only() -> None:
-        raise HTTPException(status_code=405, detail="Settings are read-only in this version.")
+        raise HTTPException(status_code=405, detail="Use PATCH to update runtime settings.")
 
     @router.get("/dashboard", response_class=HTMLResponse)
     async def dashboard() -> str:

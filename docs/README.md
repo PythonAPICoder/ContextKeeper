@@ -1,6 +1,6 @@
 # ContextKeeper Documentation
 
-Status: Current through Phase 6.5F-B6.1.
+Status: Current through Phase 6.5F-B6.2.
 
 ContextKeeper is a local Ollama-compatible middleware layer with diagnostics, Context Usage tracking, compression support, Automatic Model Context Discovery, and a live operations dashboard.
 
@@ -42,14 +42,14 @@ Use the current implementation as the source of truth. Older planning and mockup
 
 | Document | Classification | Notes |
 | --- | --- | --- |
-| `README.md` | Current | Modern project landing page synchronized through B6.1. |
+| `README.md` | Current | Modern project landing page synchronized through B6.2. |
 | `docs/README.md` | Current | Documentation index and audit inventory. |
-| `docs/ARCHITECTURE.md` | Current | Runtime/dashboard/settings architecture source-aligned through B6.1. |
+| `docs/ARCHITECTURE.md` | Current | Runtime/dashboard/settings architecture source-aligned through B6.2. |
 | `docs/API_COMPATIBILITY.md` | Current | Ollama compatibility and request-observation boundaries. |
-| `docs/CONFIGURATION.md` | Current | Source-verified defaults, overrides, thresholds, settings read API, and precedence. |
+| `docs/CONFIGURATION.md` | Current | Source-verified defaults, overrides, thresholds, runtime Settings API, and precedence. |
 | `docs/TEST_PLAN.md` | Current | Expanded automated/manual/visual/regression validation plan. |
-| `docs/ROADMAP.md` | Current | Active roadmap synchronized through B6.1. |
-| `docs/PROJECT_HISTORY.md` | Current | Phase record through B6.1. |
+| `docs/ROADMAP.md` | Current | Active roadmap synchronized through B6.2. |
+| `docs/PROJECT_HISTORY.md` | Current | Phase record through B6.2. |
 | `docs/CONVERSATION_INSPECTOR.md` | Current | Current inspector contract and deferred detail phases. |
 | `docs/DASHBOARD_LAYOUT.md` | Current | Current Operations dashboard layout and visual hierarchy. |
 | `docs/DASHBOARD_VISUALIZATION_AUDIT.md` | Historical | B5.1 audit retained with current-state addendum; not a live contract for every widget. |

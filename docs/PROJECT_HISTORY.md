@@ -68,8 +68,8 @@ Example: `Phase 6.5F-B4.2`
 | Setup wizard and installer | Completed | First-run wizard, Inno Setup foundation, and release build script present. |
 | Dashboard modernization B4 workstream | Completed | Phase 6.5F-B4.8 automatic model context discovery is implemented and documented. |
 | Live data visualization and rich widgets | Completed through B5.5.2 | Request Traffic, Connection Flow, Live Conversation Timeline, layout refinement, Connection Flow visibility polish, Conversation Inspector foundation, and Conversation Inspector Overview & Intelligence are implemented; B5.6 synchronized documentation to that state. |
-| Documentation audit and synchronization | Active | Phase 6.5F-B5.6 audits maintained Markdown documents and aligns documentation with the implementation through B5.5.2. |
-| Dashboard customization and user preferences | Planned | Phase 6.5F-B6 planned after B5. |
+| Documentation audit and synchronization | Completed | Phase 6.5F-B5.6 audited maintained Markdown documents and aligned documentation with the implementation through B5.5.2. |
+| Dashboard customization and user preferences | Active | Phase 6.5F-B6 has delivered the Settings Snapshot/read API foundation and the validated in-memory runtime update API. |
 | Release polish and final UX review | Planned | Phase 6.5F-B7 planned before historical memory retrieval and validation certification. |
 | Historical memory retrieval and detail preservation | Planned | Dedicated Phase 6.5G approved before Phase 6.6; no implementation exists yet. |
 | Validation framework and release certification | Planned | Dedicated Phase 6.6 approved after Phase 6.5G and before Phase 7; no implementation exists yet. |
@@ -1509,6 +1509,104 @@ Validation:
 - Focused dashboard/settings validation: `.\.venv\Scripts\python.exe -m pytest tests\test_dashboard_settings.py tests\test_app.py -q`, 49 tests passing, with the same existing warning.
 - Full automated suite: `.\.venv\Scripts\python.exe -m pytest -q`, 270 tests passing, with the same existing warning.
 
+### Phase 6.5F-B6.2 - Runtime Settings Update API
+
+Status: Implemented in the working tree; Product Owner and architect review pending.
+
+Date: 2026-07-17.
+
+Objective:
+
+- Extend the Phase 6.5F-B6.1 Settings Snapshot foundation with a validated runtime update API.
+- Accept partial runtime settings updates for the approved Context, Compression, and Dashboard settings.
+- Validate the complete proposed settings state before mutation.
+- Apply valid updates atomically to the existing in-memory `Settings` instance.
+- Return the canonical settings snapshot after successful updates.
+- Keep runtime changes temporary and reset on process restart.
+
+Architecture:
+
+- Extended `src/ctxkeeper/dashboard/settings_snapshot.py` rather than creating a second settings store.
+- Added strict typed Pydantic update models for Context, Compression, Dashboard, and the top-level runtime update body.
+- Added `update_runtime_settings(settings, update)` as the canonical update interface.
+- Reused the existing shared `Settings` instance owned by application startup and dashboard routing.
+- Added a small standard-library lock around snapshot reads and runtime mutation so GET and PATCH observe coherent settings state.
+- Added `PATCH /api/dashboard/settings` on the existing dashboard settings resource.
+- Kept `GET /api/dashboard/settings` response shape unchanged apart from B6.2 metadata values showing approved settings as runtime-editable and not restart-required.
+- Kept `POST`, `PUT`, and `DELETE` rejected with `405`.
+
+Update semantics:
+
+- Request bodies use the same category nesting as the settings snapshot, for example `context.warning_threshold_percent` under `context`.
+- Omitted settings retain their current runtime values.
+- Submitted values are merged into the current full settings state, then the merged state is validated before mutation.
+- Successful PATCH responses return the full canonical settings snapshot.
+- A subsequent GET returns the same updated values.
+- Empty JSON objects are rejected rather than treated as no-op updates.
+
+Validation:
+
+- Booleans must be JSON booleans.
+- Integers must be JSON integers, not strings or floating-point values.
+- Runtime threshold percentages must remain within the configured percentage range.
+- Runtime `context.warning_threshold_percent` must be less than `context.compression_threshold_percent`.
+- Existing configuration validation continues to enforce positive numeric limits and the retained `context.minimum_threshold_percent` ordering rule.
+- `compression.summarizer_model` must be a non-blank string.
+- Unknown top-level fields, unknown nested fields, read-only/unexposed fields, null values, wrong object shapes, missing bodies, and malformed JSON are rejected.
+- Invalid updates are atomic: no supplied value is applied if any part of the request fails validation.
+
+Settings update scope:
+
+- Runtime-mutable fields:
+  - `context.enabled`
+  - `context.warning_threshold_percent`
+  - `context.compression_threshold_percent`
+  - `context.keep_recent_messages`
+  - `compression.enabled`
+  - `compression.summarizer_model`
+  - `compression.max_summary_tokens`
+  - `dashboard.refresh_interval_ms`
+- Startup-only or unexposed fields remain unavailable through the runtime API, including server bind settings, Ollama URL, logging paths, metrics settings, model override maps, `context.default_context_window_tokens`, and `context.minimum_threshold_percent`.
+
+Explicit non-persistence:
+
+- No YAML writing was added.
+- No settings database was added.
+- No browser storage was added.
+- No startup restoration of runtime overrides was added.
+- Runtime overrides reset when ContextKeeper restarts.
+
+Tests added or updated:
+
+- Expanded `tests/test_dashboard_settings.py` from the B6.1 read-only coverage to B6.2 read/update coverage.
+- Covered schema compatibility, runtime-editable metadata, successful single-field updates, successful multi-field updates, omitted-field retention, full snapshot responses, read-after-write consistency, cross-section updates, repeated valid updates, strict type rejection, range validation, threshold ordering, partial threshold conflicts, numeric limits, blank model rejection, unknown/read-only fields, atomic rejection, empty body behavior, malformed/missing bodies, wrong object shapes, and null rejection.
+
+Documentation updated:
+
+- `README.md`
+- `docs/ARCHITECTURE.md`
+- `docs/CONFIGURATION.md`
+- `docs/ROADMAP.md`
+- `docs/PROJECT_HISTORY.md`
+- `docs/README.md`
+- `docs/TEST_PLAN.md`
+
+Deferred:
+
+- Settings dashboard UI controls.
+- Persistence to `contextkeeper.yaml` or another durable store.
+- Reset-to-default controls.
+- Authentication, multi-user settings, and ownership.
+- Browser storage.
+- Broad integration refactoring outside the existing `Settings` instance.
+
+Validation:
+
+- Python syntax validation: `.\.venv\Scripts\python.exe -m py_compile src/ctxkeeper/dashboard/settings_snapshot.py src/ctxkeeper/dashboard/routes.py src/ctxkeeper/dashboard/__init__.py tests/test_dashboard_settings.py`, passing.
+- Focused settings tests: `.\.venv\Scripts\python.exe -m pytest tests/test_dashboard_settings.py -q`, 25 tests passing, with one existing third-party `StarletteDeprecationWarning` from FastAPI/Starlette TestClient and one `httpx` deprecation warning from the malformed-JSON request test.
+- Related app tests: `.\.venv\Scripts\python.exe -m pytest tests/test_app.py -q`, 43 tests passing, with the existing third-party `StarletteDeprecationWarning`.
+- Full automated suite: `.\.venv\Scripts\python.exe -m pytest -q`, 289 tests passing, with the same existing FastAPI/Starlette warning and the malformed-JSON request-test `httpx` warning.
+
 ### Phase 6.5G — Historical Memory Retrieval & Detail Preservation (Approved Plan)
 
 Status: Planned; approved for the roadmap, not implemented.
@@ -1689,11 +1787,11 @@ Scope boundary:
 
 ## Current Project State
 
-- Current active implementation phase: Phase 6.5F-B6.1 — Settings State & Read API.
+- Current active implementation phase: Phase 6.5F-B6.2 — Runtime Settings Update API.
 - Phase 6.5F-B4.8 — Automatic Model Context Discovery is implemented.
-- Phase 6.5F-B5.1 through Phase 6.5F-B6.1 are represented in source and tests.
-- Latest verified automated test count before B5.6 documentation-only validation: 264 tests passing during the Phase 6.5F-B5.5.2 inspector pass, with one existing third-party FastAPI/Starlette TestClient deprecation warning.
-- Dashboard status: modern operations-console dashboard with live proxy, Ollama, request, context, compression, conversation, intelligence, health, operational activity, recommendations, grouped five-card system instrument panel, Context Trend, Request Traffic, animated Connection Flow, Live Conversation Timeline, Conversation Inspector drawer, Conversation Inspector Overview, deterministic Conversation Inspector Intelligence, and read-only Settings Snapshot API.
+- Phase 6.5F-B5.1 through Phase 6.5F-B6.2 are represented in source and tests.
+- Latest verified automated test count for Phase 6.5F-B6.2: 289 tests passing, with the existing third-party FastAPI/Starlette TestClient deprecation warning and one `httpx` malformed-request test deprecation warning.
+- Dashboard status: modern operations-console dashboard with live proxy, Ollama, request, context, compression, conversation, intelligence, health, operational activity, recommendations, grouped five-card system instrument panel, Context Trend, Request Traffic, animated Connection Flow, Live Conversation Timeline, Conversation Inspector drawer, Conversation Inspector Overview, deterministic Conversation Inspector Intelligence, and Settings Snapshot/read-update API foundation.
 - Major capabilities currently present:
   - FastAPI-based transparent Ollama proxy.
   - `/api/*` and `/v1/*` passthrough with streaming preservation for supported endpoints.
@@ -1702,11 +1800,11 @@ Scope boundary:
   - Compression manager, compression planning, rolling-summary support, and confirmed compression metadata.
   - Automatic Model Context Discovery and context-window enforcement.
   - Browser dashboard with live monitoring and intelligence.
-  - Read-only dashboard settings snapshot API for approved Context, Compression, and Dashboard settings.
+  - Dashboard settings snapshot, read API, and validated in-memory runtime update API for approved Context, Compression, and Dashboard settings.
   - Windows service foundation, PyInstaller executable foundation, first-run setup wizard, Inno Setup installer foundation, and release build script.
 - Planned work still ahead:
-  - Product Owner QA for Phase 6.5F-B6.1.
-  - Later Phase 6.5F-B6 settings UI editing, persistence, runtime update, and broader dashboard preference work after explicit approval.
+  - Product Owner QA for Phase 6.5F-B6.2.
+  - Later Phase 6.5F-B6 settings UI editing, persistence, reset/default controls, and broader dashboard preference work after explicit approval.
   - Phase 6.5F-B7 — Release Polish & Final UX Review.
   - Phase 6.5G — Historical Memory Retrieval & Detail Preservation.
   - Phase 6.6 — Validation Framework & Release Certification.
@@ -1722,8 +1820,8 @@ This section is tentative and subject to refinement. These names and boundaries 
 
 - Phase 6.5F-B5 — Live Data Visualization & Rich Widgets.
 - Phase 6.5F-B6 — Dashboard Customization & User Preferences.
-  - Product Owner QA for Phase 6.5F-B6.1 — Settings State & Read API.
-  - Later B6 settings UI editing, persistence, runtime update, and broader dashboard preference work after explicit approval.
+  - Product Owner QA for Phase 6.5F-B6.2 — Runtime Settings Update API.
+  - Later B6 settings UI editing, persistence, reset/default controls, and broader dashboard preference work after explicit approval.
 - Phase 6.5F-B7 — Release Polish & Final UX Review.
 - Phase 6.5G — Historical Memory Retrieval & Detail Preservation.
   - Phase 6.5G.1 — Durable Conversation Archive.

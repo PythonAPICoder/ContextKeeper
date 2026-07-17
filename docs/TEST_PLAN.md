@@ -1,6 +1,6 @@
 # ContextKeeper Test Plan
 
-Status: Current through Phase 6.5F-B6.1.
+Status: Current through Phase 6.5F-B6.2.
 
 This document defines automated and manual validation expectations for ContextKeeper. The automated suite is the default regression gate; manual Visual QA remains required for dashboard layout, motion, responsive behavior, and Product Owner acceptance.
 
@@ -120,7 +120,7 @@ Validate:
 - Missing, idle, and partial data do not produce JavaScript errors.
 - Dashboard polling continues during active traffic and while the Conversation Inspector drawer is open.
 
-## Settings Snapshot and read API
+## Settings Snapshot, read API, and update API
 
 Validate:
 
@@ -141,7 +141,18 @@ Validate:
 - Built-in defaults are present for future UI comparison.
 - Validation metadata includes integer minimum/maximum values where applicable.
 - Output is sanitized and does not include environment variables, config file paths, secrets, server bind details, Ollama base URL, logging paths, metrics settings, or model override maps.
-- B6.1 remains read-only: mutating methods on `/api/dashboard/settings` return `405`, no persistence is added, no runtime mutation is added, and no Settings dashboard UI controls are added.
+- `PATCH /api/dashboard/settings` supports valid partial updates and returns the complete canonical snapshot.
+- Omitted settings retain prior runtime values.
+- A subsequent `GET /api/dashboard/settings` returns the updated values.
+- Context and compression sections can be updated together.
+- Later valid updates can change earlier runtime values again.
+- Invalid boolean, integer, percentage, `keep_recent_messages`, `max_summary_tokens`, blank model, unknown field, read-only field, wrong-shape, missing-body, and malformed JSON inputs are rejected.
+- Threshold relationships are validated on the merged proposed state, including partial updates that conflict with retained current threshold values.
+- Atomic rejection is verified: a request containing one valid setting and one invalid setting changes neither value.
+- Empty JSON update bodies are deliberately rejected.
+- `POST`, `PUT`, and `DELETE` on `/api/dashboard/settings` return `405`.
+- No persistence is added, no YAML file is written, and no Settings dashboard UI controls are added.
+- Manual observation should confirm runtime changes reset after process restart.
 - Existing `/dashboard/data`, proxy behavior, Conversation Inspector, Connection Flow, Request Traffic, context engine, and compression tests remain green.
 
 ## Request Traffic

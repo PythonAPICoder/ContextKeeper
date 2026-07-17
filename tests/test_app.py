@@ -141,8 +141,14 @@ def test_dashboard_connection_flow_animation_contract() -> None:
     assert "scheduleTopologySettle(panel, TOPOLOGY_INBOUND_DURATION_MS)" in html
     assert "triggerTopologyPulse" not in html
 
+    assert '<circle id="flowPacketHalo" class="flow-svg-packet-halo" r="10" cx="0" cy="0"></circle>' in html
+    assert '<circle id="flowPacket" class="flow-svg-packet" r="6.5" cx="0" cy="0"></circle>' in html
+    assert ".flow-svg-packet,.flow-svg-packet-halo" in html
     assert ".flow-panel.traffic-outbound .flow-svg-packet" in html
+    assert ".flow-panel.traffic-outbound .flow-svg-packet-halo" in html
     assert ".flow-panel.traffic-inbound .flow-svg-packet" in html
+    assert ".flow-panel.traffic-inbound .flow-svg-packet-halo" in html
+    assert ".flow-svg-packet,.flow-svg-packet-halo,.flow-stage::after" in html
     assert ".flow-panel.traffic-processing [data-flow-segment=\"ollama-model\"]" in html
     assert "flowPacketOutbound" in html
     assert "flowPacketInbound" in html

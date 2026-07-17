@@ -1154,6 +1154,41 @@ Visual QA still pending:
 - Validate that the timeline complements Traffic and Active Conversation without dominating the gauges or connection flow.
 - This entry records implementation and automated validation only; it does not claim final visual acceptance.
 
+### Phase 6.5F-B5.4.2 — Connection Flow Visibility Polish
+
+Branch: `phase-6-5f-b5-4-2-connection-flow-visibility`
+
+Status: Implemented on branch; pending Product Owner visual QA.
+
+Objective:
+
+- Apply a Product Owner-requested presentation-only polish to make the animated Connection Flow travel marker easier to see during active traffic.
+- Preserve connection-flow behavior, dashboard payloads, backend activity tracking, request instrumentation, animation timing/direction, connection state logic, inactive appearance, and reduced-motion behavior.
+
+Implementation summary:
+
+- Increased the moving packet core from radius `5` to radius `6.5`.
+- Added a restrained SVG halo ring behind the moving packet with matching outbound/inbound path animation.
+- Increased active packet contrast and opacity while keeping the marker aligned with the existing dark mission-control visual language.
+- Kept idle, processing, waiting, offline, and reduced-motion states from displaying the travel marker or implying active traffic.
+
+Files changed:
+
+- `src/ctxkeeper/dashboard/template.py`
+- `tests/test_app.py`
+- `docs/PROJECT_HISTORY.md`
+
+Validation:
+
+- Focused dashboard validation: `.\.venv\Scripts\python.exe -m pytest tests\test_dashboard_instrument_panel.py tests\test_app.py -q`, 73 tests passing, with one existing third-party `StarletteDeprecationWarning` from FastAPI/Starlette TestClient.
+- Full automated suite: `.\.venv\Scripts\python.exe -m pytest -q`, 249 tests passing, with the same existing warning.
+
+Visual QA still pending:
+
+- Product Owner should validate the Connection Flow marker at 3440×1440, 2450×1440, and 1720×1440.
+- Validate idle, outbound, processing, inbound, rapid request, and reduced-motion states.
+- Confirm the marker is more visible without clipping, overflow, distracting flashing, or visual dominance over node labels.
+
 ### Phase 6.5G — Historical Memory Retrieval & Detail Preservation (Approved Plan)
 
 Status: Planned; approved for the roadmap, not implemented.

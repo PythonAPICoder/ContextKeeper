@@ -21,6 +21,7 @@ from ..diagnostics.activity import activity_manager
 from ..diagnostics.metrics import metrics_store
 from ..model_context import ContextWindowResolution, active_context_window_overrides, resolve_context_window
 from .insights import build_dashboard_insights
+from .inspector import build_conversation_inspector_snapshot
 from .intelligence import DashboardMetrics, HealthAssessment, HealthEngine, HealthStatus
 from .recommendations import build_recommendations
 from .snapshots import ConversationSnapshotProvider
@@ -221,6 +222,12 @@ def _compression_history(conversations: list[Conversation]) -> list[dict[str, An
             }
         )
     return sorted(history, key=lambda item: str(item["last_compressed_at"]), reverse=True)
+
+
+def _conversation_by_id(conversations: list[Conversation], conversation_id: str | None) -> Conversation | None:
+    if conversation_id is None:
+        return None
+    return next((conversation for conversation in conversations if conversation.conversation_id == conversation_id), None)
 
 
 def _dashboard_intelligence(
@@ -1529,6 +1536,18 @@ def build_dashboard_status(
         recent_requests=recent_requests,
         activity_snapshot=activity_snapshot,
     )
+    active_conversation_record = _conversation_by_id(
+        conversations,
+        _string_or_none(active_conversation_data.get("conversation_id")),
+    )
+    conversation_inspector = build_conversation_inspector_snapshot(
+        settings=settings,
+        conversation=active_conversation_record,
+        active_conversation=active_conversation_data,
+        recent_requests=recent_requests,
+        compression_history=compression_history,
+        active_request_count=activity_snapshot.active_request_count,
+    )
 
     return {
         "contextkeeper": {
@@ -1576,6 +1595,7 @@ def build_dashboard_status(
             "max_events": LIVE_CONVERSATION_TIMELINE_MAX_EVENTS,
             "conversation_id": active_conversation_data.get("conversation_id"),
         },
+        "conversation_inspector": conversation_inspector,
         "intelligence": _dashboard_intelligence(
             ollama_status=ollama_status,
             context_usage_percent=context_stats.max_usage_percent,

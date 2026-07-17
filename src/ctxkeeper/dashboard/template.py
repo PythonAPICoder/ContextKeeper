@@ -395,11 +395,25 @@ body.conversation-inspector-open .conversation-inspector-drawer {{ transform:tra
 .conversation-inspector-state-title {{ color:#dbeafe; font-size:12px; font-weight:850; letter-spacing:.035em; text-transform:uppercase; }}
 .conversation-inspector-state-detail {{ max-width:380px; color:var(--muted); font-size:11px; line-height:1.35; }}
 .conversation-inspector-section {{ display:grid; gap:12px; min-width:0; }}
+.conversation-inspector-subsection {{ display:grid; gap:10px; min-width:0; }}
 .conversation-inspector-section-title {{ margin:0; padding-bottom:4px; border-bottom:1px solid rgba(203,213,225,.09); color:#dbeafe; font-size:11.5px; line-height:1.2; font-weight:850; letter-spacing:.06em; text-transform:uppercase; }}
 .conversation-inspector-grid {{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; min-width:0; }}
 .conversation-inspector-field {{ min-width:0; display:grid; gap:4px; padding:10px 11px; border:1px solid rgba(203,213,225,.09); border-radius:10px; background:rgba(15,23,42,.42); box-shadow:var(--surface-inset-highlight); }}
 .conversation-inspector-label {{ color:var(--muted); font-size:10px; line-height:1.1; font-weight:850; letter-spacing:.07em; text-transform:uppercase; }}
 .conversation-inspector-value {{ min-width:0; color:#e2e8f0; font-size:12px; line-height:1.28; overflow-wrap:anywhere; }}
+.conversation-inspector-intelligence-card {{ --inspector-intelligence-accent:var(--accent); display:grid; gap:8px; min-width:0; padding:11px 12px; border:1px solid rgba(203,213,225,.09); border-left:3px solid var(--inspector-intelligence-accent); border-radius:10px; background:linear-gradient(180deg,rgba(15,23,42,.44),rgba(2,6,23,.24)); box-shadow:var(--surface-inset-highlight); }}
+.conversation-inspector-intelligence-card.success {{ --inspector-intelligence-accent:var(--good); }}
+.conversation-inspector-intelligence-card.warning {{ --inspector-intelligence-accent:var(--warn); }}
+.conversation-inspector-intelligence-card.error {{ --inspector-intelligence-accent:var(--bad); }}
+.conversation-inspector-intelligence-card.info {{ --inspector-intelligence-accent:#a78bfa; }}
+.conversation-inspector-intelligence-card.unavailable {{ --inspector-intelligence-accent:var(--muted); }}
+.conversation-inspector-intelligence-head {{ display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:8px; min-width:0; }}
+.conversation-inspector-intelligence-title {{ min-width:0; color:#f8fafc; font-size:13px; line-height:1.2; font-weight:850; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }}
+.conversation-inspector-intelligence-explanation {{ color:#cbd5e1; font-size:12px; line-height:1.4; }}
+.conversation-inspector-signals {{ display:flex; flex-wrap:wrap; gap:6px; min-width:0; }}
+.conversation-inspector-signal {{ display:inline-flex; align-items:center; gap:5px; max-width:100%; padding:4px 7px; border:1px solid rgba(203,213,225,.08); border-radius:999px; background:rgba(15,23,42,.4); color:var(--muted); font-size:10px; line-height:1.15; }}
+.conversation-inspector-signal strong {{ color:#dbeafe; font-weight:850; }}
+.conversation-inspector-recommendation {{ color:#fecaca; font-size:11px; line-height:1.35; padding:7px 9px; border:1px solid rgba(239,68,68,.16); border-radius:8px; background:rgba(127,29,29,.18); }}
 .conversation-inspector-note {{ color:rgba(148,163,184,.78); font-size:10px; line-height:1.35; padding:7px 9px; border:1px solid rgba(203,213,225,.055); border-radius:8px; background:rgba(15,23,42,.2); }}
 .conversation-inspector-live-region {{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }}
 .summary {{ background:rgba(15,23,42,.62); border:1px solid var(--border-card); border-radius:10px; padding:12px; white-space:pre-wrap; box-shadow:var(--surface-inset-highlight); }}
@@ -1027,10 +1041,24 @@ body.conversation-inspector-open .conversation-inspector-drawer {{ transform:tra
       <div class="conversation-inspector-state-title">Conversation details unavailable</div>
       <div class="conversation-inspector-state-detail">The selected conversation is not available in the current dashboard snapshot. Select another timeline entry or wait for fresh activity.</div>
     </section>
-    <section id="conversationInspectorDetails" class="conversation-inspector-section" aria-label="Selected conversation metadata" hidden>
-      <h3 class="conversation-inspector-section-title">Metadata Summary</h3>
-      <div id="conversationInspectorMetadataGrid" class="conversation-inspector-grid"></div>
-      <div class="conversation-inspector-note">B5.5.1 shows operational metadata only. Prompt text, responses, rolling summaries, request bodies, and retrieved content are deliberately excluded.</div>
+    <section id="conversationInspectorDetails" class="conversation-inspector-section" aria-label="Selected conversation overview and intelligence" hidden>
+      <section class="conversation-inspector-subsection" aria-labelledby="conversationInspectorOverviewTitle">
+        <h3 id="conversationInspectorOverviewTitle" class="conversation-inspector-section-title">Overview</h3>
+        <div id="conversationInspectorOverviewGrid" class="conversation-inspector-grid"></div>
+      </section>
+      <section class="conversation-inspector-subsection" aria-labelledby="conversationInspectorIntelligenceTitle">
+        <h3 id="conversationInspectorIntelligenceTitle" class="conversation-inspector-section-title">Intelligence</h3>
+        <div id="conversationInspectorIntelligenceCard" class="conversation-inspector-intelligence-card unavailable">
+          <div class="conversation-inspector-intelligence-head">
+            <div id="conversationInspectorIntelligenceStatus" class="conversation-inspector-intelligence-title">Insufficient data</div>
+            <span id="conversationInspectorIntelligenceBadge" class="badge unavailable">Unavailable</span>
+          </div>
+          <div id="conversationInspectorIntelligenceExplanation" class="conversation-inspector-intelligence-explanation">Conversation intelligence will appear when sufficient conversation data exists.</div>
+          <div id="conversationInspectorIntelligenceSignals" class="conversation-inspector-signals"></div>
+          <div id="conversationInspectorRecommendation" class="conversation-inspector-recommendation" hidden></div>
+        </div>
+      </section>
+      <div class="conversation-inspector-note">B5.5.2 shows deterministic metadata and context intelligence only. Prompt text, responses, rolling summaries, request bodies, and retrieved content are deliberately excluded.</div>
     </section>
   </div>
 </aside>
@@ -1814,116 +1842,89 @@ function inspectorDateLabel(value) {{
   const date = new Date(value || '');
   return Number.isFinite(date.getTime()) ? date.toLocaleTimeString() : 'Not available';
 }}
-function inspectorDurationLabel(start, end) {{
-  const startDate = new Date(start || '');
-  const endDate = new Date(end || '');
-  if (!Number.isFinite(startDate.getTime()) || !Number.isFinite(endDate.getTime())) return 'Not available';
-  const ms = endDate.getTime() - startDate.getTime();
+function inspectorDurationLabel(value) {{
+  const ms = Number(value);
   if (!Number.isFinite(ms) || ms < 0) return 'Not available';
   if (ms < 1000) return Math.round(ms) + ' ms';
   return (ms / 1000).toFixed(ms < 10000 ? 1 : 0).replace(/\\.0$/, '') + ' s';
-}}
-function inspectorModelFromEvent(event) {{
-  const detail = event?.detail === null || event?.detail === undefined ? '' : String(event.detail).trim();
-  if (!detail) return '';
-  if (String(event?.type || '') === 'model_changed' && detail.includes(' -> ')) {{
-    return detail.split(' -> ').pop().trim();
-  }}
-  return detail;
 }}
 function selectedConversationAvailable(data) {{
   const conversationId = conversationInspectorState.selectedConversationId;
   if (!conversationId || !data) return false;
   const activeId = data.active_conversation?.conversation_id || null;
   const timelineId = data.conversation_timeline?.conversation_id || null;
-  return activeId === conversationId || timelineId === conversationId;
-}}
-function selectedTimelineEvents(data) {{
-  const conversationId = conversationInspectorState.selectedConversationId;
-  if (!conversationId || data?.conversation_timeline?.conversation_id !== conversationId) return [];
-  return Array.isArray(data.conversation_timeline.events) ? data.conversation_timeline.events : [];
-}}
-function latestTimelineEvent(events, types) {{
-  const wanted = new Set(types);
-  for (let index = events.length - 1; index >= 0; index -= 1) {{
-    const event = events[index];
-    if (wanted.has(event?.type)) return event;
-  }}
-  return null;
-}}
-function selectedGenerationRequests(data) {{
-  const conversationId = conversationInspectorState.selectedConversationId;
-  const requests = Array.isArray(data?.requests?.latest) ? data.requests.latest : [];
-  const timelineId = data?.conversation_timeline?.conversation_id || null;
-  return requests.filter(request => {{
-    const endpoint = request?.endpoint;
-    if (endpoint !== '/api/chat' && endpoint !== '/api/generate') return false;
-    const requestConversationId = request?.conversation_id || null;
-    if (requestConversationId) return requestConversationId === conversationId;
-    return timelineId === conversationId;
-  }});
+  const inspectorId = data.conversation_inspector?.conversation_id || null;
+  return activeId === conversationId || timelineId === conversationId || inspectorId === conversationId;
 }}
 function buildConversationInspectorMetadata(data) {{
   const conversationId = conversationInspectorState.selectedConversationId;
-  const active = data?.active_conversation || {{}};
-  const activeMatches = active.conversation_id === conversationId;
-  const context = activeMatches && active.context ? active.context : {{}};
-  const events = selectedTimelineEvents(data);
-  const requests = selectedGenerationRequests(data);
-  const firstEvent = events[0] || null;
-  const startEvent = events.find(event => event?.type === 'conversation_started') || firstEvent;
-  const completedEvent = latestTimelineEvent(events, ['request_completed', 'request_failed']);
-  const receivedEvent = latestTimelineEvent(events, ['request_received']);
-  const latestModelEvent = latestTimelineEvent(events, ['model_selected', 'model_changed']);
-  const latestRequest = requests[0] || {{}};
-  const activeCount = Number(data?.activity?.active_request_count || 0);
-  const selectedIsCurrentTimeline = data?.conversation_timeline?.conversation_id === conversationId;
-  const activeRequest = activeCount > 0 && selectedIsCurrentTimeline;
-  let statusLabel = events.length ? 'Tracked' : 'Available';
-  let statusClass = 'info';
-  if (activeRequest) {{
-    statusLabel = 'Active';
-    statusClass = 'info';
-  }} else if (completedEvent?.type === 'request_failed') {{
-    statusLabel = 'Failed';
-    statusClass = 'error';
-  }} else if (completedEvent?.type === 'request_completed') {{
-    statusLabel = 'Completed';
-    statusClass = 'success';
-  }}
-  const model = activeMatches && active.model_name
-    ? active.model_name
-    : (latestRequest.model || inspectorModelFromEvent(latestModelEvent) || data?.requests?.last_model || '');
-  const startTimestamp = startEvent?.timestamp || '';
-  const completionTimestamp = completedEvent?.timestamp || '';
-  const requestEvents = events.filter(event => ['request_received', 'request_completed', 'request_failed'].includes(event?.type));
-  const requestCount = requestEvents.length || requests.length || null;
-  const endpoint = latestRequest.endpoint || (completedEvent?.detail || receivedEvent?.detail || '').split(' • ')[0];
-  const client = latestRequest.client_host || latestRequest.client || latestRequest.source || '';
-  const contextWindow = context.context_window_tokens || data?.instrument_panel?.context_usage?.context_window_tokens || null;
-  const contextPercent = context.usage_percent === null || context.usage_percent === undefined ? null : context.usage_percent;
-  const estimatedTokens = context.estimated_tokens === null || context.estimated_tokens === undefined ? null : context.estimated_tokens;
+  const inspector = data?.conversation_inspector || {{}};
+  const overview = inspector.conversation_id === conversationId ? (inspector.overview || {{}}) : {{}};
+  const intelligence = inspector.conversation_id === conversationId ? (inspector.intelligence || {{}}) : {{}};
+  const statusLabel = overview.state_label || 'Unavailable';
+  const statusClass = overview.state === 'failed' ? 'error' : overview.state === 'completed' ? 'success' : overview.state === 'active' ? 'info' : 'unavailable';
   return {{
     statusLabel,
     statusClass,
     shortId: inspectorShortId(conversationId),
-    model: inspectorSafeText(model),
-    source: inspectorSafeText(client),
-    started: inspectorDateLabel(startTimestamp),
+    fullId: inspectorSafeText(conversationId),
+    model: inspectorSafeText(overview.model),
+    source: inspectorSafeText(overview.client_source),
+    started: inspectorDateLabel(overview.started_at),
     fields: [
-      ['Status', statusLabel],
-      ['Model', inspectorSafeText(model)],
-      ['Client / Source', inspectorSafeText(client)],
-      ['Endpoint', inspectorSafeText(endpoint)],
-      ['Start time', inspectorDateLabel(startTimestamp)],
-      ['Completion time', inspectorDateLabel(completionTimestamp)],
-      ['Duration', inspectorDurationLabel(startTimestamp, completionTimestamp)],
-      ['Request count', requestCount === null ? 'Not available' : String(requestCount)],
-      ['Estimated context tokens', estimatedTokens === null ? 'Not available' : formatTokenValue(estimatedTokens)],
-      ['Context percentage', contextPercent === null ? 'Not available' : formatPercentValue(contextPercent)],
-      ['Detected capacity', contextWindow === null ? 'Not available' : formatTokenValue(contextWindow) + ' tokens']
-    ]
+      {{ key:'conversation-id', id:'conversationInspectorOverviewConversationId', label:'Conversation identifier', value:conversationId, display:inspectorShortId(conversationId), title:conversationId || '' }},
+      {{ key:'conversation-state', id:'conversationInspectorOverviewConversationState', label:'Conversation state', value:statusLabel }},
+      {{ key:'model', id:'conversationInspectorOverviewModel', label:'Model', value:overview.model }},
+      {{ key:'client-source', id:'conversationInspectorOverviewClientSource', label:'Client / Source', value:overview.client_source }},
+      {{ key:'endpoint', id:'conversationInspectorOverviewEndpoint', label:'Endpoint', value:overview.endpoint }},
+      {{ key:'request-type', id:'conversationInspectorOverviewRequestType', label:'Request type', value:overview.request_type }},
+      {{ key:'message-count', id:'conversationInspectorOverviewMessageCount', label:'Message count', value:overview.message_count }},
+      {{ key:'request-count', id:'conversationInspectorOverviewRequestCount', label:'Request count', value:overview.request_count }},
+      {{ key:'estimated-tokens', id:'conversationInspectorOverviewEstimatedTokens', label:'Estimated token count', value:overview.estimated_tokens, formatter:formatTokenValue }},
+      {{ key:'context-window-capacity', id:'conversationInspectorOverviewContextCapacity', label:'Context-window capacity', value:overview.context_window_tokens, formatter:value => formatTokenValue(value) + ' tokens' }},
+      {{ key:'context-usage', id:'conversationInspectorOverviewContextUsage', label:'Context usage', value:overview.context_usage_percent, formatter:formatPercentValue }},
+      {{ key:'compression-count', id:'conversationInspectorOverviewCompressionCount', label:'Compression count', value:overview.compression_count }},
+      {{ key:'last-activity', id:'conversationInspectorOverviewLastActivity', label:'Last activity', value:overview.last_activity_at, formatter:inspectorDateLabel }},
+      {{ key:'duration', id:'conversationInspectorOverviewDuration', label:'Duration', value:overview.duration_ms, formatter:inspectorDurationLabel }}
+    ],
+    intelligence
   }};
+}}
+function inspectorFieldValue(field) {{
+  const value = field?.value;
+  if (value === null || value === undefined || value === '') return '—';
+  if (typeof field.formatter === 'function') return field.formatter(value);
+  return String(value);
+}}
+function renderConversationInspectorOverview(metadata) {{
+  const gridHtml = metadata.fields.map(field => {{
+    const value = inspectorFieldValue(field);
+    const title = field.title || value;
+    const valueId = field.id || ('conversationInspectorOverview' + String(field.key).replace(/(^|-)([a-z])/g, (_, __, char) => char.toUpperCase()));
+    return `<div class="conversation-inspector-field" data-inspector-field="${{escapeHtml(field.key)}}"><div class="conversation-inspector-label">${{escapeHtml(field.label)}}</div><div id="${{escapeHtml(valueId)}}" class="conversation-inspector-value" title="${{escapeHtml(title)}}">${{escapeHtml(value)}}</div></div>`;
+  }}).join('');
+  setHtml('conversationInspectorOverviewGrid', gridHtml);
+}}
+function renderConversationInspectorIntelligence(intelligence) {{
+  const current = intelligence || {{}};
+  const severity = safeClass(current.severity || 'unavailable') || 'unavailable';
+  const statusLabel = inspectorSafeText(current.status_label || 'Insufficient data');
+  const explanation = inspectorSafeText(current.explanation || 'Conversation intelligence will appear when sufficient conversation data exists.');
+  const card = byId('conversationInspectorIntelligenceCard');
+  if (card) card.className = 'conversation-inspector-intelligence-card ' + severity;
+  setText('conversationInspectorIntelligenceStatus', statusLabel, false);
+  setStatusBadge('conversationInspectorIntelligenceBadge', severity, statusLabel);
+  setText('conversationInspectorIntelligenceExplanation', explanation, false);
+  const signals = Array.isArray(current.signals) ? current.signals : [];
+  setHtml('conversationInspectorIntelligenceSignals', signals.length
+    ? signals.map(signal => `<span class="conversation-inspector-signal"><strong>${{escapeHtml(signal.label || 'Signal')}}</strong>${{escapeHtml(signal.value || '—')}}</span>`).join('')
+    : '<span class="conversation-inspector-signal"><strong>Status</strong>—</span>');
+  const recommendation = current.recommendation === null || current.recommendation === undefined ? '' : String(current.recommendation).trim();
+  const recommendationEl = byId('conversationInspectorRecommendation');
+  if (recommendationEl) {{
+    recommendationEl.hidden = !recommendation;
+    recommendationEl.textContent = recommendation;
+  }}
 }}
 function setInspectorVisibility(id, visible) {{
   const el = byId(id);
@@ -1972,11 +1973,13 @@ function renderConversationInspector() {{
   }}
   const metadata = buildConversationInspectorMetadata(data);
   setText('conversationInspectorConversationId', metadata.shortId, false);
+  const idHeader = byId('conversationInspectorConversationId');
+  if (idHeader) idHeader.setAttribute('title', metadata.fullId);
   setStatusBadge('conversationInspectorStatusBadge', metadata.statusClass, metadata.statusLabel);
   setText('conversationInspectorModelLine', metadata.model + ' · ' + metadata.source, false);
   setText('conversationInspectorStartedLine', 'Started ' + metadata.started, false);
-  const gridHtml = metadata.fields.map(([label, value]) => `<div class="conversation-inspector-field"><div class="conversation-inspector-label">${{escapeHtml(label)}}</div><div class="conversation-inspector-value">${{escapeHtml(value)}}</div></div>`).join('');
-  setHtml('conversationInspectorMetadataGrid', gridHtml);
+  renderConversationInspectorOverview(metadata);
+  renderConversationInspectorIntelligence(metadata.intelligence);
   showConversationInspectorPanel('metadata');
   setText('conversationInspectorLiveRegion', 'Conversation Inspector opened for ' + metadata.shortId, false);
 }}

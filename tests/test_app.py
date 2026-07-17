@@ -124,6 +124,16 @@ def test_dashboard_conversation_inspector_foundation_contract() -> None:
     assert 'aria-label="Close Conversation Inspector"' in html
     assert "Loading conversation details…" in html
     assert "Conversation details unavailable" in html
+    assert "Overview" in html
+    assert "Intelligence" in html
+    assert 'id="conversationInspectorOverviewGrid"' in html
+    assert 'id="conversationInspectorIntelligenceCard"' in html
+    assert 'id="conversationInspectorIntelligenceStatus"' in html
+    assert 'id="conversationInspectorIntelligenceSignals"' in html
+    assert "data-inspector-field" in html
+    assert "key:'conversation-id'" in html
+    assert "conversationInspectorOverviewConversationId" in html
+    assert "conversationInspectorOverviewContextUsage" in html
     assert "selectedConversationId:null" in html
     assert "inspectorOpen:false" in html
     assert "inspectorLoading:false" in html
@@ -135,6 +145,10 @@ def test_dashboard_conversation_inspector_foundation_contract() -> None:
     assert "showConversationInspectorPanel('loading')" in html
     assert "showConversationInspectorPanel('unavailable')" in html
     assert "showConversationInspectorPanel('metadata')" in html
+    assert "renderConversationInspectorOverview" in html
+    assert "renderConversationInspectorIntelligence" in html
+    assert "conversation_inspector" in html
+    assert "escapeHtml(value)" in html
     assert "handleTimelineInspectorSelection" in html
     assert "openConversationInspector" in html
     assert "closeConversationInspector" in html
@@ -244,6 +258,17 @@ def test_dashboard_data_endpoint(monkeypatch) -> None:
     assert "conversation_timeline" in data
     assert "events" in data["conversation_timeline"]
     assert data["conversation_timeline"]["conversation_id"] == "dashboard-live"
+    assert "conversation_inspector" in data
+    assert data["conversation_inspector"]["conversation_id"] == "dashboard-live"
+    assert data["conversation_inspector"]["overview"]["conversation_id"] == "dashboard-live"
+    assert data["conversation_inspector"]["intelligence"]["status"] in {
+        "healthy",
+        "warning",
+        "compression_threshold",
+        "compression_present",
+        "critical",
+        "insufficient_data",
+    }
     assert data["active_conversation"]["conversation_id"] == "dashboard-live"
     assert data["active_conversation"]["recent_messages"][0]["content"] == "hello"
     assert data["refresh_interval_ms"] == 1000

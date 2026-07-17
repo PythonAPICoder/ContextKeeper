@@ -1263,6 +1263,105 @@ Visual QA still pending:
 
 - Product Owner should open and close the drawer, select multiple timeline entries, confirm selected-entry highlighting follows the active conversation, confirm Escape closes the drawer, confirm no horizontal overflow, confirm timeline polling continues with the drawer open, confirm an active conversation remains selected during refresh, confirm unavailable state wording is honest and readable, review 50%, 75%, and 100% browser zoom, review 3440×1440 at 100% Windows display scaling, and confirm reduced-motion mode does not use distracting transitions.
 
+### Phase 6.5F-B5.5.2 — Conversation Inspector: Overview & Intelligence
+
+Branch: `phase-6-5f-b5-5-2-conversation-inspector-overview-intelligence`
+
+Status: Implemented on branch; pending Product Owner visual QA.
+
+Objective:
+
+- Extend the Conversation Inspector foundation with a factual `Overview` section and deterministic `Intelligence` section for the selected/current conversation.
+- Reuse the existing dashboard snapshot and refresh path without adding transcript browsing, message expansion, search, export, LLM-generated analysis, or a new conversation persistence system.
+
+Architecture:
+
+- Added a small deterministic inspector view-model helper in `src/ctxkeeper/dashboard/inspector.py`.
+- Built the inspector snapshot from the same conversation list, active conversation snapshot, recent request metrics, context thresholds, compression history, and activity state already used by `build_dashboard_status()`.
+- Added the resulting `conversation_inspector` object to the existing `/dashboard/data` payload.
+- Kept the inspector tied to the existing dashboard polling interval; no new polling loop, endpoint, or secondary conversation snapshot was introduced.
+
+Overview fields added:
+
+- Conversation identifier.
+- Conversation state.
+- Model.
+- Client/source.
+- Endpoint.
+- Request type.
+- Message count.
+- Request count.
+- Estimated token count.
+- Context-window capacity.
+- Context usage percentage.
+- Compression count.
+- Last activity time.
+- Deterministic conversation duration.
+
+Intelligence states:
+
+- `insufficient_data`: no conversation, context disabled, or required context estimates unavailable.
+- `healthy`: context usage is below the warning threshold and no compression history is present.
+- `warning`: context usage is at or above the warning threshold and below the compression threshold.
+- `compression_threshold`: context usage is at or above the compression threshold while compression is enabled and capacity is not exhausted.
+- `compression_present`: one or more confirmed rolling-summary compression events exist while current usage is otherwise below warning.
+- `critical`: context usage has exhausted or exceeded known capacity, or context is at/above the compression threshold while compression is disabled.
+
+Threshold behavior:
+
+- Warning and compression comparisons use the same inclusive semantics as the context engine: `usage_percent >= threshold`.
+- No separate dashboard-only "growing" or "compression approaching" state was introduced because existing state does not provide a reliable trend or distinct threshold.
+
+Compression behavior:
+
+- Confirmed compression history is derived from existing rolling-summary evidence.
+- Compression history is shown as a supporting condition unless current context pressure or disabled compression creates a more urgent classification.
+
+Privacy boundaries:
+
+- The inspector view model includes metadata and aggregate metrics only.
+- Prompt text, assistant response text, rolling-summary body text, request bodies, retrieved document content, secrets, transcript previews, and LLM-generated analysis remain excluded.
+
+Tests added:
+
+- Direct classification tests for healthy, just below warning, exactly warning, just below compression, exactly compression, above compression, compression history, context disabled, compression disabled, no conversation, insufficient data, and exhausted-capacity behavior.
+- Dashboard payload mapping tests for overview metadata, safe missing values, compression count, and prompt/summary non-leakage.
+- Dashboard HTML contract tests for Overview/Intelligence sections, stable field hooks, escaped rendering, and preservation of a single polling interval.
+
+Files changed:
+
+- `src/ctxkeeper/dashboard/inspector.py`
+- `src/ctxkeeper/dashboard/routes.py`
+- `src/ctxkeeper/dashboard/template.py`
+- `src/ctxkeeper/dashboard/__init__.py`
+- `tests/test_dashboard_inspector.py`
+- `tests/test_app.py`
+- `docs/CONVERSATION_INSPECTOR.md`
+- `docs/PROJECT_HISTORY.md`
+
+Deferred:
+
+- Transcript inspection.
+- Individual message expansion.
+- Conversation search and filtering.
+- Export.
+- Editing and deletion.
+- LLM-generated summaries, analysis, or recommendations.
+- Cross-conversation comparison.
+- Historical conversation selection beyond the current timeline/current-conversation foundation.
+- On-demand detail endpoint and detailed context-composition/compression views.
+
+Validation:
+
+- Python syntax validation: `.\.venv\Scripts\python.exe -m py_compile src\ctxkeeper\dashboard\inspector.py src\ctxkeeper\dashboard\routes.py src\ctxkeeper\dashboard\template.py tests\test_app.py tests\test_dashboard_inspector.py`, passing.
+- Rendered dashboard JavaScript syntax validation: extracted `<script>` from `render_dashboard_html(Settings())` with UTF-8 output and ran `node --check -`, passing.
+- Focused inspector/dashboard validation: `.\.venv\Scripts\python.exe -m pytest tests\test_dashboard_inspector.py tests\test_app.py tests\test_dashboard_instrument_panel.py -q`, 88 tests passing, with one existing third-party `StarletteDeprecationWarning` from FastAPI/Starlette TestClient.
+- Full automated suite: `.\.venv\Scripts\python.exe -m pytest -q`, 264 tests passing, with the same existing warning.
+
+Visual QA still pending:
+
+- Product Owner should validate the Overview and Intelligence sections in no-conversation, healthy, warning, compression-threshold, compression-present, critical, unavailable, refresh, reduced-motion, and narrow/wide responsive states.
+
 ### Phase 6.5G — Historical Memory Retrieval & Detail Preservation (Approved Plan)
 
 Status: Planned; approved for the roadmap, not implemented.

@@ -115,7 +115,8 @@ def test_dashboard_template_contains_six_instrument_cards() -> None:
     response = client.get("/dashboard")
 
     assert response.status_code == 200
-    assert "Dashboard instrument panel" in response.text
+    html = response.text
+    assert "Dashboard instrument panel" in html
     for label in [
         "CPU Usage",
         "GPU Usage",
@@ -124,26 +125,39 @@ def test_dashboard_template_contains_six_instrument_cards() -> None:
         "Context Trend",
         "Compression Status",
     ]:
-        assert label in response.text
-    assert "initializeInstrumentGauges" in response.text
-    assert "updateInstrumentGauge" in response.text
-    assert "renderContextTrend" in response.text
-    assert "renderInstrumentSupport" in response.text
-    assert "setInstrumentReadingNeutral" in response.text
-    assert "context_window_source_label" in response.text
-    assert "context_window_state" in response.text
-    assert ".instrument-reading.is-neutral" in response.text
-    assert ".instrument-reading .badge" in response.text
-    assert "Awaiting context history." in response.text
-    assert "displayState = state === 'empty' ? 'waiting'" in response.text
-    assert "Collecting context history." not in response.text
-    assert response.text.count('class="instrument-support"') == 5
-    assert response.text.count('data-support-slot="1"') == 5
-    assert response.text.count('data-support-slot="2"') == 5
-    assert response.text.count('data-support-slot="3"') == 5
-    assert ".instrument-support-row" in response.text
-    assert "Intel Core i9-14900K" not in response.text
-    assert "NVIDIA GeForce RTX 4090" not in response.text
+        assert label in html
+    assert "grid-template-columns:repeat(5,minmax(148px,1fr))" in html
+    assert '<section class="system-activity-grid" aria-label="System activity">' in html
+    instrument_panel = html[html.index('<section id="instrumentPanel"'): html.index('<section class="system-activity-grid"')]
+    for earlier, later in [
+        ("CPU Usage", "GPU Usage"),
+        ("GPU Usage", "Memory Usage"),
+        ("Memory Usage", "Context Usage"),
+        ("Context Usage", "Compression Status"),
+    ]:
+        assert instrument_panel.index(earlier) < instrument_panel.index(later)
+    assert "Context Trend" not in instrument_panel
+    activity_row = html[html.index('<section class="system-activity-grid"'): html.index('<section class="operations-lower"')]
+    assert activity_row.index("Context Trend") < activity_row.index("Connection Flow")
+    assert "initializeInstrumentGauges" in html
+    assert "updateInstrumentGauge" in html
+    assert "renderContextTrend" in html
+    assert "renderInstrumentSupport" in html
+    assert "setInstrumentReadingNeutral" in html
+    assert "context_window_source_label" in html
+    assert "context_window_state" in html
+    assert ".instrument-reading.is-neutral" in html
+    assert ".instrument-reading .badge" in html
+    assert "Awaiting context history." in html
+    assert "displayState = state === 'empty' ? 'waiting'" in html
+    assert "Collecting context history." not in html
+    assert html.count('class="instrument-support"') == 5
+    assert html.count('data-support-slot="1"') == 5
+    assert html.count('data-support-slot="2"') == 5
+    assert html.count('data-support-slot="3"') == 5
+    assert ".instrument-support-row" in html
+    assert "Intel Core i9-14900K" not in html
+    assert "NVIDIA GeForce RTX 4090" not in html
 
 
 def test_dashboard_template_contains_context_capacity_badge_and_model_source_markup() -> None:
@@ -235,9 +249,10 @@ def test_dashboard_overview_removes_duplicate_resources_card_and_rebalances_lowe
     assert "<h2>Resources</h2>" not in response.text
     assert "speedometer" not in response.text
     assert "resource-stack" not in response.text
-    assert "grid-template-columns:minmax(0,3fr) minmax(280px,2fr)" in response.text
+    assert "grid-template-columns:minmax(0,2.2fr) minmax(240px,1.35fr) minmax(280px,1.45fr)" in response.text
     assert 'class="traffic-stat"><div class="small">Errors</div><div id="err"' in response.text
     assert "conversation-meta compact" in response.text
+    assert "Live Conversation Timeline" in response.text
 
 
 def test_instrument_panel_reports_cpu_available_and_unavailable() -> None:

@@ -65,6 +65,7 @@ class MetricsStore:
         context_window_source: str | None = None,
         context_window_source_label: str | None = None,
         generation_sequence: int | None = None,
+        conversation_id: str | None = None,
     ) -> dict[str, Any]:
         with self._lock:
             self.requests.total_requests += 1
@@ -81,6 +82,8 @@ class MetricsStore:
             }
             if generation_sequence is not None:
                 event["generation_sequence"] = generation_sequence
+            if conversation_id is not None:
+                event["conversation_id"] = conversation_id
             if context_window_tokens is not None and context_window_source is not None:
                 event["context_window_tokens"] = context_window_tokens
                 event["context_window_source"] = context_window_source

@@ -67,7 +67,7 @@ Example: `Phase 6.5F-B4.2`
 | Windows executable/service foundation | Completed | PyInstaller spec, executable entry point, service runner, and service placeholder present. |
 | Setup wizard and installer | Completed | First-run wizard, Inno Setup foundation, and release build script present. |
 | Dashboard modernization B4 workstream | Completed | Phase 6.5F-B4.8 automatic model context discovery is complete on `main` and `origin/main` at commit `fdd9478`; later B5-B7 dashboard work remains planned. |
-| Live data visualization and rich widgets | Active | Phase 6.5F-B5.3 live connection flow animation is implemented on `phase-6-5f-b5-3-live-connection-flow` and pending visual QA; Phase 6.5F-B5.2 is complete on `main` and `origin/main` at commit `7181b69`. |
+| Live data visualization and rich widgets | Active | Phase 6.5F-B5.4 live conversation timeline is implemented on `phase-6-5f-b5-4-live-conversation-timeline` and pending Product Owner visual QA; Phase 6.5F-B5.3 is present in the current branch baseline at commit `3956b29`; Phase 6.5F-B5.2 is complete on `main` and `origin/main` at commit `7181b69`. |
 | Dashboard customization and user preferences | Planned | Phase 6.5F-B6 planned after B5. |
 | Release polish and final UX review | Planned | Phase 6.5F-B7 planned before historical memory retrieval and validation certification. |
 | Historical memory retrieval and detail preservation | Planned | Dedicated Phase 6.5G approved before Phase 6.6; no implementation exists yet. |
@@ -1059,6 +1059,101 @@ Visual QA requirement:
 - Final acceptance still requires Product Owner screenshot or live-browser validation at 50%, 75%, and 100% zoom/scaling equivalents, including idle, outbound, processing, inbound, rapid requests, and reduced-motion behavior.
 - This entry records implementation and automated validation only; it does not claim final visual acceptance.
 
+### Phase 6.5F-B5.4 — Live Conversation Timeline
+
+Branch: `phase-6-5f-b5-4-live-conversation-timeline`
+
+Status: Implemented on branch; pending Product Owner visual QA.
+
+Objective:
+
+- Add a compact live operational timeline for the active or most recently active conversation.
+- Help users understand what ContextKeeper has done during a conversation without exposing private prompts, assistant responses, rolling-summary text, request bodies, retrieved content, secrets, or system prompts.
+- Preserve existing dashboard behavior, Ollama API compatibility, request metrics, active conversation display, traffic visualization, connection-flow animation, context instruments, and compression status behavior.
+
+Architectural approach:
+
+- Added a deterministic, read-only live timeline builder in `src/ctxkeeper/dashboard/timeline.py`.
+- Reused the existing single conversation snapshot captured by `build_dashboard_status()` rather than reading the conversation store again.
+- Reused existing bounded request metrics, active activity state, active conversation/context snapshot data, and rolling-summary compression evidence.
+- Added safe `conversation_id` metadata to existing request metric events when the proxy already knows the chat conversation identity, allowing exact request filtering for current non-legacy chat metrics.
+- Added only one minimal activity-snapshot field, `active_accepted_at`, exposing the already tracked accepted timestamp for the currently active generation request so an in-flight `request_received` event can be represented accurately.
+- Did not add persistent event storage, a new append-only event store, export, filtering, Conversation Inspector, AutoQA, or a competing event-tracking architecture.
+
+Event derivation strategy:
+
+- `conversation_started` derives from the selected active conversation object's `created_at`.
+- `request_received` derives only from current active generation activity with an active request id and accepted timestamp.
+- `request_completed` and `request_failed` derive from existing bounded `MetricsStore.recent_requests` records for conversational generation endpoints, filtered by request `conversation_id` when available and by the selected conversation's start time for legacy metrics without a conversation id.
+- `model_selected` and `model_changed` derive from chronological generation request history and current active generation activity.
+- `context_warning` derives from the active conversation context snapshot when warning or compression thresholds are currently exceeded.
+- `compression_completed` derives only from confirmed rolling-summary system messages in the active conversation.
+- Events are sorted chronologically, capped at 40 recent events, and assigned stable hash-based event ids from deterministic metadata such as request sequence, generation sequence, timestamp, model, endpoint, status, and conversation id.
+
+Privacy protections:
+
+- Timeline events include only operational metadata: timestamp/time label, event type, severity, title, endpoint, model name, status code, latency, context percentage/token estimates, and compression count-style detail.
+- The timeline builder checks rolling-summary prefixes only to confirm compression completion and never serializes summary content.
+- The timeline does not include user prompt text, assistant response text, rolling-summary body text, request bodies, system prompts, retrieved document contents, or API secrets.
+- Focused tests assert that prompt, response, and summary sentinel strings do not appear in timeline payload events.
+
+UI behavior:
+
+- Added a new Operations lower-row card titled `Live Conversation Timeline`, placed with Traffic and Active Conversation rather than among the primary resource gauges.
+- The card renders a compact vertical event feed with timestamp, title, optional detail, and small severity markers for informational, success, warning, and error states.
+- The list uses an internal scroll area so newer activity is visible without making the page excessively tall.
+- The empty state reads `Waiting for conversation activity` and explains that request, context, and compression events will appear without prompt or response content.
+- Polling uses a stable event-id signature to avoid rebuilding the timeline DOM when events have not changed.
+- If events change, the timeline only auto-scrolls to the newest event when the user was already near the newest event.
+- Reduced-motion coverage disables timeline event transitions along with the existing dashboard motion reductions.
+
+Tests added or updated:
+
+- Added focused `tests/test_app.py` coverage for empty timeline state, payload structure, chronological ordering, stable event identifiers, maximum event bound, safe incomplete-data handling, model information, successful request events, failed request events, request conversation identity filtering, active request-received events, context warning events, confirmed compression events, and prompt/response/summary non-leakage.
+- Updated dashboard HTML tests to assert the Live Conversation Timeline card, empty-state treatment, frontend renderer, and lower-row layout.
+- Updated activity tests to cover the new `active_accepted_at` snapshot field.
+- Existing live traffic and connection-flow tests remain intact.
+- Existing single conversation snapshot consistency coverage remains intact and still confirms one conversation-store read per dashboard status build.
+
+Validation:
+
+- Python syntax validation: `.\.venv\Scripts\python.exe -m py_compile src\ctxkeeper\dashboard\timeline.py src\ctxkeeper\dashboard\routes.py src\ctxkeeper\dashboard\template.py src\ctxkeeper\diagnostics\activity.py src\ctxkeeper\diagnostics\metrics.py src\ctxkeeper\proxy\routes.py tests\test_app.py tests\test_activity.py tests\test_dashboard_instrument_panel.py`, passing.
+- Rendered dashboard JavaScript syntax validation: extracted `<script>` from `render_dashboard_html(Settings())` with UTF-8 output and ran `node --check -`, passing.
+- Focused app validation: `.\.venv\Scripts\python.exe -m pytest tests\test_app.py -q`, 42 tests passing, with one existing third-party `StarletteDeprecationWarning` from FastAPI/Starlette TestClient.
+- Focused activity/instrument validation: `.\.venv\Scripts\python.exe -m pytest tests\test_activity.py tests\test_dashboard_instrument_panel.py -q`, 46 tests passing, with the same existing warning.
+- Focused dashboard intelligence/snapshot/context/compression validation: `.\.venv\Scripts\python.exe -m pytest tests\test_dashboard_intelligence.py tests\test_dashboard_snapshots.py tests\test_context_monitor.py tests\test_compression_manager.py -q`, 48 tests passing.
+- Combined affected-suite validation: `.\.venv\Scripts\python.exe -m pytest tests\test_app.py tests\test_activity.py tests\test_dashboard_instrument_panel.py tests\test_dashboard_intelligence.py tests\test_dashboard_snapshots.py tests\test_context_monitor.py tests\test_compression_manager.py tests\test_proxy_tags.py -q`, 160 tests passing, with the same existing warning.
+- Full automated suite: `.\.venv\Scripts\python.exe -m pytest -q`, 249 tests passing, with the same existing warning.
+
+Files changed:
+
+- `src/ctxkeeper/dashboard/timeline.py`
+- `src/ctxkeeper/dashboard/routes.py`
+- `src/ctxkeeper/dashboard/template.py`
+- `src/ctxkeeper/dashboard/__init__.py`
+- `src/ctxkeeper/diagnostics/activity.py`
+- `src/ctxkeeper/diagnostics/metrics.py`
+- `src/ctxkeeper/proxy/routes.py`
+- `tests/test_app.py`
+- `tests/test_activity.py`
+- `tests/test_dashboard_instrument_panel.py`
+- `docs/PROJECT_HISTORY.md`
+
+Deliberately deferred:
+
+- Persistent timeline/event storage.
+- Compression started and compression failed events, because existing state confirms completed rolling summaries but does not retain reliable start/failure events.
+- Context utilization reduced after compression and context-recovered amount, because current rolling-summary evidence does not retain reliable before/after utilization deltas.
+- Request-received events for already completed historical requests, because existing request metrics record completion timestamp but not historical request-start timestamp.
+- Long-duration historical timelines, export, filtering, Conversation Inspector, and AutoQA.
+
+Visual QA still pending:
+
+- Product Owner should visually validate the Operations page at 50%, 75%, and 100% zoom/scaling equivalents.
+- Validate empty timeline state, active request received, completed request, failed request, context warning, compression completed, scrolling behavior, and no horizontal overflow.
+- Validate that the timeline complements Traffic and Active Conversation without dominating the gauges or connection flow.
+- This entry records implementation and automated validation only; it does not claim final visual acceptance.
+
 ### Phase 6.5G — Historical Memory Retrieval & Detail Preservation (Approved Plan)
 
 Status: Planned; approved for the roadmap, not implemented.
@@ -1083,8 +1178,9 @@ Approved roadmap sequence:
 - Phase 6.5F-B5 — Live Data Visualization & Rich Widgets.
   - Phase 6.5F-B5.1 — Live Visualization Foundation complete.
   - Phase 6.5F-B5.2 — Live Request Traffic Visualization complete.
-  - Phase 6.5F-B5.3 — Live Connection Flow Animation QA review.
-  - Later B5 rich widget implementation based on the B5.1 audit, B5.2 request-traffic visualization, and B5.3 connection-flow animation.
+  - Phase 6.5F-B5.3 — Live Connection Flow Animation implemented in the current branch baseline.
+  - Phase 6.5F-B5.4 — Live Conversation Timeline QA review.
+  - Later B5 rich widget implementation based on the B5.1 audit, B5.2 request-traffic visualization, B5.3 connection-flow animation, and B5.4 live timeline.
 - Phase 6.5F-B6 — Dashboard Customization & User Preferences.
 - Phase 6.5F-B7 — Release Polish & Final UX Review.
 - Phase 6.5G — Historical Memory Retrieval & Detail Preservation.
@@ -1238,14 +1334,14 @@ Scope boundary:
 
 ## Current Project State
 
-- Current active branch: `phase-6-5f-b5-3-live-connection-flow`.
-- Current baseline: `main` and `origin/main` are at commit `7181b69`.
+- Current active branch: `phase-6-5f-b5-4-live-conversation-timeline`.
+- Current branch baseline before the B5.4 working-tree implementation: `3956b29` (`Add live connection flow animation`).
 - Phase 6.5F-B4.8 — Automatic Model Context Discovery is complete on `main`; the old local B4.8 feature branch has been deleted.
 - Phase 6.5F-B5.1 — Live Visualization Foundation is complete on `main` and `origin/main` at commit `e35e891`.
 - Phase 6.5F-B5.2 — Live Request Traffic Visualization is complete on `main` and `origin/main` at commit `7181b69`.
-- Current active implementation phase: Phase 6.5F-B5.3 — Live Connection Flow Animation, implemented on branch and pending Product Owner visual QA.
-- Latest verified automated test count: 241 tests passing during the Phase 6.5F-B5.3 live connection flow animation pass.
-- Dashboard status: modern operations-console dashboard with live proxy, Ollama, request, context, compression, conversation, intelligence, health, independent operational activity, trend, recommendation, timeline, six-card instrument panel, standardized three-line gauge support rows, refined inactive and no-active Context/Compression instruments, converged lower Overview layout, reusable gauges, visual QA overflow guards, automatic model context-window discovery, compact live request-traffic visualization, live connection-flow animation, and restrained micro-interaction polish.
+- Current active implementation phase: Phase 6.5F-B5.4 — Live Conversation Timeline, implemented in the working tree on branch and pending Product Owner visual QA.
+- Latest verified automated test count: 249 tests passing during the Phase 6.5F-B5.4 live conversation timeline pass.
+- Dashboard status: modern operations-console dashboard with live proxy, Ollama, request, context, compression, conversation, intelligence, health, independent operational activity, trend, recommendation, timeline, six-card instrument panel, standardized three-line gauge support rows, refined inactive and no-active Context/Compression instruments, converged lower Overview layout, reusable gauges, visual QA overflow guards, automatic model context-window discovery, compact live request-traffic visualization, live connection-flow animation, live conversation timeline, and restrained micro-interaction polish.
 - Major capabilities currently present:
   - FastAPI-based transparent Ollama proxy.
   - `/api/*` and `/v1/*` passthrough with streaming preservation for supported endpoints.
@@ -1255,8 +1351,8 @@ Scope boundary:
   - Browser dashboard with live monitoring and intelligence.
   - Windows service foundation, PyInstaller executable foundation, first-run setup wizard, Inno Setup installer foundation, and release build script.
 - Planned work still ahead:
-  - Product Owner visual QA for Phase 6.5F-B5.3 — Live Connection Flow Animation at 50%, 75%, and 100% zoom/scaling equivalents.
-  - Later Phase 6.5F-B5 rich live visualization/widget work based on the B5.1 audit, B5.2 traffic visualization, and B5.3 connection-flow animation.
+  - Product Owner visual QA for Phase 6.5F-B5.4 — Live Conversation Timeline at 50%, 75%, and 100% zoom/scaling equivalents, including empty, active, successful, failed, warning, and compression timeline states.
+  - Later Phase 6.5F-B5 rich live visualization/widget work based on the B5.1 audit, B5.2 traffic visualization, B5.3 connection-flow animation, and B5.4 live timeline.
   - Phase 6.5F-B6 — Dashboard Customization & User Preferences.
   - Phase 6.5F-B7 — Release Polish & Final UX Review.
   - Phase 6.5G — Historical Memory Retrieval & Detail Preservation.
@@ -1265,15 +1361,15 @@ Scope boundary:
   - Version 1.0 Release.
   - Version 2+ architectural ideas tracked in `docs/FUTURE_IDEAS.md`, intentionally outside the Version 1.0 release scope.
 
-Do not treat unmerged Phase 6.5F-B5.3 branch work, planned Phase 6.5G, Phase 6.6, or Version 2+ roadmap content as merged or released until Git history later confirms that state.
+Do not treat unmerged Phase 6.5F-B5.4 branch work, planned Phase 6.5G, Phase 6.6, or Version 2+ roadmap content as merged or released until Git history later confirms that state.
 
 ## Planned Next Steps
 
 This section is tentative and subject to refinement. These names and boundaries are planning labels, not completed commitments.
 
 - Phase 6.5F-B5 — Live Data Visualization & Rich Widgets.
-  - Product Owner visual QA for Phase 6.5F-B5.3 — Live Connection Flow Animation.
-  - Later B5 visualization work based on the B5.1 audit, B5.2 request-traffic visualization, and B5.3 connection-flow animation.
+  - Product Owner visual QA for Phase 6.5F-B5.4 — Live Conversation Timeline.
+  - Later B5 visualization work based on the B5.1 audit, B5.2 request-traffic visualization, B5.3 connection-flow animation, and B5.4 live timeline.
 - Phase 6.5F-B6 — Dashboard Customization & User Preferences.
 - Phase 6.5F-B7 — Release Polish & Final UX Review.
 - Phase 6.5G — Historical Memory Retrieval & Detail Preservation.

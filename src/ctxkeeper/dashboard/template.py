@@ -137,7 +137,7 @@ h1 {{ margin:0; font-size:25px; }}
 .hero-stat-value {{ font-size:24px; line-height:.95; font-weight:850; letter-spacing:0; overflow-wrap:anywhere; transition:color .18s ease; }}
 .hero-stat-desc {{ color:var(--muted); font-size:10px; line-height:1.12; }}
 .hero-stat-hidden-binding {{ display:none; }}
-.operations-lower {{ display:grid; grid-template-columns:minmax(0,3fr) minmax(280px,2fr); grid-auto-rows:minmax(0,1fr); gap:10px; align-items:stretch; height:100%; min-height:0; min-width:0; overflow:hidden; }}
+.operations-lower {{ display:grid; grid-template-columns:minmax(0,2.2fr) minmax(240px,1.35fr) minmax(280px,1.45fr); grid-auto-rows:minmax(0,1fr); gap:10px; align-items:stretch; height:100%; min-height:0; min-width:0; overflow:hidden; }}
 .grid {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px; }}
 .card {{ background:linear-gradient(180deg,rgba(24,33,50,.82),rgba(15,23,42,.76)); border:1px solid var(--border-card); border-radius:10px; padding:12px; box-shadow:var(--shadow),var(--surface-inset-highlight); backdrop-filter:blur(18px); transition:border-color .18s ease, transform .18s ease, background .18s ease,box-shadow .18s ease; }}
 .card:hover {{ border-color:rgba(203,213,225,.16); background:linear-gradient(180deg,rgba(28,38,56,.86),rgba(15,23,42,.78)); box-shadow:var(--shadow-soft),var(--surface-inset-highlight); }}
@@ -166,7 +166,8 @@ h1 {{ margin:0; font-size:25px; }}
 .gauge {{ width:46px; height:46px; transform:rotate(-90deg); }}
 .gauge-track {{ fill:none; stroke:rgba(148,163,184,.18); stroke-width:10; }}
 .gauge-progress {{ fill:none; stroke:var(--accent); stroke-width:10; stroke-linecap:round; stroke-dasharray:100; stroke-dashoffset:100; transition:stroke-dashoffset .55s ease, stroke .25s ease; }}
-.instrument-panel {{ display:grid; grid-template-columns:repeat(4,minmax(148px,1fr)) minmax(240px,1.45fr) minmax(148px,1fr); gap:8px; min-width:0; align-items:stretch; }}
+.instrument-panel {{ display:grid; grid-template-columns:repeat(5,minmax(148px,1fr)); gap:8px; min-width:0; align-items:stretch; }}
+.system-activity-grid {{ display:grid; grid-template-columns:minmax(240px,.85fr) minmax(0,2.4fr); gap:8px; min-width:0; align-items:stretch; }}
 .instrument-card {{ --instrument-accent:var(--accent); --instrument-gauge-w:128px; --instrument-gauge-h:74px; --instrument-support-line-h:14px; --instrument-reading-h:23px; position:relative; overflow:hidden; min-width:0; min-height:148px; display:grid; grid-template-rows:18px var(--instrument-gauge-h) var(--instrument-reading-h) calc((var(--instrument-support-line-h) * 3) + 4px); gap:5px; align-content:start; padding:10px; background:radial-gradient(circle at 50% -18%,rgba(56,189,248,.12),transparent 42%),linear-gradient(180deg,rgba(18,27,43,.96),rgba(12,18,31,.94)); border-color:rgba(148,163,184,.14); box-shadow:var(--shadow-neutral-soft),var(--surface-inset-highlight); }}
 .instrument-card::before {{ content:""; position:absolute; inset:0 0 auto; height:1px; background:linear-gradient(90deg,transparent,rgba(203,213,225,.16),transparent); pointer-events:none; }}
 .instrument-card > * {{ position:relative; z-index:1; }}
@@ -324,7 +325,7 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
 .pipe {{ position:relative; height:2px; align-self:center; background:linear-gradient(90deg,rgba(45,58,79,.35),rgba(56,189,248,.85),rgba(45,58,79,.35)); border-radius:99px; opacity:.9; }}
 .pipe::before {{ content:""; position:absolute; inset:-12px 0; border-top:1px dashed rgba(148,163,184,.22); top:50%; }}
 .pipe::after {{ content:""; position:absolute; left:50%; top:50%; width:10px; height:10px; border-radius:50%; transform:translate(-50%,-50%); background:rgba(56,189,248,.5); box-shadow:0 0 18px rgba(56,189,248,.42); }}
-@media (prefers-reduced-motion: reduce) {{ html {{ scroll-behavior:auto; }} .flow-panel.flow-active .flow-svg-packet,.flow-panel.flow-waiting .flow-svg-packet,.flow-panel.traffic-outbound .flow-svg-packet,.flow-panel.traffic-inbound .flow-svg-packet,.flow-panel.traffic-outbound .flow-stage::after,.flow-panel.traffic-inbound .flow-stage::after,.flow-panel.traffic-outbound [data-flow-link]::after,.flow-panel.traffic-inbound [data-flow-link]::after,.flow-panel.traffic-processing [data-flow-segment="ollama-model"],.flow-panel.traffic-processing [data-flow-link="ollama-model"]::after,.flow-node.status-pulse,.dot,.value-pop,.badge-update,.ops-activity-summary,.ops-activity-summary .ops-health-status,.ops-activity-summary::after {{ animation:none; }} .flow-svg-packet,.flow-stage::after {{ opacity:0; }} .nav a,.nav a::before,.topbar-status,.topbar-status-dot,.card,.node,.hero-status,.hero-status::before,.hero-status::after,.hero-stat-card,.hero-stat-icon,.hero-stat-value,.badge,.flow-svg-line,.gauge-progress,.fill,.ops-health-row,.ops-activity-summary,.panel-item,.timeline-item,.message,.instrument-gauge-needle,.instrument-gauge-pivot,.instrument-card-value,.trend-line,.trend-area,.request-traffic-bar {{ transition:none; }} .nav a:hover,.nav a:active,.card:hover,.node:hover,.hero-stat-card:hover,.hero-stat-card:focus-within,.hero-stat-card:focus-visible,.hero-stat-card:hover .hero-stat-icon,.hero-stat-card:focus-within .hero-stat-icon,.hero-stat-card:focus-visible .hero-stat-icon,a.badge:hover,a.badge:active,body.is-refreshing .topbar-status-dot {{ transform:none; }} }}
+@media (prefers-reduced-motion: reduce) {{ html {{ scroll-behavior:auto; }} .flow-panel.flow-active .flow-svg-packet,.flow-panel.flow-waiting .flow-svg-packet,.flow-panel.traffic-outbound .flow-svg-packet,.flow-panel.traffic-inbound .flow-svg-packet,.flow-panel.traffic-outbound .flow-stage::after,.flow-panel.traffic-inbound .flow-stage::after,.flow-panel.traffic-outbound [data-flow-link]::after,.flow-panel.traffic-inbound [data-flow-link]::after,.flow-panel.traffic-processing [data-flow-segment="ollama-model"],.flow-panel.traffic-processing [data-flow-link="ollama-model"]::after,.flow-node.status-pulse,.dot,.value-pop,.badge-update,.ops-activity-summary,.ops-activity-summary .ops-health-status,.ops-activity-summary::after {{ animation:none; }} .flow-svg-packet,.flow-stage::after {{ opacity:0; }} .nav a,.nav a::before,.topbar-status,.topbar-status-dot,.card,.node,.hero-status,.hero-status::before,.hero-status::after,.hero-stat-card,.hero-stat-icon,.hero-stat-value,.badge,.flow-svg-line,.gauge-progress,.fill,.ops-health-row,.ops-activity-summary,.panel-item,.timeline-item,.live-timeline-event,.message,.instrument-gauge-needle,.instrument-gauge-pivot,.instrument-card-value,.trend-line,.trend-area,.request-traffic-bar {{ transition:none; }} .nav a:hover,.nav a:active,.card:hover,.node:hover,.hero-stat-card:hover,.hero-stat-card:focus-within,.hero-stat-card:focus-visible,.hero-stat-card:hover .hero-stat-icon,.hero-stat-card:focus-within .hero-stat-icon,.hero-stat-card:focus-visible .hero-stat-icon,a.badge:hover,a.badge:active,body.is-refreshing .topbar-status-dot {{ transform:none; }} }}
 .small {{ font-size:12px; color:var(--muted); overflow-wrap:anywhere; }}
 .traffic-panel {{ display:grid; grid-template-rows:auto auto 1fr; gap:12px; align-content:start; padding:14px; }}
 .traffic-stats {{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; align-items:stretch; }}
@@ -353,6 +354,24 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
 .conversation-compact .conversation-meta.compact > div {{ min-width:0; display:grid; gap:3px; padding:8px 9px; border:1px solid rgba(203,213,225,.08); border-radius:8px; background:rgba(15,23,42,.34); box-shadow:var(--surface-inset-highlight); }}
 .conversation-compact .conversation-meta.compact .muted {{ line-height:1.25; white-space:normal; overflow-wrap:anywhere; }}
 .conversation-compact .summary {{ min-height:0; max-height:92px; overflow:hidden; line-height:1.28; }}
+.live-timeline-card {{ display:grid; grid-template-rows:auto minmax(0,1fr); gap:10px; padding:14px; }}
+.live-timeline-list {{ min-height:0; overflow-y:auto; overflow-x:hidden; display:grid; align-content:start; gap:8px; padding-right:2px; scrollbar-width:thin; scrollbar-color:rgba(148,163,184,.32) transparent; }}
+.live-timeline-event {{ --timeline-accent:var(--accent); min-width:0; display:grid; grid-template-columns:14px minmax(54px,.34fr) minmax(0,1fr); gap:8px; align-items:start; padding:8px 9px; border:1px solid rgba(203,213,225,.09); border-radius:9px; background:linear-gradient(180deg,rgba(15,23,42,.48),rgba(2,6,23,.24)); box-shadow:var(--surface-inset-highlight); transition:border-color .18s ease,background .18s ease,box-shadow .18s ease; }}
+.live-timeline-event:hover {{ border-color:rgba(129,140,248,.24); background:rgba(15,23,42,.68); box-shadow:var(--surface-inset-highlight),0 0 16px rgba(129,140,248,.09); }}
+.live-timeline-event.success {{ --timeline-accent:var(--good); }}
+.live-timeline-event.warning {{ --timeline-accent:var(--warn); }}
+.live-timeline-event.error {{ --timeline-accent:var(--bad); }}
+.live-timeline-marker {{ width:10px; height:10px; margin-top:3px; border-radius:999px; background:var(--timeline-accent); box-shadow:0 0 0 3px rgba(56,189,248,.08),0 0 12px rgba(56,189,248,.18); }}
+.live-timeline-event.success .live-timeline-marker {{ box-shadow:0 0 0 3px rgba(34,197,94,.08),0 0 12px rgba(34,197,94,.18); }}
+.live-timeline-event.warning .live-timeline-marker {{ box-shadow:0 0 0 3px rgba(245,158,11,.08),0 0 12px rgba(245,158,11,.18); }}
+.live-timeline-event.error .live-timeline-marker {{ box-shadow:0 0 0 3px rgba(239,68,68,.08),0 0 12px rgba(239,68,68,.18); }}
+.live-timeline-time {{ color:var(--muted); font-size:10px; line-height:1.2; font-weight:800; letter-spacing:.035em; white-space:nowrap; }}
+.live-timeline-copy {{ min-width:0; display:grid; gap:2px; }}
+.live-timeline-title {{ min-width:0; color:#e2e8f0; font-size:12px; line-height:1.18; font-weight:800; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }}
+.live-timeline-detail {{ min-width:0; color:var(--muted); font-size:10px; line-height:1.2; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }}
+.live-timeline-empty {{ min-height:100%; display:grid; place-items:center; align-content:center; gap:6px; padding:16px 12px; text-align:center; border:1px dashed rgba(148,163,184,.28); border-radius:9px; background:rgba(15,23,42,.32); color:#aebbd0; }}
+.live-timeline-empty-title {{ color:#dbeafe; font-size:12px; font-weight:850; letter-spacing:.03em; text-transform:uppercase; }}
+.live-timeline-empty-detail {{ max-width:280px; color:var(--muted); font-size:11px; line-height:1.35; }}
 .summary {{ background:rgba(15,23,42,.62); border:1px solid var(--border-card); border-radius:10px; padding:12px; white-space:pre-wrap; box-shadow:var(--surface-inset-highlight); }}
 .messages {{ display:grid; gap:10px; margin-top:12px; }}
 .message {{ background:rgba(15,23,42,.46); border:1px solid var(--border-card); border-radius:10px; padding:10px 12px; box-shadow:var(--surface-inset-highlight); transition:border-color .18s ease,background .18s ease,box-shadow .18s ease; }}
@@ -421,8 +440,8 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
   .node-title {{ font-size:11px; margin-bottom:3px; }}
   .node .value {{ font-size:18px; }}
   .node .small {{ font-size:10px; line-height:1.16; }}
-  .operations-lower {{ grid-template-columns:minmax(0,3fr) minmax(260px,2fr); gap:8px; }}
-  .traffic-panel,.conversation-compact {{ gap:8px; padding:10px; }}
+  .operations-lower {{ grid-template-columns:minmax(0,2.1fr) minmax(220px,1.35fr) minmax(250px,1.45fr); gap:8px; }}
+  .traffic-panel,.conversation-compact,.live-timeline-card {{ gap:8px; padding:10px; }}
   .traffic-stats {{ gap:8px; }}
   .traffic-stat {{ padding:8px 9px; }}
   .traffic-stat .value {{ font-size:24px; }}
@@ -432,12 +451,12 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
 @media (max-width: 1500px) {{
   .ops-hero {{ grid-template-columns:minmax(250px,1fr) minmax(220px,.78fr); gap:7px; }}
   .instrument-panel {{ grid-template-columns:repeat(3,minmax(0,1fr)); }}
-  .instrument-trend-card {{ grid-column:span 2; }}
+  .system-activity-grid {{ grid-template-columns:minmax(220px,.82fr) minmax(0,2.18fr); }}
   .hero-stats-grid {{ grid-template-columns:repeat(4,minmax(132px,1fr)); gap:7px; }}
   .hero-stat-card {{ min-height:68px; }}
   .hero-title {{ white-space:normal; }}
   .hero-title span:last-child {{ overflow:visible; text-overflow:clip; }}
-  .operations-lower {{ grid-template-columns:minmax(0,3fr) minmax(240px,2fr); gap:6px; }}
+  .operations-lower {{ grid-template-columns:minmax(0,2fr) minmax(210px,1.35fr) minmax(230px,1.45fr); gap:6px; }}
   .flow-stage {{ grid-template-columns:minmax(118px,1fr) 20px minmax(118px,1fr) 20px minmax(118px,1fr) 20px minmax(118px,1fr); gap:6px; }}
 }}
 @media (max-width: 1350px) {{
@@ -519,13 +538,13 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
   .node .small {{ font-size:9px; line-height:1.1; }}
   .dot {{ width:9px; height:9px; margin-right:5px; }}
   .pipe::after {{ width:7px; height:7px; }}
-  .operations-lower {{ grid-template-columns:minmax(0,3fr) minmax(220px,2fr); gap:6px; }}
-  .traffic-panel,.conversation-compact {{ gap:5px; padding:8px; }}
+  .operations-lower {{ grid-template-columns:minmax(0,2fr) minmax(190px,1.35fr) minmax(210px,1.45fr); gap:6px; }}
+  .traffic-panel,.conversation-compact,.live-timeline-card {{ gap:5px; padding:8px; }}
   .traffic-stats {{ gap:5px; }}
   .traffic-stat {{ padding:6px 7px; gap:3px; }}
   .traffic-stat .value {{ font-size:20px; }}
   .traffic-note {{ padding-top:5px; }}
-  .conversation-compact {{ grid-column:auto; }}
+  .conversation-compact,.live-timeline-card {{ grid-column:auto; }}
   .conversation-meta.compact {{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }}
   .conversation-compact .conversation-meta.compact > div {{ padding:6px 7px; }}
   .conversation-compact .summary {{ max-height:32px; padding:8px; }}
@@ -549,7 +568,7 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
   .flow-panel::before {{ inset:30px 9px 7px; }}
   .flow-stage {{ gap:5px; }}
   .operations-lower {{ gap:6px; }}
-  .traffic-panel,.conversation-compact {{ gap:5px; }}
+  .traffic-panel,.conversation-compact,.live-timeline-card {{ gap:5px; }}
   .traffic-stat {{ padding:6px 7px; }}
 }}
 @media (min-width: 1001px) and (max-height: 800px) {{
@@ -586,7 +605,7 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
   .flow-node-foot {{ gap:5px; padding-top:3px; }}
   .operations-lower {{ gap:5px; }}
   .operations-lower .card {{ padding:8px; }}
-  .traffic-panel,.conversation-compact {{ gap:4px; }}
+  .traffic-panel,.conversation-compact,.live-timeline-card {{ gap:4px; }}
   .traffic-stats {{ gap:5px; }}
   .traffic-stat {{ padding:5px 6px; }}
   .conversation-meta.compact {{ gap:6px; }}
@@ -627,7 +646,7 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
   .flow-node-foot {{ gap:4px; padding-top:2px; }}
   .operations-lower {{ gap:4px; }}
   .operations-lower .card {{ padding:6px; }}
-  .traffic-panel,.conversation-compact {{ gap:3px; }}
+  .traffic-panel,.conversation-compact,.live-timeline-card {{ gap:3px; }}
   .traffic-stats {{ gap:4px; }}
   .traffic-stat {{ padding:4px 5px; }}
   .conversation-meta.compact {{ gap:4px; }}
@@ -635,8 +654,8 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
   .conversation-compact .summary {{ padding:8px; }}
   .badge {{ min-height:19px; padding:1px 6px; }}
 }}
-@media (max-width: 1000px) {{ .app-shell {{ grid-template-columns:220px minmax(0,1fr); }} .dashboard-main {{ padding:14px 16px 18px; }} .ops-hero,.operations-lower {{ grid-template-columns:1fr; }} .hero-title {{ white-space:normal; }} .hero-title span:last-child {{ overflow:visible; text-overflow:clip; }} .ops-health-details {{ grid-template-columns:1fr; }} .ops-health-row {{ grid-template-columns:16px minmax(0,1fr) auto; }} .flow-svg-layer {{ display:none; }} .flow-stage {{ grid-template-columns:1fr; }} .pipe {{ height:20px; width:4px; justify-self:center; }} }}
-@media (max-width: 1000px) {{ .app-shell {{ height:100vh; overflow-y:auto; overflow-x:hidden; grid-template-columns:1fr; }} .workspace {{ height:auto; min-height:0; overflow:visible; }} .sidebar {{ position:relative; height:auto; gap:14px; }} .nav {{ grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); }} .sidebar-footer {{ display:none; }} .topbar {{ position:relative; align-items:flex-start; flex-direction:column; }} .dashboard-main {{ height:auto; overflow:visible; padding:18px; }} .page.active,.ops-hero,.operations-lower {{ height:auto; overflow:visible; grid-template-columns:1fr; }} .ops-hero {{ grid-template-areas:"hero" "actions" "stats"; }} .hero-stats-grid {{ grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); }} .traffic-stats {{ grid-template-columns:1fr; }} .instrument-panel {{ grid-template-columns:1fr; }} .instrument-trend-card {{ grid-column:auto; }} .operations-page {{ min-height:auto; grid-template-rows:none; }} .timeline-item {{ grid-template-columns:1fr; }} }}
+@media (max-width: 1000px) {{ .app-shell {{ grid-template-columns:220px minmax(0,1fr); }} .dashboard-main {{ padding:14px 16px 18px; }} .ops-hero,.system-activity-grid,.operations-lower {{ grid-template-columns:1fr; }} .hero-title {{ white-space:normal; }} .hero-title span:last-child {{ overflow:visible; text-overflow:clip; }} .ops-health-details {{ grid-template-columns:1fr; }} .ops-health-row {{ grid-template-columns:16px minmax(0,1fr) auto; }} .flow-svg-layer {{ display:none; }} .flow-stage {{ grid-template-columns:1fr; }} .pipe {{ height:20px; width:4px; justify-self:center; }} }}
+@media (max-width: 1000px) {{ .app-shell {{ height:100vh; overflow-y:auto; overflow-x:hidden; grid-template-columns:1fr; }} .workspace {{ height:auto; min-height:0; overflow:visible; }} .sidebar {{ position:relative; height:auto; gap:14px; }} .nav {{ grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); }} .sidebar-footer {{ display:none; }} .topbar {{ position:relative; align-items:flex-start; flex-direction:column; }} .dashboard-main {{ height:auto; overflow:visible; padding:18px; }} .page.active,.ops-hero,.system-activity-grid,.operations-lower {{ height:auto; overflow:visible; grid-template-columns:1fr; }} .ops-hero {{ grid-template-areas:"hero" "actions" "stats"; }} .hero-stats-grid {{ grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); }} .traffic-stats {{ grid-template-columns:1fr; }} .instrument-panel {{ grid-template-columns:1fr; }} .instrument-trend-card {{ grid-column:auto; }} .operations-page {{ min-height:auto; grid-template-rows:none; }} .timeline-item {{ grid-template-columns:1fr; }} }}
 </style>
 </head>
 <body>
@@ -786,6 +805,19 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
         <div class="instrument-support-row" data-support-slot="3">Thresholds pending.</div>
       </div>
     </div>
+    <div id="compressionInstrumentCard" class="card instrument-card">
+      <div class="instrument-head dashboard-card-header"><div class="instrument-title dashboard-card-title">Compression Status</div><div class="instrument-head-actions dashboard-card-header-actions"><div class="instrument-info" title="Compression readiness and threshold proximity">i</div></div></div>
+      <div class="instrument-body"><div id="compressionInstrumentGauge" class="instrument-gauge-shell" data-gauge-label="Compression Status"></div></div>
+      <div class="instrument-reading"><div id="compressionInstrumentValue" class="instrument-card-value" data-live-value="true">--</div><span id="compressionInstrumentStatus" class="badge">Loading</span></div>
+      <div id="compressionInstrumentSupport" class="instrument-support" data-instrument-support="compression" aria-label="Compression supporting details">
+        <div class="instrument-support-row primary" data-support-slot="1">Compression state is loading.</div>
+        <div class="instrument-support-row" data-support-slot="2">Event count pending.</div>
+        <div class="instrument-support-row" data-support-slot="3">Readiness pending.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="system-activity-grid" aria-label="System activity">
     <div id="contextTrendCard" class="card instrument-card instrument-trend-card">
       <div class="instrument-head dashboard-card-header"><div class="instrument-title dashboard-card-title">Context Trend</div><div class="instrument-head-actions dashboard-card-header-actions"><div class="instrument-info" title="Rolling active-context history">i</div></div></div>
       <div class="trend-body">
@@ -804,17 +836,6 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
         <div class="trend-footer"><span id="contextTrendDetail">Estimate unavailable</span><span id="contextTrendThresholds">Warn -- • Compress --</span></div>
       </div>
     </div>
-    <div id="compressionInstrumentCard" class="card instrument-card">
-      <div class="instrument-head dashboard-card-header"><div class="instrument-title dashboard-card-title">Compression Status</div><div class="instrument-head-actions dashboard-card-header-actions"><div class="instrument-info" title="Compression readiness and threshold proximity">i</div></div></div>
-      <div class="instrument-body"><div id="compressionInstrumentGauge" class="instrument-gauge-shell" data-gauge-label="Compression Status"></div></div>
-      <div class="instrument-reading"><div id="compressionInstrumentValue" class="instrument-card-value" data-live-value="true">--</div><span id="compressionInstrumentStatus" class="badge">Loading</span></div>
-      <div id="compressionInstrumentSupport" class="instrument-support" data-instrument-support="compression" aria-label="Compression supporting details">
-        <div class="instrument-support-row primary" data-support-slot="1">Compression state is loading.</div>
-        <div class="instrument-support-row" data-support-slot="2">Event count pending.</div>
-        <div class="instrument-support-row" data-support-slot="3">Readiness pending.</div>
-      </div>
-    </div>
-  </section>
 
   <section id="connections" class="card flow-panel ops-panel traffic-idle" data-traffic-state="idle" data-active-requests="0">
     <div class="health-title dashboard-card-header">
@@ -853,6 +874,7 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
       </div>
     </div>
   </section>
+  </section>
 
   <section class="operations-lower">
     <div class="card traffic-panel ops-panel">
@@ -881,6 +903,18 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
       </div>
       <div id="opsConversationRiskIndicators" class="risk-row"></div>
       <div id="opsActiveRollingSummary" class="summary muted">No rolling summary available.</div>
+    </div>
+    <div class="card live-timeline-card ops-panel" aria-labelledby="liveConversationTimelineTitle">
+      <div class="dashboard-card-header">
+        <h2 id="liveConversationTimelineTitle" class="dashboard-card-title">Live Conversation Timeline</h2>
+        <div class="dashboard-card-header-actions"><span id="liveConversationTimelineStatus" class="badge waiting">Waiting</span></div>
+      </div>
+      <div id="liveConversationTimelineList" class="live-timeline-list" aria-live="polite">
+        <div class="live-timeline-empty">
+          <div class="live-timeline-empty-title">Waiting for conversation activity</div>
+          <div class="live-timeline-empty-detail">Request, context, and compression events will appear here without prompt or response content.</div>
+        </div>
+      </div>
     </div>
   </section>
 </section>
@@ -1608,6 +1642,7 @@ async function refreshDashboardData() {{
   refreshOperationalActivity(activity);
   refreshIntelligence(intelligence);
   refreshActiveConversation(data.active_conversation, intelligence.conversation_risk);
+  renderLiveConversationTimeline(data.conversation_timeline);
 }}
 function refreshOperationalActivity(activity) {{
   const current = activity || {{}};
@@ -1662,6 +1697,44 @@ function renderTimeline(events) {{
     ? events.map(event => `<div class="timeline-item"><div class="small">${{escapeHtml(new Date(event.timestamp).toLocaleTimeString())}}</div><div>${{escapeHtml(event.message)}}</div></div>`).join('')
     : '<div class="muted">No recent activity.</div>';
   setHtml('timelineList', html);
+}}
+function timelineEmptyHtml() {{
+  return '<div class="live-timeline-empty"><div class="live-timeline-empty-title">Waiting for conversation activity</div><div class="live-timeline-empty-detail">Request, context, and compression events will appear here without prompt or response content.</div></div>';
+}}
+function timelineTimeLabel(event) {{
+  if (event && event.time_label) return String(event.time_label);
+  const date = new Date(event?.timestamp || '');
+  return Number.isFinite(date.getTime()) ? date.toLocaleTimeString() : '--';
+}}
+function timelineDetailHtml(event) {{
+  const detail = event?.detail === null || event?.detail === undefined ? '' : String(event.detail).trim();
+  return detail ? `<div class="live-timeline-detail">${{escapeHtml(detail)}}</div>` : '';
+}}
+function renderLiveConversationTimeline(timeline) {{
+  const list = byId('liveConversationTimelineList');
+  if (!list) return;
+  const events = Array.isArray(timeline?.events) ? timeline.events : (Array.isArray(timeline) ? timeline : []);
+  const signature = events.map(event => String(event?.id || '')).join('|');
+  const status = byId('liveConversationTimelineStatus');
+  const countLabel = events.length === 1 ? '1 event' : events.length + ' events';
+  if (status) setStatusBadge('liveConversationTimelineStatus', events.length ? 'info' : 'waiting', events.length ? countLabel : 'Waiting');
+  if (list.dataset.renderedSignature === signature) return;
+  const wasPinned = list.scrollHeight - list.scrollTop - list.clientHeight < 24;
+  if (!events.length) {{
+    list.innerHTML = timelineEmptyHtml();
+    list.dataset.renderedSignature = signature;
+    return;
+  }}
+  const html = events.map(event => {{
+    const severity = safeClass(event?.severity || 'info') || 'info';
+    const type = safeClass(event?.type || 'event') || 'event';
+    const eventId = event?.id ? String(event.id) : '';
+    const title = event?.title || 'Timeline event';
+    return `<div class="live-timeline-event ${{severity}}" data-event-id="${{escapeHtml(eventId)}}" data-event-type="${{type}}"><div class="live-timeline-marker" aria-hidden="true"></div><div class="live-timeline-time">${{escapeHtml(timelineTimeLabel(event))}}</div><div class="live-timeline-copy"><div class="live-timeline-title">${{escapeHtml(title)}}</div>${{timelineDetailHtml(event)}}</div></div>`;
+  }}).join('');
+  list.innerHTML = html;
+  list.dataset.renderedSignature = signature;
+  if (wasPinned) list.scrollTop = list.scrollHeight;
 }}
 function refreshActiveConversation(active, risk) {{
   const current = active || {{}};

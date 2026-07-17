@@ -410,6 +410,7 @@ def create_proxy_router(settings: Settings) -> APIRouter:
                     client_host=client_host,
                     context_resolution=context_resolution,
                     generation_sequence=generation_sequence,
+                    conversation_id=conversation_id,
                 )
                 # TODO: Capture streaming assistant responses only after adding a
                 # transparent stream tee that preserves chunk timing and errors.
@@ -451,6 +452,7 @@ def create_proxy_router(settings: Settings) -> APIRouter:
                     generation_sequence=generation_sequence
                     if is_generation_request
                     else None,
+                    conversation_id=conversation_id,
                 )
                 if is_generation_request:
                     _log_generation_observation(
@@ -538,6 +540,7 @@ def create_proxy_router(settings: Settings) -> APIRouter:
                 generation_sequence=generation_sequence
                 if is_generation_request
                 else None,
+                conversation_id=conversation_id,
             )
             if is_generation_request:
                 _log_generation_observation(
@@ -605,6 +608,7 @@ async def _track_streaming_response(
     client_host: str | None,
     context_resolution: ContextWindowResolution | None = None,
     generation_sequence: int | None = None,
+    conversation_id: str | None = None,
 ) -> AsyncIterator[bytes]:
     first_chunk_seen = False
     completion_status_code = upstream_status_code
@@ -637,6 +641,7 @@ async def _track_streaming_response(
                 context_window_source=context_resolution.source if context_resolution is not None else None,
                 context_window_source_label=context_resolution.source_label if context_resolution is not None else None,
                 generation_sequence=generation_sequence,
+                conversation_id=conversation_id,
             )
             _log_generation_observation(
                 event="metric_record",

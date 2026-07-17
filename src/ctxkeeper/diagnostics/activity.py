@@ -70,6 +70,7 @@ class ActivitySnapshot:
     active_generation_sequence: int | None
     active_endpoint: str | None
     active_request_id: str | None
+    active_accepted_at: datetime | None
     latest_model: str | None
 
     def to_dict(self) -> dict[str, object]:
@@ -84,6 +85,7 @@ class ActivitySnapshot:
             "active_generation_sequence": self.active_generation_sequence,
             "active_endpoint": self.active_endpoint,
             "active_request_id": self.active_request_id,
+            "active_accepted_at": self.active_accepted_at.isoformat() if self.active_accepted_at is not None else None,
             "latest_model": self.latest_model,
         }
 
@@ -211,6 +213,7 @@ class OperationalActivityManager:
                 active_generation_sequence=active_request.generation_sequence if active_request is not None else None,
                 active_endpoint=active_request.endpoint if active_request is not None else None,
                 active_request_id=active_request.request_id if active_request is not None else None,
+                active_accepted_at=active_request.accepted_at if active_request is not None else None,
                 latest_model=self._latest_model,
             )
 

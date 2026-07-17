@@ -1,3 +1,6 @@
+import json
+from datetime import datetime, timedelta, timezone
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -22,6 +25,41 @@ def clear_conversation_store() -> None:
     model_context_window_cache.clear()
     active_context_window_overrides.clear()
     activity_manager.reset()
+
+
+def _timeline_metrics_snapshot(recent_requests: list[dict[str, object]] | None = None) -> dict[str, object]:
+    requests = list(recent_requests or [])
+    latest = requests[0] if requests else {}
+    return {
+        "requests": {
+            "total_requests": len(requests),
+            "total_errors": sum(
+                1
+                for request in requests
+                if isinstance(request.get("status_code"), int) and int(request["status_code"]) >= 400
+            ),
+            "last_sequence": latest.get("sequence", len(requests) if requests else 0),
+            "last_generation_sequence": latest.get("generation_sequence"),
+            "last_endpoint": latest.get("endpoint"),
+            "last_model": latest.get("model"),
+            "last_latency_ms": latest.get("latency_ms"),
+            "last_status_code": latest.get("status_code"),
+            "recent_requests": requests,
+        },
+        "system": {"cpu_percent": 0, "ram_percent": 0, "gpu": None},
+    }
+
+
+def _timeline_status(
+    *,
+    recent_requests: list[dict[str, object]] | None = None,
+    settings: Settings | None = None,
+) -> dict[str, object]:
+    return build_dashboard_status(
+        settings=settings or Settings(),
+        metrics_snapshot=_timeline_metrics_snapshot(recent_requests),
+        ollama_status={"status": "online", "version": "test", "latency_ms": 1.0},
+    )
 
 
 def test_health_endpoint() -> None:
@@ -49,6 +87,8 @@ def test_dashboard_endpoint() -> None:
     assert "Insights" in response.text
     assert "Recommendations" in response.text
     assert "Activity Timeline" in response.text
+    assert "Live Conversation Timeline" in response.text
+    assert "Waiting for conversation activity" in response.text
     assert "Request Trend" in response.text
     assert "requestTrafficSvg" in response.text
     assert "renderRequestTraffic" in response.text
@@ -57,6 +97,8 @@ def test_dashboard_endpoint() -> None:
     assert "Live request traffic over the last minute" in response.text
     assert "Waiting for request traffic" in response.text
     assert "Current Activity" in response.text
+    assert "liveConversationTimelineList" in response.text
+    assert "renderLiveConversationTimeline" in response.text
     assert "currentActivityStatus" in response.text
     assert "refreshOperationalActivity" in response.text
     assert "activity-streaming" in response.text
@@ -156,6 +198,9 @@ def test_dashboard_data_endpoint(monkeypatch) -> None:
     assert "average_latency_ms" in data["intelligence"]["trends"]
     assert "timeline" in data["intelligence"]
     assert "conversation_risk" in data["intelligence"]
+    assert "conversation_timeline" in data
+    assert "events" in data["conversation_timeline"]
+    assert data["conversation_timeline"]["conversation_id"] == "dashboard-live"
     assert data["active_conversation"]["conversation_id"] == "dashboard-live"
     assert data["active_conversation"]["recent_messages"][0]["content"] == "hello"
     assert data["refresh_interval_ms"] == 1000
@@ -460,6 +505,213 @@ def test_build_dashboard_status_includes_context_and_compression_history() -> No
     assert status["intelligence"]["trends"]["average_request_rate"] == 2.0
     assert status["intelligence"]["timeline"][0]["message"] == "/api/chat returned 200 in 100.0 ms"
     assert status["intelligence"]["conversation_risk"]["status"] == "healthy"
+
+
+def test_live_conversation_timeline_empty_state() -> None:
+    status = _timeline_status()
+
+    timeline = status["conversation_timeline"]
+
+    assert timeline["events"] == []
+    assert timeline["conversation_id"] is None
+    assert timeline["max_events"] == 40
+
+
+def test_live_conversation_timeline_payload_structure_ordering_and_stable_ids() -> None:
+    conversation = conversation_store.create("timeline-structure")
+    conversation.created_at = datetime(2026, 7, 15, 12, 0, 0, tzinfo=timezone.utc)
+    conversation.updated_at = datetime(2026, 7, 15, 12, 0, 3, tzinfo=timezone.utc)
+    recent_requests = [
+        {
+            "sequence": 2,
+            "generation_sequence": 2,
+            "timestamp": "2026-07-15T12:00:02+00:00",
+            "endpoint": "/api/chat",
+            "model": "qwen2.5:32b",
+            "status_code": 502,
+            "latency_ms": 25.5,
+        },
+        {
+            "sequence": 1,
+            "generation_sequence": 1,
+            "timestamp": "2026-07-15T12:00:01+00:00",
+            "endpoint": "/api/chat",
+            "model": "gpt-oss:20b",
+            "status_code": 200,
+            "latency_ms": 2400.0,
+        },
+    ]
+
+    first = _timeline_status(recent_requests=recent_requests)["conversation_timeline"]["events"]
+    second = _timeline_status(recent_requests=recent_requests)["conversation_timeline"]["events"]
+
+    assert first
+    assert [event["id"] for event in first] == [event["id"] for event in second]
+    assert [event["timestamp"] for event in first] == sorted(event["timestamp"] for event in first)
+    for event in first:
+        assert set(event) == {"id", "timestamp", "time_label", "type", "severity", "title", "detail"}
+        assert event["id"]
+        assert event["timestamp"]
+        assert event["time_label"]
+        assert event["severity"] in {"info", "success", "warning", "error"}
+
+    assert any(event["type"] == "conversation_started" for event in first)
+    assert any(event["type"] == "model_selected" and event["detail"] == "gpt-oss:20b" for event in first)
+    assert any(event["type"] == "model_changed" and event["detail"] == "gpt-oss:20b -> qwen2.5:32b" for event in first)
+    assert any(event["type"] == "request_completed" and "2.4 s" in event["detail"] for event in first)
+    assert any(event["type"] == "request_failed" and "HTTP 502" in event["detail"] for event in first)
+
+
+def test_live_conversation_timeline_is_bounded_to_recent_events() -> None:
+    base = datetime(2026, 7, 15, 12, 0, tzinfo=timezone.utc)
+    chronological_requests = [
+        {
+            "sequence": index + 1,
+            "generation_sequence": index + 1,
+            "timestamp": (base + timedelta(seconds=index)).isoformat(),
+            "endpoint": "/api/chat",
+            "model": "gpt-oss:20b",
+            "status_code": 200,
+            "latency_ms": 10.0,
+        }
+        for index in range(60)
+    ]
+
+    timeline = _timeline_status(recent_requests=list(reversed(chronological_requests)))["conversation_timeline"]
+    events = timeline["events"]
+
+    assert len(events) == timeline["max_events"] == 40
+    assert [event["timestamp"] for event in events] == sorted(event["timestamp"] for event in events)
+    assert events[0]["type"] == "request_completed"
+
+
+def test_live_conversation_timeline_handles_incomplete_legacy_data_safely() -> None:
+    conversation = conversation_store.create("timeline-legacy")
+    conversation.created_at = datetime(2026, 7, 15, 12, 0, tzinfo=timezone.utc)
+    conversation.updated_at = conversation.created_at
+    recent_requests = [
+        {"endpoint": "/api/chat", "timestamp": "not-a-timestamp", "status_code": 200},
+        {"timestamp": "2026-07-15T12:00:01+00:00", "status_code": None, "model": "missing-endpoint"},
+        {"endpoint": "/api/tags", "timestamp": "2026-07-15T12:00:02+00:00", "status_code": 200},
+    ]
+
+    events = _timeline_status(recent_requests=recent_requests)["conversation_timeline"]["events"]
+
+    assert [event["type"] for event in events] == ["conversation_started"]
+
+
+def test_live_conversation_timeline_prefers_request_conversation_identity_when_available() -> None:
+    conversation = conversation_store.create("timeline-active")
+    conversation.created_at = datetime(2026, 7, 15, 12, 0, tzinfo=timezone.utc)
+    conversation.updated_at = datetime(2026, 7, 15, 12, 0, 3, tzinfo=timezone.utc)
+    recent_requests = [
+        {
+            "sequence": 2,
+            "generation_sequence": 2,
+            "timestamp": "2026-07-15T12:00:02+00:00",
+            "endpoint": "/api/chat",
+            "model": "other-model",
+            "status_code": 200,
+            "latency_ms": 20.0,
+            "conversation_id": "timeline-other",
+        },
+        {
+            "sequence": 1,
+            "generation_sequence": 1,
+            "timestamp": "2026-07-15T12:00:01+00:00",
+            "endpoint": "/api/chat",
+            "model": "active-model",
+            "status_code": 200,
+            "latency_ms": 10.0,
+            "conversation_id": "timeline-active",
+        },
+    ]
+
+    events = _timeline_status(recent_requests=recent_requests)["conversation_timeline"]["events"]
+    serialized = json.dumps(events)
+
+    assert "active-model" in serialized
+    assert "other-model" not in serialized
+
+
+def test_live_conversation_timeline_represents_active_request_received() -> None:
+    activity_manager.accept_request(
+        method="POST",
+        endpoint="/api/chat",
+        model="llava:latest",
+        request_id="active-timeline-request",
+        generation_sequence=7,
+    )
+
+    events = _timeline_status()["conversation_timeline"]["events"]
+
+    assert any(event["type"] == "request_received" and "/api/chat" in event["detail"] for event in events)
+    assert any(event["type"] == "model_selected" and event["detail"] == "llava:latest" for event in events)
+
+
+def test_live_conversation_timeline_represents_context_warning() -> None:
+    conversation_store.append_message("timeline-context-warning", "user", "a" * 96)
+    conversation = conversation_store.get("timeline-context-warning")
+    assert conversation is not None
+    conversation.created_at = datetime(2026, 7, 15, 12, 0, tzinfo=timezone.utc)
+    conversation.updated_at = datetime(2026, 7, 15, 12, 0, 1, tzinfo=timezone.utc)
+    settings = Settings.model_validate(
+        {
+            "context": {
+                "default_context_window_tokens": 100,
+                "warning_threshold_percent": 10,
+                "compression_threshold_percent": 90,
+            }
+        }
+    )
+    recent_requests = [
+        {
+            "sequence": 1,
+            "generation_sequence": 1,
+            "timestamp": "2026-07-15T12:00:00+00:00",
+            "endpoint": "/api/chat",
+            "model": "gpt-oss:20b",
+            "status_code": 200,
+            "latency_ms": 10.0,
+        }
+    ]
+
+    events = _timeline_status(settings=settings, recent_requests=recent_requests)["conversation_timeline"]["events"]
+
+    assert any(
+        event["type"] == "context_warning"
+        and event["title"] == "Context warning threshold reached"
+        and "context used" in event["detail"]
+        for event in events
+    )
+
+
+def test_live_conversation_timeline_represents_confirmed_compression_without_summary_leakage() -> None:
+    prompt_secret = "PRIVATE_PROMPT_TIMELINE_SECRET"
+    response_secret = "PRIVATE_RESPONSE_TIMELINE_SECRET"
+    summary_secret = "PRIVATE_SUMMARY_TIMELINE_SECRET"
+    conversation = conversation_store.create("timeline-compression")
+    conversation.created_at = datetime(2026, 7, 15, 12, 0, tzinfo=timezone.utc)
+    user_message = conversation_store.append_message("timeline-compression", "user", prompt_secret)
+    assistant_message = conversation_store.append_message("timeline-compression", "assistant", response_secret)
+    summary_message = conversation_store.append_message(
+        "timeline-compression",
+        "system",
+        f"{ROLLING_SUMMARY_PREFIX}{summary_secret}",
+    )
+    user_message.timestamp = datetime(2026, 7, 15, 12, 0, 1, tzinfo=timezone.utc)
+    assistant_message.timestamp = datetime(2026, 7, 15, 12, 0, 2, tzinfo=timezone.utc)
+    summary_message.timestamp = datetime(2026, 7, 15, 12, 0, 3, tzinfo=timezone.utc)
+    conversation.updated_at = summary_message.timestamp
+
+    events = _timeline_status()["conversation_timeline"]["events"]
+    serialized = json.dumps(events)
+
+    assert any(event["type"] == "compression_completed" for event in events)
+    assert "Rolling summary 1 recorded." in serialized
+    assert prompt_secret not in serialized
+    assert response_secret not in serialized
+    assert summary_secret not in serialized
 
 
 def test_dashboard_status_uses_latest_applicable_request_model() -> None:

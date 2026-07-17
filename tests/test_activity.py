@@ -109,7 +109,9 @@ def test_active_snapshot_exposes_latest_generation_sequence() -> None:
     assert active.active_generation_sequence == 11
     assert active.active_endpoint == "/api/chat"
     assert isinstance(active.active_request_id, str)
+    assert active.active_accepted_at is not None
     assert active.to_dict()["active_generation_sequence"] == 11
+    assert active.to_dict()["active_accepted_at"] is not None
 
 
 def test_active_request_without_model_is_unknown_without_overwriting_latest_model() -> None:

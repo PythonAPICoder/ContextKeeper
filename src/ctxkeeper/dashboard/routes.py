@@ -24,7 +24,7 @@ from .insights import build_dashboard_insights
 from .intelligence import DashboardMetrics, HealthAssessment, HealthEngine, HealthStatus
 from .recommendations import build_recommendations
 from .snapshots import ConversationSnapshotProvider
-from .timeline import TimelineEvent
+from .timeline import LIVE_CONVERSATION_TIMELINE_MAX_EVENTS, TimelineEvent, build_live_conversation_timeline
 from .template import render_dashboard_html
 from .trends import RollingTrends
 
@@ -1523,6 +1523,12 @@ def build_dashboard_status(
             active_conversation_data["context"]["context_window_source_label"] = context_window_resolution.source_label
             active_conversation_data["context"]["context_window_label"] = context_window_resolution.label
     system_metrics = metrics_snapshot["system"]
+    live_timeline_events = build_live_conversation_timeline(
+        conversations=conversations,
+        active_conversation=active_conversation_data,
+        recent_requests=recent_requests,
+        activity_snapshot=activity_snapshot,
+    )
 
     return {
         "contextkeeper": {
@@ -1565,6 +1571,11 @@ def build_dashboard_status(
             "history": compression_history[:10],
         },
         "active_conversation": active_conversation_data,
+        "conversation_timeline": {
+            "events": [event.to_dict() for event in live_timeline_events],
+            "max_events": LIVE_CONVERSATION_TIMELINE_MAX_EVENTS,
+            "conversation_id": active_conversation_data.get("conversation_id"),
+        },
         "intelligence": _dashboard_intelligence(
             ollama_status=ollama_status,
             context_usage_percent=context_stats.max_usage_percent,

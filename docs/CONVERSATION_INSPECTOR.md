@@ -1,5 +1,7 @@
 # Conversation Inspector
 
+Status: Current through Phase 6.5F-B5.5.2.
+
 ## Purpose
 
 The Conversation Inspector is the planned drill-down surface for understanding a selected ContextKeeper conversation while keeping the main dashboard visible. It complements the Live Conversation Timeline: the timeline remains the compact operational narrative, and the inspector becomes the place for deeper conversation-specific diagnostics.

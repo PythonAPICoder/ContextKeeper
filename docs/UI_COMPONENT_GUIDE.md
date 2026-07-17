@@ -1,5 +1,7 @@
 # ContextKeeper UI Component Guide
 
+Status: Current through Phase 6.5F-B5.5.2.
+
 ## Purpose
 
 This guide defines reusable dashboard components for the ContextKeeper browser UI. Components should support a stable operations-console experience across full desktop, snapped desktop, and narrow browser widths.
@@ -144,22 +146,54 @@ Client -> ContextKeeper -> Ollama -> Model
 
 Current state:
 
-- static topology
+- topology nodes
 - live status dots
-- placeholders for future animated traffic flow
-
-Future state:
-
-- animated request movement along connectors
-- optional flow intensity based on traffic rate
+- readable status labels and badges
+- animated moving marker during active traffic
 - visible degraded/offline segments
 
 Rules:
 
-- Do not animate until the mockup and interaction model are approved.
+- Animate only real request/stream activity.
+- Respect `prefers-reduced-motion`.
 - Must remain readable in compact desktop layouts.
 - May become a two-row or vertical topology when width is constrained.
 - Never hide endpoint status labels.
+
+## Live Conversation Timeline
+
+The Live Conversation Timeline shows a compact operational narrative for the active or most recently active conversation.
+
+Content:
+
+- timestamp
+- event title
+- short operational detail
+- severity/type marker
+
+Rules:
+
+- Do not expose prompt text, response text, rolling-summary body text, or request bodies.
+- Keep the event list bounded.
+- Make conversation-backed entries selectable for the Conversation Inspector.
+- Use stable event IDs to avoid duplicate DOM insertion during polling.
+
+## Conversation Inspector
+
+The Conversation Inspector is a right-side drawer opened from selectable timeline entries.
+
+Current sections:
+
+- Overview
+- Intelligence
+
+Rules:
+
+- Keep the main dashboard visible on desktop.
+- Use loading, unavailable, and metadata states that are mutually exclusive.
+- Preserve keyboard access and Escape close behavior.
+- Use deterministic metadata and aggregate signals only.
+- Do not add transcript browsing until a later inspector phase.
 
 ## Settings Toggles
 

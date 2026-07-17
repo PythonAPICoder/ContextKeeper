@@ -1,5 +1,7 @@
 # ContextKeeper UI Style Guide
 
+Status: Current through Phase 6.5F-B5.6.
+
 ## 1. Purpose
 
 This guide defines global UI consistency rules for ContextKeeper.

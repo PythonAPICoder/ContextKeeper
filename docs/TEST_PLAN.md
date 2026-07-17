@@ -1,98 +1,291 @@
-
 # ContextKeeper Test Plan
 
-## Purpose
-This document defines how each ContextKeeper phase is validated.
+Status: Current through Phase 6.5F-B5.5.2.
 
-## Phase 1 — Transparent Proxy
+This document defines automated and manual validation expectations for ContextKeeper. The automated suite is the default regression gate; manual Visual QA remains required for dashboard layout, motion, responsive behavior, and Product Owner acceptance.
 
-### Goal
-ContextKeeper must behave like Ollama to existing clients.
+## Standard automated command
 
-### Tests
+```powershell
+python -m pytest -q
+```
 
-#### Test 1: Model Discovery
+Focused dashboard and inspector tests currently live in:
+
+- `tests/test_app.py`
+- `tests/test_dashboard_instrument_panel.py`
+- `tests/test_dashboard_inspector.py`
+
+Other focused modules include:
+
+- `tests/test_proxy_tags.py`
+- `tests/test_diagnostics_metrics.py`
+- `tests/test_activity.py`
+- `tests/test_context_meter.py`
+- `tests/test_context_monitor.py`
+- `tests/test_compression_manager.py`
+- `tests/test_model_context.py`
+- `tests/test_dashboard_snapshots.py`
+- `tests/test_dashboard_intelligence.py`
+- `tests/test_config.py`
+- `tests/test_resources.py`
+- `tests/test_service_runner.py`
+- `tests/test_main_wizard.py`
+- `tests/test_wizard.py`
+
+## Core proxy compatibility
+
+Goal: ContextKeeper behaves like an Ollama-compatible server to existing clients.
+
+Automated coverage should confirm:
+
+- `/api/tags` passes through.
+- `/api/*` passthrough behavior is preserved.
+- `/v1/*` passthrough behavior is preserved.
+- Ollama connectivity failures return an appropriate `502`.
+- Request diagnostics record endpoint, method, model, status, latency, client host, generation sequence, and conversation id where available.
+
+Manual smoke checks:
+
 1. Start Ollama.
 2. Start ContextKeeper.
-3. Run:
-   ```powershell
-   Invoke-RestMethod http://localhost:11500/api/tags
-   ```
-4. Confirm model list is returned.
+3. Request `http://localhost:11500/api/tags`.
+4. Point an Ollama-compatible client to `http://localhost:11500`.
+5. Confirm models populate and chat/generation works.
 
-#### Test 2: AnythingLLM Connection
-1. Set AnythingLLM Ollama URL to `http://localhost:11500`.
-2. Open model dropdown.
-3. Confirm models populate.
+## Streaming behavior
 
-#### Test 3: Basic Chat
-1. Select `gpt-oss:20b`.
-2. Send: `Hello`.
-3. Confirm model responds.
+Goal: ContextKeeper must not break Ollama streaming semantics.
 
-#### Test 4: Streaming
-1. Send a longer prompt.
-2. Confirm response streams normally.
-3. Confirm no buffering breaks the client.
+Validate:
 
-### Success Criteria
-- Models populate.
-- Chat works.
-- Streaming works.
-- Logs show request endpoint, model, status, and latency.
+- `/api/chat` streaming responses remain streamed.
+- `/api/generate` streaming responses remain streamed.
+- Client disconnect/cancellation does not leave active request state stuck.
+- Errors during streaming are recorded without corrupting the stream contract.
 
-## Phase 2 — Diagnostics
+## Diagnostics and metrics
 
-### Tests
-- Verify request count increments.
-- Verify latency is recorded.
-- Verify endpoint path is logged.
-- Verify model name is captured.
-- Verify errors are logged with useful messages.
+Validate:
 
-## Phase 3 — Context Meter
+- Request count increments.
+- Error count increments for failing upstream calls.
+- Last endpoint, model, status, and latency are tracked.
+- Recent request history is bounded.
+- System metrics expose CPU and memory data.
+- GPU metrics degrade safely when `nvidia-smi` is unavailable.
+- Operational activity state transitions remain coherent during idle, active, streaming, failed, and completed requests.
 
-### Tests
-- Send short prompt.
-- Send long prompt.
-- Confirm estimated token count increases.
-- Confirm context percent is calculated.
-- Confirm warning threshold is detected.
+## Context engine and Automatic Model Context Discovery
 
-## Phase 4 — Compression
+Validate:
 
-### Tests
-- Set compression threshold low, such as 10%.
-- Send enough messages to exceed threshold.
-- Confirm summary is generated.
-- Confirm recent messages remain.
-- Confirm old messages are replaced by rolling summary.
-- Confirm conversation still makes sense.
+- Conversation Snapshot creation.
+- Message tracking for chat requests.
+- Estimated token counts increase with message content.
+- Context Usage percentage uses the resolved context-window capacity.
+- Warning threshold uses `>= context.warning_threshold_percent`.
+- Compression threshold uses `>= context.compression_threshold_percent`.
+- Invalid threshold ordering is rejected.
+- Model-specific `models.<model>.context_window_tokens` overrides take precedence.
+- `/api/show` metadata can populate Automatic Model Context Discovery.
+- Default context-window fallback is used when no override or discovered value exists.
+- `options.num_ctx` is enforced for conversational generation requests.
+- Dashboard source labels distinguish `Pre-defined`, `Discovered`, and `Default`.
 
-## Phase 5 — Dashboard
+## Compression
 
-### Tests
-- Confirm dashboard starts.
-- Confirm Ollama status is visible.
-- Confirm ContextKeeper status is visible.
-- Confirm requests appear live.
-- Confirm context percent updates.
-- Confirm compression count updates.
+Validate:
 
-## Phase 6 — Windows EXE / Service
+- Compression planning preserves the configured number of recent messages.
+- Compression manager returns unchanged conversations below threshold.
+- Compression manager condenses older messages when threshold conditions and summarizer output support it.
+- Rolling-summary metadata is maintained.
+- Repeated compression is idempotent without new history.
+- Dashboard compression history is shown only when confirmed rolling-summary state exists.
 
-### Tests
-- Build executable.
-- Run executable on client PC.
-- Run executable on AI server.
-- Install as Windows service.
-- Reboot and confirm service starts automatically.
+Current boundary:
 
-## Regression Tests
-Every release must confirm:
+- Durable historical original-message retrieval after compression is planned for Phase 6.5G and should not be treated as implemented.
+
+## Dashboard baseline
+
+Validate:
+
+- `/dashboard` renders.
+- `/health`, `/metrics`, and `/dashboard/data` return expected structures.
+- The dashboard uses one refresh loop.
+- Dashboard snapshot generation uses one consistent conversation snapshot during a payload build.
+- Missing, idle, and partial data do not produce JavaScript errors.
+- Dashboard polling continues during active traffic and while the Conversation Inspector drawer is open.
+
+## Request Traffic
+
+Validate:
+
+- Request Traffic markup exists.
+- Empty/idle state is readable.
+- Recent request history maps to the visualization.
+- Rate, trend, and error states update from existing request metrics.
+- Existing live traffic and connection-flow behavior remain intact after changes.
+
+Manual Visual QA:
+
+- Confirm the Request Traffic sparkline/bars remain compact.
+- Confirm no flicker during polling.
+- Confirm labels remain readable at 50%, 75%, and 100% browser zoom.
+
+## Connection Flow
+
+Validate:
+
+- Client, ContextKeeper, Ollama, and Model nodes render.
+- Active/idle/warning/offline states are communicated with text and badges, not color alone.
+- The moving marker is visible during active traffic and inactive when idle.
+- Animation timing/direction remains unchanged unless intentionally scoped.
+- Reduced-motion mode disables continuous motion without losing state readability.
+
+Manual Visual QA:
+
+- Review idle, active request, upstream failure, and model observed states.
+- Confirm no horizontal overflow.
+- Confirm the marker does not distract from labels or nodes.
+
+## Conversation Timeline
+
+Validate:
+
+- Empty timeline state appears when no conversation activity exists.
+- Timeline payload has stable event structure and stable event IDs.
+- Events are chronological and bounded.
+- Request received/completed/failed events are represented when supported by current data.
+- Context warning and compression events appear only when supported by existing state.
+- No prompt, response, rolling-summary, or private message body leaks into timeline events.
+- Polling does not duplicate DOM entries or visibly flicker.
+
+Manual Visual QA:
+
+- Confirm the timeline reads as a compact operational narrative.
+- Confirm bounded internal scrolling works.
+- Confirm selecting a conversation entry opens the Conversation Inspector.
+
+## Conversation Inspector
+
+Validate:
+
+- Drawer markup, title, close control, accessible labels, loading state, unavailable state, Overview, and Intelligence render.
+- Timeline entries that map to a real conversation are keyboard and mouse selectable.
+- Selected-entry highlight follows active selection.
+- Closing by button and Escape works.
+- Focus returns to the opening timeline entry where practical.
+- Selection persists across dashboard refresh when the selected conversation remains available.
+- If the selected conversation disappears, the drawer reports unavailable instead of silently switching.
+- No additional polling interval is introduced.
+
+## Conversation Inspector: Overview & Intelligence
+
+Validate Overview:
+
+- Stable DOM hooks exist for core fields.
+- Conversation identifier, state, model, client/source, endpoint, request type, message count, request count, estimated tokens, context-window capacity, Context Usage, compression count, last activity, and duration map correctly when available.
+- Missing values render safe placeholders.
+- Externally derived strings are escaped.
+
+Validate Intelligence:
+
+- Insufficient-data state.
+- Healthy below warning threshold.
+- Just below warning threshold.
+- Exactly at warning threshold.
+- Just below compression threshold.
+- Exactly at compression threshold.
+- Above compression threshold.
+- Compression-history behavior.
+- Context-disabled behavior.
+- Compression-disabled behavior.
+- Critical pressure when usage exhausts or exceeds known capacity.
+- Recommendation appears only for genuine action-required states.
+
+Privacy checks:
+
+- No prompt text.
+- No assistant response text.
+- No rolling-summary body text.
+- No request body, headers, API secrets, or retrieved document contents.
+
+## Responsive layout and Visual QA
+
+Manual dashboard review should include:
+
+- 3440×1440.
+- 2450×1440.
+- 1720×1440.
+- 50%, 75%, and 100% browser zoom.
+- 100% Windows display scaling where practical.
+- Narrow/mobile breakpoint behavior.
+- No clipping.
+- No horizontal page overflow.
+- Balanced spacing.
+- System instrument panel: CPU Usage, GPU Usage, Memory Usage, Context Usage, Compression Status.
+- System Activity row: Context Trend and Connection Flow.
+- Operations lower row: Traffic, Active Conversation, Live Conversation Timeline.
+- Conversation Inspector desktop drawer and narrow full-width/backdrop behavior.
+
+## Reduced motion
+
+Validate:
+
+- `prefers-reduced-motion` disables or simplifies continuous animations.
+- Connection Flow marker animation does not continue under reduced motion.
+- Timeline/inspector transitions remain readable without motion.
+- No feature communicates status only through animation.
+
+## Dashboard idle, active, completed, and failed states
+
+Validate:
+
+- Fresh startup with no traffic.
+- Ollama offline.
+- Ollama online but no model observed.
+- Active generation request.
+- Streaming request.
+- Completed request.
+- Failed request.
+- Active conversation with context estimates.
+- Completed/idle conversation snapshot.
+- Compression present.
+- Context warning and compression threshold states.
+
+## Windows executable, service, and installer
+
+Validate:
+
+- PyInstaller build creates `dist/ContextKeeper.exe`.
+- Packaged executable loads editable config beside the executable when present.
+- Packaged executable can fall back to bundled config.
+- First-run wizard can create `contextkeeper.yaml`.
+- Release build script creates installer output when prerequisites are installed.
+- Windows service host foundation can construct the ContextKeeper application runner.
+
+Current boundary:
+
+- Service installation hooks remain placeholder work until a later release phase.
+
+## Regression checklist
+
+Every release candidate should confirm:
+
 - `/api/tags` works.
 - `/api/chat` works.
 - `/api/generate` works.
 - Streaming works.
-- AnythingLLM connects.
-- Logs are created.
+- AnythingLLM or another Ollama-compatible client connects.
+- Logs are created when logging is enabled.
+- Dashboard renders and refreshes.
+- Request Traffic updates.
+- Connection Flow updates.
+- Context Usage and Context Trend update.
+- Live Conversation Timeline updates.
+- Conversation Inspector opens, updates, and closes.
+- Reduced-motion behavior is respected.
+- No prompt/response/summary content appears in routine dashboard surfaces.

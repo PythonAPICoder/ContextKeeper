@@ -1,5 +1,7 @@
 # Dashboard Visualization Pipeline Audit
 
+Status: Historical B5.1 audit with current addendum through Phase 6.5F-B5.5.2. The original audit remains useful for understanding data-source decisions, but later B5 phases implemented several opportunities identified here.
+
 ## Purpose
 
 This document records the Phase 6.5F-B5.1 audit of ContextKeeper's existing dashboard visualization pipeline. It is a foundation document for later rich-widget work and does not introduce new visible dashboard components.
@@ -80,6 +82,8 @@ Exposed data:
 - Context statistics across tracked conversations.
 - Compression count and recent derived compression history.
 - Active conversation snapshot.
+- Live Conversation Timeline events for the active or most recently active conversation.
+- Conversation Inspector view model with Overview metadata and deterministic Intelligence.
 - Dashboard intelligence including health, insights, recommendations, request trends, timeline, conversation risk, and source metadata.
 - System metrics.
 - Instrument panel data for CPU, GPU, memory, context usage, context trend, and compression status.
@@ -243,9 +247,29 @@ Remaining opportunities:
 - Introduce a dedicated append-only compression event store before building richer compression timelines.
 - Consider recording context samples on meaningful events as well as, or instead of, dashboard polling.
 
+## Current addendum through B5.5.2
+
+Implemented after the original B5.1 audit:
+
+- Request Traffic visualization from recent request history.
+- Animated Connection Flow using existing health, metrics, activity, and model state.
+- Context Trend using bounded `ContextHistoryStore` samples.
+- System instrument panel grouping CPU Usage, GPU Usage, Memory Usage, Context Usage, and Compression Status.
+- Live Conversation Timeline derived from existing request, conversation, context, and compression state.
+- Conversation Inspector shell with selection state, loading/unavailable states, Overview, and deterministic Intelligence.
+
+Architecture decisions preserved:
+
+- `/dashboard/data` remains the authoritative dashboard status source.
+- The dashboard still uses one refresh path and one browser polling interval.
+- Conversation, context, compression, timeline, and inspector data are derived from one captured conversation list during a dashboard payload build.
+- No append-only compression event store exists yet.
+- No durable historical archive exists yet.
+- No Conversation Inspector detail endpoint exists yet.
+
 ## Future Visualization Opportunities
 
-Existing data can already support:
+Already implemented from existing data:
 
 - request rate over recent requests;
 - recent latency trend;
@@ -258,6 +282,9 @@ Existing data can already support:
 - active model and latest model display;
 - basic model utilization from request history;
 - current CPU/RAM/GPU gauges.
+- live conversation timeline;
+- selected conversation inspector overview;
+- deterministic selected conversation context/compression intelligence.
 
 Additional backend support is likely needed for:
 
@@ -270,8 +297,11 @@ Additional backend support is likely needed for:
 - historical operational statistics for reports;
 - restart-stable dashboard trend history;
 - exact visualization of when context warning and compression thresholds were crossed.
+- full transcript/detail inspection;
+- context-composition visualization;
+- compression-event detail timelines.
 
-## B5.2 Readiness Notes
+## Historical B5.2 Readiness Notes
 
 Recommended next step before visible rich widgets:
 

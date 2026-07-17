@@ -66,8 +66,9 @@ Example: `Phase 6.5F-B4.2`
 | Live dashboard and intelligence | Completed | Dashboard routes, live metrics, health, insights, recommendations, trends, and timeline implemented. |
 | Windows executable/service foundation | Completed | PyInstaller spec, executable entry point, service runner, and service placeholder present. |
 | Setup wizard and installer | Completed | First-run wizard, Inno Setup foundation, and release build script present. |
-| Dashboard modernization B4 workstream | Completed | Phase 6.5F-B4.8 automatic model context discovery is complete on `main` and `origin/main` at commit `fdd9478`; later B5-B7 dashboard work remains planned. |
-| Live data visualization and rich widgets | Active | Phase 6.5F-B5.4 live conversation timeline is implemented on `phase-6-5f-b5-4-live-conversation-timeline` and pending Product Owner visual QA; Phase 6.5F-B5.3 is present in the current branch baseline at commit `3956b29`; Phase 6.5F-B5.2 is complete on `main` and `origin/main` at commit `7181b69`. |
+| Dashboard modernization B4 workstream | Completed | Phase 6.5F-B4.8 automatic model context discovery is implemented and documented. |
+| Live data visualization and rich widgets | Completed through B5.5.2 | Request Traffic, Connection Flow, Live Conversation Timeline, layout refinement, Connection Flow visibility polish, Conversation Inspector foundation, and Conversation Inspector Overview & Intelligence are implemented; B5.6 synchronized documentation to that state. |
+| Documentation audit and synchronization | Active | Phase 6.5F-B5.6 audits maintained Markdown documents and aligns documentation with the implementation through B5.5.2. |
 | Dashboard customization and user preferences | Planned | Phase 6.5F-B6 planned after B5. |
 | Release polish and final UX review | Planned | Phase 6.5F-B7 planned before historical memory retrieval and validation certification. |
 | Historical memory retrieval and detail preservation | Planned | Dedicated Phase 6.5G approved before Phase 6.6; no implementation exists yet. |
@@ -521,19 +522,19 @@ Evidence:
 
 #### Phase 6.5F-B4 — Dashboard Visual Polish & Micro-Interactions
 
-Status: Active
+Status: Completed
 
 Goal: Apply final visual polish and restrained micro-interactions without destabilizing the responsive dashboard architecture.
 
-Current workstream:
+Historical workstream:
 
 - Branch: `phase-6-5f-b4-4-dashboard-instrument-panel`.
 - Base commit: `85dd3cf` (Phase 6.5F-B4.2 merged into `main`).
-- Overall B4 is not complete yet.
+- Overall B4 is complete; later B5 work added live visualization widgets and inspector capabilities.
 
 #### Phase 6.5F-B4.1 — Core Surface and Status Polish
 
-Status: Completed within the active B4 workstream
+Status: Completed
 
 Principal outcomes:
 
@@ -1007,7 +1008,7 @@ Validation:
 
 Branch: `phase-6-5f-b5-3-live-connection-flow`
 
-Status: Implemented on branch; pending Product Owner visual QA.
+Status: Implemented; Product Owner visual QA remains the acceptance checkpoint for final visual tuning.
 
 Objective:
 
@@ -1063,7 +1064,7 @@ Visual QA requirement:
 
 Branch: `phase-6-5f-b5-4-live-conversation-timeline`
 
-Status: Implemented on branch; pending Product Owner visual QA.
+Status: Implemented; Product Owner visual QA remains the acceptance checkpoint for final visual tuning.
 
 Objective:
 
@@ -1158,7 +1159,7 @@ Visual QA still pending:
 
 Branch: `phase-6-5f-b5-4-2-connection-flow-visibility`
 
-Status: Implemented on branch; pending Product Owner visual QA.
+Status: Implemented; Product Owner visual QA remains the acceptance checkpoint for final visual tuning.
 
 Objective:
 
@@ -1191,7 +1192,7 @@ Visual QA still pending:
 
 ### Phase 6.5F-B5.5 — Conversation Inspector
 
-Status: Planned as smaller implementation slices.
+Status: Active sub-phase track; B5.5.1 and B5.5.2 implemented, later detail slices planned.
 
 Purpose:
 
@@ -1218,7 +1219,7 @@ Durable design note:
 
 Branch: `phase-6-5f-b5-5-1-conversation-inspector-foundation`
 
-Status: Implemented on branch; pending Product Owner visual QA.
+Status: Implemented; Product Owner visual QA remains the acceptance checkpoint for final visual tuning.
 
 Scope:
 
@@ -1267,7 +1268,7 @@ Visual QA still pending:
 
 Branch: `phase-6-5f-b5-5-2-conversation-inspector-overview-intelligence`
 
-Status: Implemented on branch; pending Product Owner visual QA.
+Status: Implemented; Product Owner visual QA remains the acceptance checkpoint for final visual tuning.
 
 Objective:
 
@@ -1361,6 +1362,77 @@ Validation:
 Visual QA still pending:
 
 - Product Owner should validate the Overview and Intelligence sections in no-conversation, healthy, warning, compression-threshold, compression-present, critical, unavailable, refresh, reduced-motion, and narrow/wide responsive states.
+
+### Phase 6.5F-B5.6 — Documentation Audit & Synchronization
+
+Status: Implemented in the working tree; Product Owner documentation QA pending.
+
+Objective:
+
+- Audit every maintained Markdown document.
+- Classify each document as current, historical, superseded, or archive candidate.
+- Synchronize documentation with the current implementation through Phase 6.5F-B5.5.2.
+- Preserve current source behavior as authoritative.
+- Avoid runtime feature work, dashboard redesign, and production-code refactoring.
+
+Architectural approach:
+
+- Treated source files under `src/ctxkeeper/` and current tests as the source of truth.
+- Rewrote only documentation and added status/classification notes to older planning references.
+- Preserved older planning/mockup documents rather than deleting them.
+- Recorded the durable Markdown inventory in `docs/README.md`.
+
+Key contradictions corrected:
+
+- README still described the dashboard as basic and implied the product was closer to planning than current implementation.
+- Architecture still listed unimplemented routing, memory, and plugin engines as initial modules.
+- Configuration priority incorrectly listed command-line setting overrides; current source supports built-in defaults, `contextkeeper.yaml`, and a small environment override set.
+- Test plan stopped before B5 live dashboard widgets, Conversation Timeline, Conversation Inspector, reduced-motion QA, and responsive visual QA.
+- Roadmap still marked B5 live data visualization as planned even though B5.1 through B5.5.2 are implemented.
+- Dashboard layout and live-flow docs still contained pre-implementation or placeholder wording for widgets now implemented.
+
+Documentation updated:
+
+- `README.md`
+- `docs/README.md`
+- `docs/ARCHITECTURE.md`
+- `docs/API_COMPATIBILITY.md`
+- `docs/CONFIGURATION.md`
+- `docs/TEST_PLAN.md`
+- `docs/ROADMAP.md`
+- `docs/PROJECT_HISTORY.md`
+- `docs/ContextKeeper_Project_Plan.md`
+- `docs/DASHBOARD_LAYOUT.md`
+- `docs/DASHBOARD_VISUALIZATION_AUDIT.md`
+- `docs/DASHBOARD_MOCKUP_PLAN.md`
+- `docs/DASHBOARD_MOCKUPS.md`
+- `docs/LIVE_FLOW_VISUALIZATION.md`
+- `docs/COMPONENT_LIBRARY.md`
+- `docs/UI_COMPONENT_GUIDE.md`
+- `docs/DESIGN_SYSTEM.md`
+- `docs/CODING_STANDARDS.md`
+- `docs/ANIMATION_GUIDELINES.md`
+- `docs/COLOR_SYSTEM.md`
+- `docs/DESIGN_LANGUAGE.md`
+- `docs/TYPOGRAPHY.md`
+- `docs/UI_STYLE_GUIDE.md`
+- `docs/CONVERSATION_INSPECTOR.md`
+- `docs/FUTURE_IDEAS.md`
+- `installer/README.md`
+
+Deferred:
+
+- Runtime feature work.
+- Dashboard redesign.
+- Production-code refactoring.
+- Deletion or archival movement of superseded documents.
+- Screenshot replacement or image asset work.
+
+Validation:
+
+- Maintained Markdown relative-link check: passing.
+- Full automated suite: `.\.venv\Scripts\python.exe -m pytest -q`, 264 tests passing, with one existing third-party `StarletteDeprecationWarning` from FastAPI/Starlette TestClient.
+- `git diff --check`: passing with Git line-ending normalization warnings for edited Markdown files; no whitespace errors reported.
 
 ### Phase 6.5G — Historical Memory Retrieval & Detail Preservation (Approved Plan)
 
@@ -1542,25 +1614,22 @@ Scope boundary:
 
 ## Current Project State
 
-- Current active branch: `phase-6-5f-b5-4-live-conversation-timeline`.
-- Current branch baseline before the B5.4 working-tree implementation: `3956b29` (`Add live connection flow animation`).
-- Phase 6.5F-B4.8 — Automatic Model Context Discovery is complete on `main`; the old local B4.8 feature branch has been deleted.
-- Phase 6.5F-B5.1 — Live Visualization Foundation is complete on `main` and `origin/main` at commit `e35e891`.
-- Phase 6.5F-B5.2 — Live Request Traffic Visualization is complete on `main` and `origin/main` at commit `7181b69`.
-- Current active implementation phase: Phase 6.5F-B5.4 — Live Conversation Timeline, implemented in the working tree on branch and pending Product Owner visual QA.
-- Latest verified automated test count: 249 tests passing during the Phase 6.5F-B5.4 live conversation timeline pass.
-- Dashboard status: modern operations-console dashboard with live proxy, Ollama, request, context, compression, conversation, intelligence, health, independent operational activity, trend, recommendation, timeline, six-card instrument panel, standardized three-line gauge support rows, refined inactive and no-active Context/Compression instruments, converged lower Overview layout, reusable gauges, visual QA overflow guards, automatic model context-window discovery, compact live request-traffic visualization, live connection-flow animation, live conversation timeline, and restrained micro-interaction polish.
+- Current active implementation phase: Phase 6.5F-B5.6 — Documentation Audit & Synchronization.
+- Phase 6.5F-B4.8 — Automatic Model Context Discovery is implemented.
+- Phase 6.5F-B5.1 through Phase 6.5F-B5.5.2 are represented in source and tests.
+- Latest verified automated test count before B5.6 documentation-only validation: 264 tests passing during the Phase 6.5F-B5.5.2 inspector pass, with one existing third-party FastAPI/Starlette TestClient deprecation warning.
+- Dashboard status: modern operations-console dashboard with live proxy, Ollama, request, context, compression, conversation, intelligence, health, operational activity, recommendations, grouped five-card system instrument panel, Context Trend, Request Traffic, animated Connection Flow, Live Conversation Timeline, Conversation Inspector drawer, Conversation Inspector Overview, and deterministic Conversation Inspector Intelligence.
 - Major capabilities currently present:
   - FastAPI-based transparent Ollama proxy.
   - `/api/*` and `/v1/*` passthrough with streaming preservation for supported endpoints.
   - Request diagnostics and system metrics.
   - Conversation store, context meter, context monitor, and compression candidates.
-  - Summarizer-backed automatic rolling context compression.
+  - Compression manager, compression planning, rolling-summary support, and confirmed compression metadata.
+  - Automatic Model Context Discovery and context-window enforcement.
   - Browser dashboard with live monitoring and intelligence.
   - Windows service foundation, PyInstaller executable foundation, first-run setup wizard, Inno Setup installer foundation, and release build script.
 - Planned work still ahead:
-  - Product Owner visual QA for Phase 6.5F-B5.4 — Live Conversation Timeline at 50%, 75%, and 100% zoom/scaling equivalents, including empty, active, successful, failed, warning, and compression timeline states.
-  - Later Phase 6.5F-B5 rich live visualization/widget work based on the B5.1 audit, B5.2 traffic visualization, B5.3 connection-flow animation, and B5.4 live timeline.
+  - Product Owner documentation QA for Phase 6.5F-B5.6.
   - Phase 6.5F-B6 — Dashboard Customization & User Preferences.
   - Phase 6.5F-B7 — Release Polish & Final UX Review.
   - Phase 6.5G — Historical Memory Retrieval & Detail Preservation.
@@ -1569,15 +1638,14 @@ Scope boundary:
   - Version 1.0 Release.
   - Version 2+ architectural ideas tracked in `docs/FUTURE_IDEAS.md`, intentionally outside the Version 1.0 release scope.
 
-Do not treat unmerged Phase 6.5F-B5.4 branch work, planned Phase 6.5G, Phase 6.6, or Version 2+ roadmap content as merged or released until Git history later confirms that state.
+Do not treat planned Phase 6.5F-B6/B7, Phase 6.5G, Phase 6.6, Phase 7, or Version 2+ roadmap content as implemented until source and tests confirm that state.
 
 ## Planned Next Steps
 
 This section is tentative and subject to refinement. These names and boundaries are planning labels, not completed commitments.
 
 - Phase 6.5F-B5 — Live Data Visualization & Rich Widgets.
-  - Product Owner visual QA for Phase 6.5F-B5.4 — Live Conversation Timeline.
-  - Later B5 visualization work based on the B5.1 audit, B5.2 request-traffic visualization, B5.3 connection-flow animation, and B5.4 live timeline.
+  - Product Owner documentation QA for Phase 6.5F-B5.6.
 - Phase 6.5F-B6 — Dashboard Customization & User Preferences.
 - Phase 6.5F-B7 — Release Polish & Final UX Review.
 - Phase 6.5G — Historical Memory Retrieval & Detail Preservation.

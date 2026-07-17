@@ -1,5 +1,7 @@
 # ContextKeeper Future Ideas
 
+Status: Current future-ideas parking lot. These ideas are not Version 1 implementation commitments unless promoted in `ROADMAP.md`.
+
 ## Purpose
 
 This document is an idea parking lot. It preserves promising ContextKeeper ideas that should not be forgotten but are not yet formal implementation commitments.

@@ -1,5 +1,7 @@
 # ContextKeeper Component Library
 
+Status: Current through Phase 6.5F-B5.5.2.
+
 ## 1. Purpose
 
 This document defines the reusable UI component library for ContextKeeper.
@@ -480,7 +482,7 @@ Usage rules:
 
 Purpose:
 
-- Future animation placeholder for request movement.
+- Represents request movement during active traffic.
 
 Primary information:
 
@@ -491,6 +493,7 @@ Usage rules:
 
 - Do not implement decorative packets.
 - Packet motion should represent real request flow or streaming activity.
+- Preserve reduced-motion behavior.
 
 ## 9. Timeline Components
 
@@ -533,7 +536,77 @@ Usage rules:
 - Pair marker with text.
 - Avoid using marker color alone.
 
-## 10. Event Components
+## 10. Conversation Inspector Components
+
+### Inspector Drawer
+
+Purpose:
+
+- Provides selected-conversation drill-down while preserving the main Operations dashboard context.
+
+Usage rules:
+
+- Open from selectable Live Conversation Timeline entries.
+- Use a right-side drawer on desktop.
+- Use effectively full-width presentation on narrow layouts.
+- Provide a visible close control and Escape close behavior.
+- Do not add an independent polling loop.
+
+### Inspector Overview Field
+
+Purpose:
+
+- Shows one factual selected-conversation metadata value.
+
+Supported examples:
+
+- conversation identifier
+- state
+- model
+- client/source
+- endpoint
+- request type
+- message count
+- request count
+- estimated tokens
+- context-window capacity
+- Context Usage
+- Compression count
+- last activity
+- duration
+
+Usage rules:
+
+- Use stable DOM hooks for testable core fields.
+- Truncate long identifiers visually while preserving the full value in an accessible title or equivalent.
+- Use a calm placeholder for missing values.
+- Escape externally derived display strings.
+
+### Inspector Intelligence Card
+
+Purpose:
+
+- Shows deterministic context/compression health for the selected conversation.
+
+Supported states:
+
+- insufficient data
+- healthy
+- warning
+- compression threshold reached
+- compression present
+- action required
+
+Usage rules:
+
+- Do not call an LLM.
+- Base status only on existing context, threshold, compression, and conversation metadata.
+- Show readable status text and supporting signals.
+- Use red only for genuine degraded or critical states.
+- Show recommendations only when action is genuinely appropriate.
+- Do not expose prompts, responses, rolling-summary bodies, or request bodies.
+
+## 11. Event Components
 
 ### Event Card
 
@@ -593,7 +666,7 @@ Usage rules:
 - Should remain compact on Operations.
 - Full explanation belongs in Analytics or detail pages.
 
-## 11. Navigation Components
+## 12. Navigation Components
 
 ### Sidebar Item
 
@@ -656,7 +729,7 @@ Usage rules:
 - Use icons with accessible labels.
 - Do not use toolbar buttons for unclear commands.
 
-## 12. Input Components
+## 13. Input Components
 
 ### Search Box
 
@@ -735,7 +808,7 @@ Usage rules:
 - Label should be specific.
 - Destructive actions require confirmation.
 
-## 13. Dialog Components
+## 14. Dialog Components
 
 ### Confirmation Dialog
 
@@ -770,7 +843,7 @@ Usage rules:
 - Keep informational.
 - Do not include operational controls.
 
-## 14. Empty States
+## 15. Empty States
 
 Purpose:
 
@@ -788,7 +861,7 @@ Examples:
 - No recommendations queued.
 - No recent compression events.
 
-## 15. Loading States
+## 16. Loading States
 
 Purpose:
 
@@ -801,7 +874,7 @@ Rules:
 - Avoid large spinners in Operations.
 - Preserve component dimensions where possible.
 
-## 16. Error States
+## 17. Error States
 
 Purpose:
 
@@ -814,7 +887,7 @@ Rules:
 - Avoid exposing sensitive details.
 - Preserve compatibility with client-facing proxy behavior.
 
-## 17. Component Rules
+## 18. Component Rules
 
 - One component answers one question.
 - Components should not duplicate nearby information.
@@ -826,7 +899,7 @@ Rules:
 - Error states should be clear without being visually noisy.
 - Decorative elements should not compete with operational state.
 
-## 18. Future Components
+## 19. Future Components
 
 Reserve patterns for:
 
@@ -838,7 +911,7 @@ Reserve patterns for:
 
 Future components should follow existing card, status, metric, and navigation patterns unless a new pattern is clearly justified.
 
-## 19. Implementation Checklist
+## 20. Implementation Checklist
 
 Before creating or modifying reusable UI components, verify:
 

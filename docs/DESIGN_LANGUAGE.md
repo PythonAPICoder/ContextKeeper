@@ -1,5 +1,7 @@
 # ContextKeeper Design Language
 
+Status: Current through Phase 6.5F-B5.6.
+
 ## 1. Vision
 
 ContextKeeper is an AI Operations Console for local and distributed AI systems.

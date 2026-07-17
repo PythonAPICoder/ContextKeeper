@@ -1,5 +1,7 @@
 # ContextKeeper Dashboard Mockup Plan
 
+Status: Superseded historical planning document. This file records pre-implementation dashboard mockup direction. The current Operations dashboard implementation has advanced through Request Traffic, Connection Flow, Live Conversation Timeline, and Conversation Inspector work. Use `DASHBOARD_LAYOUT.md`, `CONVERSATION_INSPECTOR.md`, `PROJECT_HISTORY.md`, and the source implementation as the current references.
+
 ## Purpose
 
 This document defines the target for the next high-fidelity dashboard mockup. The mockup must be reviewed and approved before additional UI code changes are made.

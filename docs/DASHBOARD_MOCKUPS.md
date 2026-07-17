@@ -1,5 +1,7 @@
 # ContextKeeper Dashboard Mockups
 
+Status: Superseded historical planning document. These text mockups preserve earlier design direction, but they are not the current dashboard contract. The current dashboard includes the grouped system instrument panel, System Activity row with Context Trend and Connection Flow, Request Traffic, Live Conversation Timeline, and Conversation Inspector drawer. Use `DASHBOARD_LAYOUT.md`, `CONVERSATION_INSPECTOR.md`, `PROJECT_HISTORY.md`, and source code for current behavior.
+
 ## 1. Purpose
 
 This document provides textual dashboard mockups for ContextKeeper. These mockups define the intended structure for full desktop, 75% desktop, and compact layouts.

@@ -1,5 +1,9 @@
 # ContextKeeper Project Plan
 
+Status: Historical origin plan. This document is retained for project-history context. Current implementation status lives in `PROJECT_HISTORY.md`, active sequencing lives in `ROADMAP.md`, and source behavior remains authoritative.
+
+Current implementation through Phase 6.5F-B5.5.2 includes the transparent proxy, diagnostics, Context Usage tracking, compression subsystem support, Automatic Model Context Discovery, the live Operations dashboard, Request Traffic, Connection Flow, Live Conversation Timeline, Conversation Inspector foundation, and Conversation Inspector Overview & Intelligence.
+
 ## Vision
 
 ContextKeeper is a transparent middleware layer that sits between any
@@ -16,6 +20,8 @@ requiring changes to existing clients.
 -   Keep production-quality code from day one.
 
 ## Phase Roadmap
+
+The phase roadmap below is the original high-level plan. It has been superseded by the more detailed 6.5F/6.5G/6.6 roadmap in `ROADMAP.md`.
 
 ### Phase 0 -- Planning
 

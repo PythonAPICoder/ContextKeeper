@@ -1,394 +1,208 @@
 # ContextKeeper Dashboard Layout
 
-## 1. Purpose
+Status: Current through Phase 6.5F-B5.5.2.
 
-This document defines the visual layout and information architecture for the ContextKeeper Operations Dashboard.
+This document describes the current Operations dashboard visual hierarchy and layout contract. It defines layout and user flow; source code remains authoritative for exact CSS and DOM details.
 
-The Operations Dashboard is the primary AI Operations Console surface. It should help users understand system health, request flow, context pressure, compression activity, and required action without reading a report.
+## Purpose
 
-This document defines layout, hierarchy, spacing, and user flow. It does not define colors, typography, backend contracts, or implementation code.
+The ContextKeeper Operations dashboard is the primary AI operations console for the local proxy. It should help users understand system health, request flow, Context Usage, Compression activity, and required action without reading logs or reports.
 
-## 2. Dashboard Design Goals
+## Layout principles
 
-- Communicate overall system health within three seconds.
-- Present status before configuration.
-- Make live request flow visually central.
-- Show only the information needed for operational awareness.
-- Avoid duplicate information.
-- Avoid clutter and dense report-style layouts.
-- Keep critical information above the fold during normal desktop operation.
-- Provide clear paths to detail pages for deeper investigation.
+- Communicate system health quickly.
+- Keep runtime status above detailed history.
+- Group instruments with instruments and activity visualizations with activity visualizations.
+- Preserve live dashboard context while drill-down surfaces are open.
+- Avoid horizontal overflow.
+- Preserve reduced-motion support.
+- Keep prompt, response, rolling-summary, and request-body content out of routine dashboard surfaces.
 
-The dashboard should feel like a live operations console, not a static reporting screen.
+## Current page structure
 
-## 3. Information Hierarchy
-
-The dashboard should prioritize information in this order:
-
-1. Overall Health
-2. User Action Required
-3. Live Request Flow
-4. Operational Metrics
-5. Context Pressure
-6. Compression Activity
-7. Timeline
-8. Events
-9. Detailed Logs
-
-Detailed logs and long history should not compete with the main Operations view. They belong in secondary views or expandable detail areas.
-
-## 4. Overall Page Structure
-
-The dashboard uses a 12-column responsive grid inside the main content area.
-
-Recommended desktop structure:
+The Operations page currently uses this hierarchy:
 
 ```text
-Header
-Primary Status Row
-Live Connection Flow Area
-Operational Metrics + Context & Compression
-Activity Timeline + Event Feed
-Footer / Status Bar
+Topbar
+Operations hero
+System Instrument Panel
+System Activity
+Operations lower row
+Conversation Inspector drawer
 ```
 
-Recommended grid:
+### Topbar
 
-- Page max width: fluid, fills available browser width.
-- Grid columns: 12.
-- Desktop gutter: 16px.
-- Compact desktop gutter: 12px.
-- Narrow gutter: 8px.
-- Outer page margin: 16px to 24px on desktop.
-- Compact desktop page margin: 12px to 16px.
+Purpose:
 
-The page should scan naturally from top to bottom. Users should not need to inspect side panels before understanding primary health and flow.
+- Identify ContextKeeper.
+- Show global refresh/status context.
+- Surface proxy/Ollama connection metadata.
 
-## 5. Header Layout
+The topbar should stay compact and should not compete with the Operations hero.
 
-The header provides persistent application context and global access.
+### Operations hero
 
-Required content:
+Purpose:
 
-- Application title: ContextKeeper.
-- Connection summary: proxy port and Ollama endpoint.
-- Global status: concise health state.
-- Settings access: link or button to Settings.
+- Communicate overall health and action state.
+- Show recommendations.
+- Show high-level statistics.
 
-Recommended layout:
+Current content:
 
-- Header spans all 12 columns.
-- Application title aligns left.
-- Connection summary and Settings access align right.
-- Header height should remain compact.
-- Header should not compete visually with the Primary Status Row.
+- health status;
+- current activity;
+- last refresh;
+- recommendations;
+- total requests;
+- active conversations;
+- compression savings/count;
+- average response time.
 
-Header sizing:
+### System Instrument Panel
 
-- Full desktop height: 56px to 72px.
-- Compact desktop height: 44px to 56px.
-- Avoid multiline header content unless width is narrow.
+Purpose:
 
-## 6. Primary Status Row
+- Present gauge/status-meter cards as a unified instrument row.
 
-The Primary Status Row provides the fastest answer to system state.
+Current top-row cards:
 
-Required components:
-
-- Overall Health card.
-- User Action Required / Recommendations card.
-- Ollama status.
-- ContextKeeper status.
-- Active Model status.
-- Connected Clients status.
-
-Recommended full desktop layout:
-
-- Overall Health spans 3 to 4 columns.
-- Recommendations spans 3 to 4 columns.
-- Service status cards use remaining columns.
-- Cards align to a shared height.
-
-Recommended compact desktop layout:
-
-- Overall Health and Recommendations may stack in a left column.
-- Service status cards may form a 2-column or 3-column compact grid.
-- Cards should reduce height before pushing Live Connection Flow too far down.
+1. CPU Usage.
+2. GPU Usage.
+3. Memory Usage.
+4. Context Usage.
+5. Compression Status.
 
 Rules:
 
-- Each card answers one question.
-- Recommendations should remain compact when no action is required.
-- Long explanatory text should move to detail pages.
-- Empty states must remain visually balanced.
+- Keep these cards visually related.
+- Do not insert chart widgets into this row.
+- Preserve compact three-line supporting details.
+- Preserve responsive behavior that collapses the row at narrower widths.
 
-## 7. Live Connection Flow Area
+### System Activity
 
-The Live Connection Flow is the dashboard centerpiece.
+Purpose:
 
-Required topology:
+- Group visualization widgets that explain activity and trends.
+
+Current second-row widgets:
+
+1. Context Trend.
+2. Connection Flow.
+
+Context Trend shows rolling active-conversation Context Usage history from dashboard samples.
+
+Connection Flow shows the path:
 
 ```text
 Client -> ContextKeeper -> Ollama -> Model
 ```
 
+It includes activity state, availability state, labels, badges, and a restrained moving marker during active traffic.
+
+### Operations lower row
+
 Purpose:
 
-- Show whether the request path is connected.
-- Show where traffic is flowing.
-- Show degraded or disconnected segments.
-- Reserve space for future animated request flow.
+- Present recent operational activity and active-conversation context without crowding primary health/instrument content.
 
-Recommended layout:
+Current cards:
 
-- Full desktop: spans all 12 columns.
-- Compact desktop: spans all available width below the Primary Status Row.
-- Minimum supported width: may become a two-row or vertical topology.
+1. Traffic with Request Traffic visualization.
+2. Active Conversation.
+3. Live Conversation Timeline.
 
-Sizing:
+Traffic shows request trend, request rate, errors, and compact recent request-frequency visualization.
 
-- Full desktop height: 240px to 320px.
-- Compact desktop height: 140px to 220px.
-- Narrow layout: height determined by stacked node cards.
+Active Conversation shows selected/current conversation metadata and rolling-summary availability without exposing full private content in the Operations summary.
 
-Rules:
+Live Conversation Timeline is a compact chronological operational feed for the active or most recently active conversation. Timeline entries that map to a real conversation can open the Conversation Inspector.
 
-- The flow area should be the largest visual element on full desktop.
-- Do not make it so tall that operational metrics disappear below the fold.
-- Connection nodes should remain readable at every supported width.
-- Animation space should be reserved but not required for static layout.
+### Conversation Inspector drawer
 
-## 8. Operational Metrics Area
+Purpose:
 
-Operational Metrics show whether traffic is healthy.
+- Provide selected-conversation drill-down while preserving dashboard context.
 
-Required metrics:
+Current behavior:
 
-- Requests.
-- Latency.
-- Throughput.
-- Tokens.
-- Errors.
+- Opens from selectable Live Conversation Timeline entries.
+- Uses a right-side drawer on desktop.
+- Uses a backdrop/effectively full-width drawer on narrow layouts.
+- Supports close button and Escape.
+- Keeps polling active.
+- Shows loading, unavailable, Overview, and Intelligence states.
+- Does not show prompt text, response text, rolling-summary bodies, request bodies, or retrieved private content.
 
-Recommended layout:
+See `CONVERSATION_INSPECTOR.md` for the current inspector contract.
 
-- Full desktop: metric cards span 6 to 8 columns total.
-- Compact desktop: use a 2-column grid.
-- Narrow layout: stack cards vertically.
+## Secondary dashboard pages
 
-Each metric card should include:
+Current source includes secondary pages for:
 
-- label
-- primary value
-- short supporting text or trend
-- optional compact visualization
+- Conversations.
+- Context.
+- Analytics.
+- Logs.
+- Settings.
 
-Rules:
+These pages remain subordinate to the Operations dashboard and should not duplicate the core Operations hierarchy unless a later phase intentionally redesigns navigation.
 
-- Metrics should not duplicate the Primary Status Row unless they add detail.
-- Charts should remain compact on Operations.
-- Detailed trend analysis belongs in Analytics.
+## Responsive behavior
 
-## 9. Context & Compression Area
+Requirements:
 
-This area explains context pressure and compression state.
+- Preserve readability at 50%, 75%, and 100% browser zoom.
+- Preserve wide-display usability, including 3440×1440 with 100% Windows display scaling.
+- Collapse multi-column grids cleanly at narrower widths.
+- Do not introduce horizontal page overflow.
+- Ensure the Conversation Inspector becomes effectively full-width on narrow layouts.
+- Keep dashboard controls reachable while preserving context.
 
-Required content:
+Manual review should include:
 
-- Context usage.
-- Compression status.
-- Memory indicators.
+- 3440×1440.
+- 2450×1440.
+- 1720×1440.
+- 50%, 75%, and 100% browser zoom.
+- Narrow/mobile breakpoint.
 
-Recommended layout:
+## Motion and reduced motion
 
-- Full desktop: sits beside Operational Metrics.
-- Compact desktop: may share a row with Resources or Active Conversation.
-- Narrow layout: stack below Traffic.
+Motion should communicate real state, not decoration.
 
-Rules:
+Current motion surfaces:
 
-- Context usage must show pressure state and value.
-- Compression status should distinguish normal, recommended, completed, and critical states.
-- Memory indicators should remain concise.
-- Detailed compression history belongs on the Context page.
+- refresh/status micro-interactions;
+- gauge transitions;
+- Request Traffic updates;
+- Connection Flow moving marker during active traffic;
+- timeline entry updates;
+- Conversation Inspector drawer transition.
 
-## 10. Activity Timeline
+Reduced-motion behavior must disable or simplify continuous animation and should never hide status information.
 
-The Activity Timeline shows chronological operational history.
+## Visual QA checklist
 
-Content:
+Before accepting layout changes, verify:
 
-- request summaries
-- compression events
-- warnings
-- health transitions
+- Operations hero remains above the instrument panel.
+- Top row contains only CPU Usage, GPU Usage, Memory Usage, Context Usage, and Compression Status.
+- Second row contains Context Trend and Connection Flow.
+- Traffic, Active Conversation, and Live Conversation Timeline remain grouped as operational/history content.
+- Conversation Inspector opens without causing unpredictable card reflow.
+- No clipping or horizontal overflow.
+- Request Traffic, Connection Flow, Timeline, and Inspector remain readable under active polling.
+- Reduced-motion mode is calm and still informative.
 
-Recommended layout:
+## Future layout boundaries
 
-- Full desktop: lower section, 6 to 8 columns.
-- Compact desktop: below core metrics or behind a detail link if space is constrained.
-- Narrow layout: stack below metrics.
+Future dashboard customization should preserve:
 
-Rules:
-
-- Timeline items should be concise.
-- Use timestamps consistently.
-- Do not show full logs in the Operations timeline.
-
-## 11. Event Feed
-
-The Event Feed shows recent operational events.
-
-Content:
-
-- informational messages
-- errors
-- notifications
-- service state changes
-
-Recommended layout:
-
-- Full desktop: beside Activity Timeline.
-- Compact desktop: below Traffic and Resources.
-- Narrow layout: stack or link to Logs.
-
-Rules:
-
-- Events should be scannable.
-- Errors must be clear and actionable.
-- Informational events should not look urgent.
-- Detailed logs belong on the Logs page.
-
-## 12. Footer / Status Bar
-
-The Footer or Status Bar provides runtime metadata.
-
-Required content:
-
-- Version.
-- Build.
-- Runtime.
-- Uptime.
-
-Recommended layout:
-
-- Full desktop: compact horizontal bar at bottom.
-- Compact desktop: single-line metadata where possible.
-- Narrow layout: wrap metadata or move to Settings/About.
-
-Rules:
-
-- Footer content must not compete with operational status.
-- Footer may be omitted from the above-the-fold area if space is constrained.
-
-## 13. Responsive Layout Behavior
-
-### Full-Screen Desktop
-
-Target examples:
-
-- 2560x1440.
-- 3440x1440.
-
-Behavior:
-
-- Use rich 12-column layout.
-- Primary Status Row and Live Connection Flow appear above the fold.
-- Operational Metrics and Context & Compression should begin above the fold.
-- No scrolling should be required for normal operational awareness.
-
-### 75% Desktop Width
-
-Target example:
-
-- Browser window around 1400px to 1900px wide.
-
-Behavior:
-
-- Use compact desktop layout.
-- Primary status cards may reorganize into a denser grid.
-- Recommendations should remain compact.
-- Connection Flow may become a two-row topology.
-- Traffic, Resources, and Active Conversation should remain visible or begin above the fold.
-
-### Minimum Supported Width
-
-Target example:
-
-- Browser window around 1100px to 1350px wide.
-
-Behavior:
-
-- Use compact desktop mode before switching to mobile stacking.
-- Reduce card padding, gaps, and min-heights.
-- Keep top metrics, full Connection Flow, and at least Traffic and Resources reachable with minimal scrolling.
-- Below this range, vertical stacking and scrolling are acceptable.
-
-## 14. Expansion Strategy
-
-Reserve layout capacity for future features without crowding Operations.
-
-Future expansion areas:
-
-- Multi-server monitoring.
-- Plugin panels.
-- Agent monitoring.
-- Cloud providers.
-- Workspace memory.
-
-Rules:
-
-- New features should not be added directly to Operations unless they affect health, flow, or immediate action.
-- Detail-heavy features should receive dedicated pages or drill-down panels.
-- Operations should remain the launch pad.
-
-## 15. Layout Rules
-
-- One component should answer one question.
-- No scrolling should be required during normal desktop operation.
-- Critical information should always remain above the fold.
-- Cards should align consistently.
-- Similar information should use similar sizing.
-- Empty states should remain visually balanced.
-- Avoid duplicate information across adjacent cards.
-- Long text should be truncated, summarized, or moved to detail pages.
-- Compact layouts should feel intentional, not squeezed.
-- Connection Flow should remain readable before decorative details are preserved.
-
-## 16. Future Expansion
-
-The dashboard layout must support future growth toward:
-
-- multi-server operations
-- plugin lifecycle monitoring
-- agent execution monitoring
-- model routing visibility
-- workspace memory observability
-- cloud provider status
-
-Future dashboard extensions should preserve the primary hierarchy:
-
-1. Health.
-2. Action.
-3. Flow.
-4. Metrics.
-5. Context.
-6. Events.
-7. Details.
-
-## 17. Implementation Checklist
-
-Before implementing or modifying dashboard layouts, verify:
-
-- The layout communicates overall health within three seconds.
-- The page reads naturally from top to bottom.
-- The Primary Status Row appears above the Live Connection Flow.
-- Live Connection Flow is visually central.
-- Critical information remains above the fold on full desktop.
-- Compact desktop widths remain usable at 100% zoom.
-- Cards align to the 12-column grid.
-- Similar components use similar sizing.
-- Each component answers one clear question.
-- Empty states are balanced and not visually broken.
-- Detailed logs and long history are not shown directly in Operations.
-- Future multi-server, plugin, agent, cloud, and memory areas have an expansion path.
+- instrument grouping;
+- System Activity grouping;
+- dashboard-as-observer architecture;
+- single dashboard refresh path unless intentionally changed;
+- privacy boundaries for prompt/response/summary content.

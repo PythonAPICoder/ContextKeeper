@@ -1,5 +1,7 @@
 # ContextKeeper Design System
 
+Status: Current through Phase 6.5F-B5.5.2.
+
 ## Purpose
 
 This document defines the visual and interaction foundation for the ContextKeeper browser dashboard.
@@ -104,7 +106,7 @@ Allowed:
 
 - subtle value change feedback
 - gentle status pulse on live connection dots
-- future connection-flow animation showing request movement
+- Connection Flow animation showing real request movement
 - short transitions for hover and state changes
 
 Avoid:

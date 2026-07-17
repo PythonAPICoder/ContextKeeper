@@ -1,268 +1,130 @@
 # ContextKeeper Live Flow Visualization
 
-## 1. Purpose
+Status: Current through Phase 6.5F-B5.4.2.
 
-The Live Flow Visualization is the signature operational widget in ContextKeeper. It shows whether AI requests can move through the active path:
+The Connection Flow visualization is the signature operational widget in ContextKeeper. It shows whether requests can move through the active path:
 
 ```text
-Client
-  |
-ContextKeeper
-  |
-Ollama
-  |
-Model
+Client -> ContextKeeper -> Ollama -> Model
 ```
 
-The widget should make request flow, connection health, and failure location understandable at a glance. It must remain calm during normal operation and become more explicit only when user attention is required.
+It is part of the System Activity row beside Context Trend.
 
-## 2. Visualization Goals
+## Goals
 
-- Show whether the request path is connected.
-- Show whether traffic is flowing.
-- Identify the segment responsible for delays or failures.
-- Reserve space for future packet animation.
-- Scale from full desktop to compact desktop layouts.
-- Support future multi-server and cloud-provider routing.
+- Show whether the request path is available.
+- Show whether traffic is actively flowing.
+- Identify which segment is waiting, active, warning, offline, or failed.
+- Keep the visualization calm during normal operation.
+- Preserve reduced-motion support.
+- Scale from wide desktop to compact layouts.
 
 The visualization should communicate system state, not decorate the page.
 
-## 3. Node Types
+## Nodes
 
-### Client Node
+### Client
 
-Purpose:
-
-- Represents connected applications or users sending requests.
+Represents connected applications or users sending requests.
 
 Primary information:
 
-- client state
-- number of recent clients
-- last observed activity when available
+- client state;
+- recent client count;
+- last observed activity when available.
 
-States:
+### ContextKeeper
 
-- waiting
-- connected
-- active
-- warning
-- disconnected
-
-### ContextKeeper Node
-
-Purpose:
-
-- Represents the local proxy and orchestration layer.
+Represents the local proxy and orchestration layer.
 
 Primary information:
 
-- proxy status
-- listening address or port
-- routing/compression activity when relevant
+- proxy status;
+- listening port;
+- activity state.
 
-States:
+### Ollama
 
-- online
-- active
-- warning
-- error
-
-### Ollama Node
-
-Purpose:
-
-- Represents the upstream Ollama service.
+Represents the configured upstream Ollama runtime.
 
 Primary information:
 
-- reachability
-- version when available
-- latency when available
+- reachability;
+- version when available;
+- latency when available.
 
-States:
+### Model
 
-- checking
-- online
-- slow
-- warning
-- offline
-- error
-
-### Model Node
-
-Purpose:
-
-- Represents the active or most recently used model.
+Represents the active or most recently observed model.
 
 Primary information:
 
-- model name
-- active/waiting state
-- optional load or response state
+- model name;
+- waiting/active/observed state;
+- model warmup or unavailable state when known.
 
-States:
+## Connection segments
 
-- waiting
-- active
-- streaming
-- warning
-- unavailable
-
-## 4. Connection Types
-
-### Client to ContextKeeper
-
-Shows whether clients are reaching the proxy.
-
-### ContextKeeper to Ollama
-
-Shows whether the proxy can reach the upstream AI runtime.
-
-### Ollama to Model
-
-Shows whether a model is active or selected.
+- Client to ContextKeeper.
+- ContextKeeper to Ollama.
+- Ollama to Model.
 
 Rules:
 
-- Connection lines should be muted when idle.
-- Active lines may use restrained live-activity emphasis.
-- Degraded lines must pair visual state with text.
+- Idle connections are muted.
+- Active connections receive restrained emphasis.
+- Degraded connections pair visual state with text and badges.
+- Status is never communicated by color alone.
 
-## 5. Connection States
+## Moving marker
 
-| State | Meaning |
-| --- | --- |
-| Connected | Segment is available and healthy |
-| Idle | Segment is available but inactive |
-| Streaming | Request or response stream is active |
-| Warning | Segment is slow, unstable, or elevated risk |
-| Disconnected | Segment is unavailable |
-| Error | Segment has failed or returned an error |
-
-Connection state must not rely on color alone. Use labels, icons, line style, node state, or supporting text.
-
-## 6. Packet Animation Concepts
-
-Flow packets are future animation placeholders.
-
-Purpose:
-
-- represent request movement
-- represent streaming response movement
-- show direction and activity
-
-Rules:
-
-- Packets should map to real request activity.
-- Packet speed may reflect request rate or streaming state.
-- Packets should be subtle during normal operation.
-- Packet animation must pause or simplify when reduced motion is enabled.
-- Do not animate packets for decoration.
-
-## 7. Streaming Visualization
-
-Streaming should be visible without becoming noisy.
-
-Recommended behavior:
-
-- show directional packet movement along active segments
-- use a subtle pulse on the active node or connector
-- display streaming state text where space allows
-- avoid rapid flashing
-
-Streaming should distinguish request direction from response direction when the interaction model supports it.
-
-## 8. Error Visualization
-
-Errors should identify the failing segment.
-
-Rules:
-
-- Mark the affected node or connector.
-- Provide concise text explaining the failure.
-- Do not make the entire flow appear failed if only one segment is degraded.
-- Keep healthy segments visually distinct from failed segments.
-
-Examples:
-
-- Ollama offline: mark ContextKeeper to Ollama segment and Ollama node.
-- No active model: mark Model node as waiting, not critical.
-- Client not connected: mark Client node as waiting, not failed.
-
-## 9. Reconnection Behavior
-
-Reconnection should communicate recovery clearly.
-
-Behavior:
-
-- transition from offline to checking
-- transition from checking to online or warning
-- clear stale error emphasis after recovery
-- optionally show a success event outside the flow widget
-
-Do not use celebratory animation for recovery. Recovery should feel stable and factual.
-
-## 10. Idle Behavior
-
-Idle is a normal state.
-
-Rules:
-
-- Idle should look calm and available.
-- Do not imply a failure when no client or model is active.
-- Idle connectors should remain visible but low-emphasis.
-- Empty text should explain the state, such as "No clients seen recently."
-
-## 11. Future Multi-Server Support
-
-The visualization must eventually support:
-
-- multiple ContextKeeper instances
-- multiple Ollama endpoints
-- remote model providers
-- cloud providers
-- routed model paths
-- fallback paths
-
-Future layout options:
-
-- stacked server lanes
-- grouped provider clusters
-- expandable routes
-- selected route focus with secondary routes muted
-
-The default Operations view should still focus on the active route.
-
-## 12. Accessibility
+The current implementation includes a restrained moving marker on the SVG connection path during active traffic.
 
 Requirements:
 
-- Every node has a text label.
-- Every state has a text equivalent.
-- Color is never the only state cue.
-- Animation is optional and respects reduced-motion preferences.
-- The flow path remains understandable when animation is disabled.
+- The marker represents real request/stream activity.
+- The marker must be visible enough to distinguish from the static connector path.
+- The marker uses a moderately larger dot and subtle halo after the B5.4.2 visibility polish.
+- The marker must not resemble a flashing alert.
+- Animation speed and direction should remain stable unless a future phase explicitly changes behavior.
+- Inactive state must not imply active traffic.
 
-## 13. Layout Rules
+Reduced-motion behavior:
 
-- Full desktop: flow may be the largest visual element.
-- Medium desktop: flow may become a two-row topology.
-- Compact desktop: flow should remain readable with smaller nodes.
-- Narrow width: flow may stack vertically.
-- Node labels should remain visible at all sizes.
-- Long details should truncate or move to tooltips/detail pages.
-- Flow should not push all operational metrics below the fold.
+- Continuous marker animation is disabled or hidden under `prefers-reduced-motion`.
+- State labels, badges, and node text remain the source of truth when motion is reduced.
 
-## 14. Implementation Checklist
+## Error and degraded states
 
-Before implementing or modifying the Live Flow Visualization, verify:
+Errors should identify the failing segment.
 
-- The path Client -> ContextKeeper -> Ollama -> Model is clear.
-- Every node has a purpose, label, and state.
-- Every connector has a state.
-- Idle, streaming, warning, disconnected, and error states are represented.
-- Reduced-motion behavior is defined.
-- Error state identifies the affected segment.
-- Compact desktop layout remains readable.
-- Multi-server expansion is not blocked by the layout.
+Examples:
+
+- No client activity: Client node waits while proxy and Ollama may remain healthy.
+- Ollama offline: ContextKeeper-to-Ollama segment and Ollama node indicate the failure.
+- No model observed: Model node waits without implying proxy failure.
+- Request failure: activity and recent request diagnostics show failure state.
+
+## Responsive behavior
+
+The full horizontal topology is preferred on desktop. At narrower widths, the layout may stack while preserving node order and status readability.
+
+Manual review should confirm:
+
+- no clipping;
+- no horizontal overflow;
+- labels and badges remain readable;
+- active marker remains visible on desktop;
+- reduced-motion mode remains calm.
+
+## Future considerations
+
+Future versions may extend Connection Flow for:
+
+- multiple Ollama backends;
+- cloud-provider routing;
+- model routing;
+- validation traffic;
+- richer bidirectional streaming visualization.
+
+These are not current Version 1 implementation commitments unless promoted in `ROADMAP.md`.

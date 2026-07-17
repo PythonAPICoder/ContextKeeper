@@ -1,5 +1,7 @@
 # ContextKeeper Animation Guidelines
 
+Status: Current through Phase 6.5F-B5.6.
+
 ## 1. Purpose
 
 This document defines animation behavior for ContextKeeper.

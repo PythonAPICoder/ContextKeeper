@@ -1,5 +1,7 @@
 # ContextKeeper Color System
 
+Status: Current through Phase 6.5F-B5.6.
+
 ## 1. Purpose
 
 This document defines the official UI color system for ContextKeeper.

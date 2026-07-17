@@ -1,5 +1,7 @@
 # ContextKeeper Installer
 
+Status: Current through Phase 6.5F-B5.6.
+
 This folder contains the first-stage Inno Setup installer foundation.
 
 ## Prerequisites

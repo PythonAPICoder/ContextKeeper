@@ -1,6 +1,8 @@
 
 # ContextKeeper Coding Standards
 
+Status: Current through Phase 6.5F-B5.6.
+
 ## Project Philosophy
 ContextKeeper should be built like a production application, not a growing script.
 
@@ -111,7 +113,7 @@ Initial likely stack:
 - `rich`
 
 Dashboard later:
-- `PySide6` or web dashboard, decision pending.
+- Browser-rendered FastAPI dashboard using HTML, CSS, and vanilla JavaScript. Do not add a frontend framework without an approved phase.
 
 ## Testing
 

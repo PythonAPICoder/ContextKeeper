@@ -2,7 +2,7 @@
 
 ContextKeeper is a local, Ollama-compatible middleware layer for long-running AI conversations. Clients point to ContextKeeper instead of Ollama; ContextKeeper preserves the Ollama API surface while adding diagnostics, context-window awareness, automatic compression, and a live operations dashboard.
 
-The current implementation is an active local product foundation, not a planning stub. It is still pre-1.0, but the transparent proxy, dashboard, context engine, compression engine, automatic model context discovery, Windows executable foundation, installer foundation, and Conversation Inspector foundation are implemented.
+The current implementation is an active local product foundation, not a planning stub. It is still pre-1.0, but the transparent proxy, dashboard, context engine, compression engine, automatic model context discovery, Windows executable foundation, installer foundation, Conversation Inspector foundation, and runtime Settings API foundation are implemented.
 
 ## Architecture summary
 
@@ -45,20 +45,21 @@ Runtime processing and dashboard visualization are deliberately separate. The pr
 - Compression engine support for rolling summaries, recent-message preservation, and confirmed compression metadata.
 - Browser Operations dashboard with health, recommendations, Request Traffic, Connection Flow, Context Trend, instrument gauges, Active Conversation, Live Conversation Timeline, and Conversation Inspector.
 - Conversation Inspector drawer with Overview metadata and deterministic Intelligence based on context/compression state.
-- Read-only dashboard settings snapshot API for approved Context, Compression, and Dashboard settings.
+- Dashboard Settings API for approved Context, Compression, and Dashboard settings, including read snapshots and validated in-memory runtime updates.
 - First-run configuration wizard, PyInstaller executable foundation, Windows service host foundation, Inno Setup installer foundation, and release build script.
 
 ## Current implementation status
 
-Completed through Phase 6.5F-B6.1:
+Completed through Phase 6.5F-B6.2:
 
 - Transparent proxy, diagnostics, context monitoring, compression, dashboard modernization, live request visualization, animated Connection Flow, Live Conversation Timeline, and Conversation Inspector Overview & Intelligence are implemented.
 - Phase 6.5F-B5.6 synchronized documentation through the B5.5.2 implementation.
-- Phase 6.5F-B6.1 adds the read-only backend Settings Snapshot and `/api/dashboard/settings` API foundation.
+- Phase 6.5F-B6.1 added the backend Settings Snapshot and read API foundation.
+- Phase 6.5F-B6.2 adds a validated `PATCH /api/dashboard/settings` update API for temporary in-memory runtime settings changes.
 
 Still planned:
 
-- Dashboard settings UI editing, persistence, and runtime updates.
+- Dashboard settings UI editing and persistence.
 - Broader dashboard customization and preferences.
 - Release polish and final UX review.
 - Durable historical memory retrieval after compression.
@@ -90,7 +91,7 @@ Default URLs:
 | Surface | URL |
 | --- | --- |
 | Dashboard | `http://localhost:11500/dashboard` |
-| Settings read API | `http://localhost:11500/api/dashboard/settings` |
+| Settings API | `http://localhost:11500/api/dashboard/settings` |
 | ContextKeeper proxy | `http://localhost:11500` |
 | Upstream Ollama | `http://localhost:11434` |
 
@@ -124,6 +125,13 @@ Important defaults:
 
 See [docs/CONFIGURATION.md](docs/CONFIGURATION.md) for the complete source-verified configuration reference.
 
+Runtime settings can also be queried and updated through the dashboard Settings API. Updates are partial, validated atomically, immediately visible through the read API, and in-memory only:
+
+```powershell
+$body = @{ context = @{ warning_threshold_percent = 70 } } | ConvertTo-Json -Depth 4
+Invoke-RestMethod -Method Patch -Uri http://localhost:11500/api/dashboard/settings -ContentType "application/json" -Body $body
+```
+
 ## Testing
 
 Run the automated test suite:
@@ -137,6 +145,7 @@ Focused dashboard coverage lives primarily in:
 - `tests/test_app.py`
 - `tests/test_dashboard_instrument_panel.py`
 - `tests/test_dashboard_inspector.py`
+- `tests/test_dashboard_settings.py`
 
 See [docs/TEST_PLAN.md](docs/TEST_PLAN.md) for manual and automated validation coverage, including Conversation Timeline, Conversation Inspector, Request Traffic, Connection Flow, responsive layouts, reduced motion, Windows packaging, and regression checks.
 
@@ -199,6 +208,7 @@ Long-term v2+ ideas are tracked in [docs/FUTURE_IDEAS.md](docs/FUTURE_IDEAS.md).
 - Compression condenses active context but does not yet provide durable original-message retrieval.
 - Conversation Inspector does not yet expose transcripts, message expansion, search, export, context-composition views, or compression-event details.
 - Dashboard telemetry is live and bounded; long-duration trends across restarts are not implemented.
+- Runtime settings updates are in-memory only and reset when ContextKeeper restarts.
 - Authentication, multi-user permissions, cloud model providers, routing, plugins, and multi-server orchestration are future ideas, not current Version 1 behavior.
 - Windows service installation hooks are still placeholders.
 

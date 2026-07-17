@@ -8,7 +8,13 @@ from .settings_snapshot import (
     DashboardSetting,
     DashboardSettingsCategory,
     DashboardSettingsSnapshot,
+    RuntimeCompressionSettingsUpdate,
+    RuntimeContextSettingsUpdate,
+    RuntimeDashboardSettingsUpdate,
+    RuntimeSettingsUpdate,
+    RuntimeSettingsUpdateError,
     build_dashboard_settings_snapshot,
+    update_runtime_settings,
 )
 from .timeline import EventTimeline, LiveConversationTimelineEvent, TimelineEvent, build_live_conversation_timeline
 from .trends import RequestSample, RollingTrends
@@ -28,6 +34,11 @@ __all__ = [
     "LiveConversationTimelineEvent",
     "RequestSample",
     "RollingTrends",
+    "RuntimeCompressionSettingsUpdate",
+    "RuntimeContextSettingsUpdate",
+    "RuntimeDashboardSettingsUpdate",
+    "RuntimeSettingsUpdate",
+    "RuntimeSettingsUpdateError",
     "TimelineEvent",
     "build_conversation_inspector_snapshot",
     "build_dashboard_insights",
@@ -35,4 +46,5 @@ __all__ = [
     "build_live_conversation_timeline",
     "build_recommendations",
     "classify_conversation_intelligence",
+    "update_runtime_settings",
 ]

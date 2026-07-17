@@ -1,6 +1,6 @@
 # ContextKeeper Configuration
 
-Status: Current through Phase 6.5F-B6.1 and verified against `src/ctxkeeper/config.py`.
+Status: Current through Phase 6.5F-B6.2 and verified against `src/ctxkeeper/config.py` and `src/ctxkeeper/dashboard/settings_snapshot.py`.
 
 ContextKeeper is configured through `contextkeeper.yaml`, with a small set of environment variable overrides. The first-run wizard creates this file when it is missing.
 
@@ -92,12 +92,13 @@ Current source behavior:
 
 The `--configure` command-line flag launches the configuration wizard and exits. It does not provide per-setting runtime overrides.
 
-## Settings read API
+## Runtime Settings API
 
-Phase 6.5F-B6.1 adds a read-only dashboard settings snapshot API:
+The dashboard Settings API exposes the approved runtime settings snapshot and supports validated in-memory updates:
 
 ```text
 GET /api/dashboard/settings
+PATCH /api/dashboard/settings
 ```
 
 The endpoint exposes only approved runtime configuration metadata for future dashboard Settings UI work. It does not expose environment variables, file paths, secrets, passwords, API tokens, server bind details, Ollama base URLs, logging paths, model override maps, or future configuration.
@@ -121,9 +122,13 @@ Each setting includes:
 - runtime-editable flag;
 - restart-required flag.
 
-B6.1 is read-only. It does not implement editing, persistence, runtime updates, or dashboard UI controls. Because there is no runtime mutation mechanism yet, the approved exposed settings are currently marked `runtime_editable: false` and `restart_required: true`.
+B6.2 adds runtime update support for the approved settings. These settings are marked `runtime_editable: true` and `restart_required: false` because changes apply to the current process immediately.
 
-Mutating methods on `/api/dashboard/settings` are rejected with `405` and are not proxied to Ollama.
+Runtime updates are temporary. They mutate the in-memory `Settings` instance only, are immediately visible through `GET /api/dashboard/settings`, and reset when ContextKeeper restarts. No YAML file is rewritten and no persistence store is created.
+
+`PATCH /api/dashboard/settings` accepts partial updates using the same category nesting as the read API. Omitted settings retain their current values. The complete proposed state is validated before mutation; if any supplied value is invalid, the entire update is rejected and the previous runtime state remains unchanged.
+
+Empty JSON objects are rejected with `400`. Missing, malformed, incorrectly nested, unknown, read-only, or wrongly typed fields are rejected as client errors. `POST`, `PUT`, and `DELETE` on `/api/dashboard/settings` return `405` and are not proxied to Ollama.
 
 Exposed settings:
 
@@ -138,6 +143,28 @@ Exposed settings:
 | Compression | `compression.max_summary_tokens` |
 | Dashboard | `dashboard.refresh_interval_ms` |
 
+Example runtime update:
+
+```powershell
+$body = @{
+    context = @{
+        warning_threshold_percent = 70
+        compression_threshold_percent = 88
+    }
+    compression = @{
+        max_summary_tokens = 900
+    }
+} | ConvertTo-Json -Depth 4
+
+Invoke-RestMethod `
+    -Method Patch `
+    -Uri http://localhost:11500/api/dashboard/settings `
+    -ContentType "application/json" `
+    -Body $body
+```
+
+Startup-only or unexposed fields remain rejected by the runtime API, including server host/port, Ollama base URL, logging paths, metrics settings, model override maps, `context.default_context_window_tokens`, and `context.minimum_threshold_percent`.
+
 ## Validation rules
 
 - `server.port` must be between `1` and `65535`.
@@ -150,6 +177,8 @@ Exposed settings:
 - `context.minimum_threshold_percent <= context.warning_threshold_percent <= context.compression_threshold_percent`.
 - `context.default_context_window_tokens` and `context.keep_recent_messages` must be greater than `0`.
 - `compression.max_summary_tokens` must be greater than `0`.
+
+Runtime PATCH validation additionally rejects `context.warning_threshold_percent >= context.compression_threshold_percent` so dashboard-edited runtime thresholds retain a clear warning-before-compression boundary.
 
 ## Dashboard settings
 

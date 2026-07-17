@@ -9,7 +9,7 @@ from threading import Lock
 from typing import Any
 
 import httpx
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse
 
 from ..config import Settings
@@ -24,6 +24,7 @@ from .insights import build_dashboard_insights
 from .inspector import build_conversation_inspector_snapshot
 from .intelligence import DashboardMetrics, HealthAssessment, HealthEngine, HealthStatus
 from .recommendations import build_recommendations
+from .settings_snapshot import build_dashboard_settings_snapshot
 from .snapshots import ConversationSnapshotProvider
 from .timeline import LIVE_CONVERSATION_TIMELINE_MAX_EVENTS, TimelineEvent, build_live_conversation_timeline
 from .template import render_dashboard_html
@@ -1671,6 +1672,14 @@ def create_dashboard_router(settings: Settings) -> APIRouter:
             metrics_snapshot=metrics_store.snapshot(),
             ollama_status=await _check_ollama(settings),
         )
+
+    @router.get("/api/dashboard/settings")
+    async def dashboard_settings() -> dict[str, object]:
+        return build_dashboard_settings_snapshot(settings).to_dict()
+
+    @router.api_route("/api/dashboard/settings", methods=["POST", "PUT", "PATCH", "DELETE"])
+    async def dashboard_settings_read_only() -> None:
+        raise HTTPException(status_code=405, detail="Settings are read-only in this version.")
 
     @router.get("/dashboard", response_class=HTMLResponse)
     async def dashboard() -> str:

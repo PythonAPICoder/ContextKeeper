@@ -1,6 +1,6 @@
 # ContextKeeper Test Plan
 
-Status: Current through Phase 6.5F-B5.5.2.
+Status: Current through Phase 6.5F-B6.1.
 
 This document defines automated and manual validation expectations for ContextKeeper. The automated suite is the default regression gate; manual Visual QA remains required for dashboard layout, motion, responsive behavior, and Product Owner acceptance.
 
@@ -15,6 +15,7 @@ Focused dashboard and inspector tests currently live in:
 - `tests/test_app.py`
 - `tests/test_dashboard_instrument_panel.py`
 - `tests/test_dashboard_inspector.py`
+- `tests/test_dashboard_settings.py`
 
 Other focused modules include:
 
@@ -118,6 +119,30 @@ Validate:
 - Dashboard snapshot generation uses one consistent conversation snapshot during a payload build.
 - Missing, idle, and partial data do not produce JavaScript errors.
 - Dashboard polling continues during active traffic and while the Conversation Inspector drawer is open.
+
+## Settings Snapshot and read API
+
+Validate:
+
+- `GET /api/dashboard/settings` returns a settings snapshot.
+- Snapshot schema version is present.
+- Categories are ordered as Context, Compression, and Dashboard.
+- Each setting includes stable id, category, display name, description, value, default value, minimum, maximum, runtime-editable flag, restart-required flag, and data type.
+- Approved settings are exposed:
+  - `context.enabled`
+  - `context.warning_threshold_percent`
+  - `context.compression_threshold_percent`
+  - `context.keep_recent_messages`
+  - `compression.enabled`
+  - `compression.summarizer_model`
+  - `compression.max_summary_tokens`
+  - `dashboard.refresh_interval_ms`
+- Current effective values come from the runtime `Settings` instance.
+- Built-in defaults are present for future UI comparison.
+- Validation metadata includes integer minimum/maximum values where applicable.
+- Output is sanitized and does not include environment variables, config file paths, secrets, server bind details, Ollama base URL, logging paths, metrics settings, or model override maps.
+- B6.1 remains read-only: mutating methods on `/api/dashboard/settings` return `405`, no persistence is added, no runtime mutation is added, and no Settings dashboard UI controls are added.
+- Existing `/dashboard/data`, proxy behavior, Conversation Inspector, Connection Flow, Request Traffic, context engine, and compression tests remain green.
 
 ## Request Traffic
 

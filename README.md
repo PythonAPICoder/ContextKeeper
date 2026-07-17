@@ -45,18 +45,21 @@ Runtime processing and dashboard visualization are deliberately separate. The pr
 - Compression engine support for rolling summaries, recent-message preservation, and confirmed compression metadata.
 - Browser Operations dashboard with health, recommendations, Request Traffic, Connection Flow, Context Trend, instrument gauges, Active Conversation, Live Conversation Timeline, and Conversation Inspector.
 - Conversation Inspector drawer with Overview metadata and deterministic Intelligence based on context/compression state.
+- Read-only dashboard settings snapshot API for approved Context, Compression, and Dashboard settings.
 - First-run configuration wizard, PyInstaller executable foundation, Windows service host foundation, Inno Setup installer foundation, and release build script.
 
 ## Current implementation status
 
-Completed through Phase 6.5F-B5.5.2:
+Completed through Phase 6.5F-B6.1:
 
 - Transparent proxy, diagnostics, context monitoring, compression, dashboard modernization, live request visualization, animated Connection Flow, Live Conversation Timeline, and Conversation Inspector Overview & Intelligence are implemented.
-- Phase 6.5F-B5.6 is a documentation audit and synchronization phase.
+- Phase 6.5F-B5.6 synchronized documentation through the B5.5.2 implementation.
+- Phase 6.5F-B6.1 adds the read-only backend Settings Snapshot and `/api/dashboard/settings` API foundation.
 
 Still planned:
 
-- Dashboard customization and preferences.
+- Dashboard settings UI editing, persistence, and runtime updates.
+- Broader dashboard customization and preferences.
 - Release polish and final UX review.
 - Durable historical memory retrieval after compression.
 - Validation Framework and AutoQA release certification.
@@ -87,6 +90,7 @@ Default URLs:
 | Surface | URL |
 | --- | --- |
 | Dashboard | `http://localhost:11500/dashboard` |
+| Settings read API | `http://localhost:11500/api/dashboard/settings` |
 | ContextKeeper proxy | `http://localhost:11500` |
 | Upstream Ollama | `http://localhost:11434` |
 

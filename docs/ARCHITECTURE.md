@@ -1,6 +1,6 @@
 # ContextKeeper Architecture
 
-Status: Current through Phase 6.5F-B5.5.2.
+Status: Current through Phase 6.5F-B6.1.
 
 ContextKeeper is a local FastAPI application that presents an Ollama-compatible API to clients while observing, measuring, and managing conversation context before requests reach Ollama.
 
@@ -142,6 +142,7 @@ Source:
 - `src/ctxkeeper/dashboard/recommendations.py`
 - `src/ctxkeeper/dashboard/timeline.py`
 - `src/ctxkeeper/dashboard/inspector.py`
+- `src/ctxkeeper/dashboard/settings_snapshot.py`
 - `src/ctxkeeper/dashboard/trends.py`
 
 The dashboard exposes:
@@ -149,6 +150,7 @@ The dashboard exposes:
 - `GET /health`
 - `GET /metrics`
 - `GET /dashboard/data`
+- `GET /api/dashboard/settings`
 - `GET /dashboard`
 
 `/dashboard/data` builds one coherent dashboard status payload from current metrics, current Ollama status, current activity, one conversation-store snapshot, context scan results, derived compression history, active conversation data, timeline events, inspector metadata/intelligence, and instrument-panel data.
@@ -159,6 +161,35 @@ Important constraints:
 - The conversation list is captured once per dashboard payload build and reused for context, compression, active-conversation, timeline, and inspector derivation.
 - Timeline and inspector data are deterministic views of existing state.
 - No additional polling loop was introduced for the Conversation Inspector.
+- The settings snapshot is read-only and exposes only approved Context, Compression, and Dashboard configuration metadata. It does not expose environment variables, config paths, secrets, server settings, Ollama base URLs, logging paths, model override maps, or runtime mutation controls.
+
+## Settings snapshot path
+
+Source:
+
+- `src/ctxkeeper/dashboard/settings_snapshot.py`
+- `src/ctxkeeper/dashboard/routes.py`
+
+Phase 6.5F-B6.1 adds the backend foundation for the future Settings dashboard. The read API is:
+
+```text
+GET /api/dashboard/settings
+```
+
+The endpoint returns:
+
+- `schema_version`;
+- ordered categories: Context, Compression, Dashboard;
+- setting id, category, display name, description, value, built-in default value, data type, minimum/maximum validation metadata where applicable, runtime-editable flag, and restart-required flag.
+
+Current B6.1 boundary:
+
+- Read-only API only.
+- No UI controls.
+- No editing.
+- No persistence.
+- No runtime updates.
+- All exposed settings are marked `runtime_editable: false` and `restart_required: true`.
 
 ## Dashboard visualization path
 

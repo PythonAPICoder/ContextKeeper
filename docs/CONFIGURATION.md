@@ -1,6 +1,6 @@
 # ContextKeeper Configuration
 
-Status: Current through Phase 6.5F-B5.5.2 and verified against `src/ctxkeeper/config.py`.
+Status: Current through Phase 6.5F-B6.1 and verified against `src/ctxkeeper/config.py`.
 
 ContextKeeper is configured through `contextkeeper.yaml`, with a small set of environment variable overrides. The first-run wizard creates this file when it is missing.
 
@@ -91,6 +91,52 @@ Current source behavior:
 3. Supported environment variable overrides.
 
 The `--configure` command-line flag launches the configuration wizard and exits. It does not provide per-setting runtime overrides.
+
+## Settings read API
+
+Phase 6.5F-B6.1 adds a read-only dashboard settings snapshot API:
+
+```text
+GET /api/dashboard/settings
+```
+
+The endpoint exposes only approved runtime configuration metadata for future dashboard Settings UI work. It does not expose environment variables, file paths, secrets, passwords, API tokens, server bind details, Ollama base URLs, logging paths, model override maps, or future configuration.
+
+Snapshot categories:
+
+- Context.
+- Compression.
+- Dashboard.
+
+Each setting includes:
+
+- stable id;
+- category;
+- display name;
+- description;
+- effective current value;
+- built-in default value;
+- data type;
+- minimum/maximum validation metadata where applicable;
+- runtime-editable flag;
+- restart-required flag.
+
+B6.1 is read-only. It does not implement editing, persistence, runtime updates, or dashboard UI controls. Because there is no runtime mutation mechanism yet, the approved exposed settings are currently marked `runtime_editable: false` and `restart_required: true`.
+
+Mutating methods on `/api/dashboard/settings` are rejected with `405` and are not proxied to Ollama.
+
+Exposed settings:
+
+| Category | Setting |
+| --- | --- |
+| Context | `context.enabled` |
+| Context | `context.warning_threshold_percent` |
+| Context | `context.compression_threshold_percent` |
+| Context | `context.keep_recent_messages` |
+| Compression | `compression.enabled` |
+| Compression | `compression.summarizer_model` |
+| Compression | `compression.max_summary_tokens` |
+| Dashboard | `dashboard.refresh_interval_ms` |
 
 ## Validation rules
 

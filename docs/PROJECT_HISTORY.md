@@ -1434,6 +1434,81 @@ Validation:
 - Full automated suite: `.\.venv\Scripts\python.exe -m pytest -q`, 264 tests passing, with one existing third-party `StarletteDeprecationWarning` from FastAPI/Starlette TestClient.
 - `git diff --check`: passing with Git line-ending normalization warnings for edited Markdown files; no whitespace errors reported.
 
+### Phase 6.5F-B6.1 — Settings State & Read API
+
+Status: Implemented in the working tree; Product Owner QA pending.
+
+Objective:
+
+- Establish the backend foundation for the future Settings dashboard.
+- Provide a single authoritative read-only runtime settings snapshot.
+- Expose the current effective values and metadata for approved Context, Compression, and Dashboard settings.
+- Avoid UI editing, persistence, runtime updates, dashboard redesign, or changes to proxy/context/compression behavior.
+
+Architecture:
+
+- Added `src/ctxkeeper/dashboard/settings_snapshot.py` as the typed internal settings snapshot model.
+- Added `DashboardSetting`, `DashboardSettingsCategory`, and `DashboardSettingsSnapshot` dataclasses.
+- Added `build_dashboard_settings_snapshot(settings)` to derive the sanitized snapshot from the existing `Settings` instance.
+- Added `GET /api/dashboard/settings` on the existing dashboard router.
+- Added an explicit `405` response for mutating methods on `/api/dashboard/settings` so the internal settings path cannot be used as an edit API or fall through to the Ollama proxy.
+- Kept the endpoint read-only and independent from `/dashboard/data`, dashboard rendering, proxy routing, conversation inspection, context monitoring, and compression logic.
+
+Settings exposed:
+
+- `context.enabled`
+- `context.warning_threshold_percent`
+- `context.compression_threshold_percent`
+- `context.keep_recent_messages`
+- `compression.enabled`
+- `compression.summarizer_model`
+- `compression.max_summary_tokens`
+- `dashboard.refresh_interval_ms`
+
+Snapshot metadata:
+
+- stable id;
+- category;
+- display name;
+- description;
+- effective runtime value;
+- built-in default value;
+- minimum/maximum validation limits when applicable;
+- data type;
+- `runtime_editable`;
+- `restart_required`.
+
+Read-only boundary:
+
+- No Settings dashboard UI controls were added.
+- No editing API was added.
+- No persistence or config write path was added.
+- No runtime settings mutation was added.
+- Because no runtime mutation mechanism exists yet, all approved settings are exposed as `runtime_editable: false` and `restart_required: true`.
+
+Sanitization:
+
+- The endpoint does not expose environment variables, config file paths, secrets, tokens, passwords, server bind details, Ollama base URL, logging paths, metrics settings, model override maps, or future configuration.
+
+Tests added:
+
+- Added `tests/test_dashboard_settings.py` covering snapshot schema, category order, expected fields, current/default values, validation metadata, sanitized output, endpoint response, and preservation of the existing dashboard data payload.
+
+Documentation updated:
+
+- `README.md`
+- `docs/ARCHITECTURE.md`
+- `docs/CONFIGURATION.md`
+- `docs/ROADMAP.md`
+- `docs/PROJECT_HISTORY.md`
+- `docs/TEST_PLAN.md`
+
+Validation:
+
+- Focused settings tests: `.\.venv\Scripts\python.exe -m pytest tests\test_dashboard_settings.py -q`, 6 tests passing, with one existing third-party `StarletteDeprecationWarning` from FastAPI/Starlette TestClient.
+- Focused dashboard/settings validation: `.\.venv\Scripts\python.exe -m pytest tests\test_dashboard_settings.py tests\test_app.py -q`, 49 tests passing, with the same existing warning.
+- Full automated suite: `.\.venv\Scripts\python.exe -m pytest -q`, 270 tests passing, with the same existing warning.
+
 ### Phase 6.5G — Historical Memory Retrieval & Detail Preservation (Approved Plan)
 
 Status: Planned; approved for the roadmap, not implemented.
@@ -1614,11 +1689,11 @@ Scope boundary:
 
 ## Current Project State
 
-- Current active implementation phase: Phase 6.5F-B5.6 — Documentation Audit & Synchronization.
+- Current active implementation phase: Phase 6.5F-B6.1 — Settings State & Read API.
 - Phase 6.5F-B4.8 — Automatic Model Context Discovery is implemented.
-- Phase 6.5F-B5.1 through Phase 6.5F-B5.5.2 are represented in source and tests.
+- Phase 6.5F-B5.1 through Phase 6.5F-B6.1 are represented in source and tests.
 - Latest verified automated test count before B5.6 documentation-only validation: 264 tests passing during the Phase 6.5F-B5.5.2 inspector pass, with one existing third-party FastAPI/Starlette TestClient deprecation warning.
-- Dashboard status: modern operations-console dashboard with live proxy, Ollama, request, context, compression, conversation, intelligence, health, operational activity, recommendations, grouped five-card system instrument panel, Context Trend, Request Traffic, animated Connection Flow, Live Conversation Timeline, Conversation Inspector drawer, Conversation Inspector Overview, and deterministic Conversation Inspector Intelligence.
+- Dashboard status: modern operations-console dashboard with live proxy, Ollama, request, context, compression, conversation, intelligence, health, operational activity, recommendations, grouped five-card system instrument panel, Context Trend, Request Traffic, animated Connection Flow, Live Conversation Timeline, Conversation Inspector drawer, Conversation Inspector Overview, deterministic Conversation Inspector Intelligence, and read-only Settings Snapshot API.
 - Major capabilities currently present:
   - FastAPI-based transparent Ollama proxy.
   - `/api/*` and `/v1/*` passthrough with streaming preservation for supported endpoints.
@@ -1627,10 +1702,11 @@ Scope boundary:
   - Compression manager, compression planning, rolling-summary support, and confirmed compression metadata.
   - Automatic Model Context Discovery and context-window enforcement.
   - Browser dashboard with live monitoring and intelligence.
+  - Read-only dashboard settings snapshot API for approved Context, Compression, and Dashboard settings.
   - Windows service foundation, PyInstaller executable foundation, first-run setup wizard, Inno Setup installer foundation, and release build script.
 - Planned work still ahead:
-  - Product Owner documentation QA for Phase 6.5F-B5.6.
-  - Phase 6.5F-B6 — Dashboard Customization & User Preferences.
+  - Product Owner QA for Phase 6.5F-B6.1.
+  - Later Phase 6.5F-B6 settings UI editing, persistence, runtime update, and broader dashboard preference work after explicit approval.
   - Phase 6.5F-B7 — Release Polish & Final UX Review.
   - Phase 6.5G — Historical Memory Retrieval & Detail Preservation.
   - Phase 6.6 — Validation Framework & Release Certification.
@@ -1645,8 +1721,9 @@ Do not treat planned Phase 6.5F-B6/B7, Phase 6.5G, Phase 6.6, Phase 7, or Versio
 This section is tentative and subject to refinement. These names and boundaries are planning labels, not completed commitments.
 
 - Phase 6.5F-B5 — Live Data Visualization & Rich Widgets.
-  - Product Owner documentation QA for Phase 6.5F-B5.6.
 - Phase 6.5F-B6 — Dashboard Customization & User Preferences.
+  - Product Owner QA for Phase 6.5F-B6.1 — Settings State & Read API.
+  - Later B6 settings UI editing, persistence, runtime update, and broader dashboard preference work after explicit approval.
 - Phase 6.5F-B7 — Release Polish & Final UX Review.
 - Phase 6.5G — Historical Memory Retrieval & Detail Preservation.
   - Phase 6.5G.1 — Durable Conversation Archive.

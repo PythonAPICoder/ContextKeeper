@@ -1189,6 +1189,80 @@ Visual QA still pending:
 - Validate idle, outbound, processing, inbound, rapid request, and reduced-motion states.
 - Confirm the marker is more visible without clipping, overflow, distracting flashing, or visual dominance over node labels.
 
+### Phase 6.5F-B5.5 — Conversation Inspector
+
+Status: Planned as smaller implementation slices.
+
+Purpose:
+
+- Add a dashboard drill-down surface for a selected conversation while preserving the main Operations dashboard context.
+- Let the Live Conversation Timeline remain the compact operational narrative, while the Conversation Inspector becomes the future location for deeper selected-conversation diagnostics.
+
+Design decision:
+
+- Use a right-side slide-out drawer instead of navigating away from the dashboard or reserving a permanent column.
+- On wide displays the drawer should preserve visible dashboard context; on narrow displays it may become effectively full-width with a backdrop.
+- Keep the dashboard as a read-only observer. Do not duplicate conversation ownership or create a competing event-tracking architecture for inspector presentation.
+
+Why B5.5 is sliced:
+
+- Full conversation inspection touches privacy, on-demand detail loading, message visibility, context composition, compression provenance, and cross-highlighting.
+- Splitting the work keeps each slice testable and prevents the foundation from accidentally exposing prompt, response, summary, retrieved-document, or request-body content.
+- B5.5.1 intentionally establishes interaction and layout primitives before adding detailed data surfaces.
+
+Durable design note:
+
+- `docs/CONVERSATION_INSPECTOR.md` captures the approved architectural direction, drawer interaction model, planned sections, privacy expectations, on-demand loading strategy, and proposed B5.5 sub-phase breakdown.
+
+### Phase 6.5F-B5.5.1 — Conversation Inspector Foundation
+
+Branch: `phase-6-5f-b5-5-1-conversation-inspector-foundation`
+
+Status: Implemented on branch; pending Product Owner visual QA.
+
+Scope:
+
+- Added selectable Live Conversation Timeline entries for events that map to the current timeline conversation.
+- Added explicit frontend inspector state for selected conversation id, open/closed state, loading state, and unavailable/error state.
+- Added a right-side, nonmodal Conversation Inspector drawer shell with close button, loading state, unavailable state, metadata summary area, accessible labelling, Escape-close behavior, and narrow-screen backdrop behavior.
+- Derived initial metadata from the existing dashboard snapshot and Live Conversation Timeline data only.
+- Kept dashboard polling as the only refresh path; no new polling loop or backend detail endpoint was added.
+
+Privacy protections:
+
+- B5.5.1 shows operational metadata only.
+- Prompt text, assistant response text, rolling-summary body text, system prompts, retrieved document content, request bodies, API secrets, and full conversation messages remain excluded.
+
+Deliberately deferred:
+
+- Full conversation-message inspection.
+- Conversation-detail backend endpoint.
+- Context-composition visualization.
+- Compression-event detail views.
+- Prompt/request/response body display.
+- Timeline-to-detail cross-highlighting beyond selected-entry state.
+- Modal focus trap; the desktop drawer is a complementary nonmodal panel.
+
+Tests added or updated:
+
+- Dashboard HTML/JS contract coverage for inspector drawer markup, title, close control, loading/unavailable states, selected-entry support, explicit inspector state fields, accessibility hooks, Escape-close logic, and reduced-motion styling coverage.
+
+Pre-merge visual polish:
+
+- Tightened Conversation Inspector state rendering so Loading, Unavailable, and Metadata panels are mutually exclusive.
+- Condensed loading/unavailable cards, strengthened Metadata Summary hierarchy, and reduced the visual weight of the privacy/phase-scope note without changing drawer width, polling, payloads, or backend behavior.
+
+Validation:
+
+- Python syntax validation: `.\.venv\Scripts\python.exe -m py_compile src\ctxkeeper\dashboard\template.py tests\test_app.py`, passing.
+- Rendered dashboard JavaScript syntax validation: extracted `<script>` from `render_dashboard_html(Settings())` with UTF-8 output and ran `node --check -`, passing.
+- Focused dashboard validation: `.\.venv\Scripts\python.exe -m pytest tests\test_app.py tests\test_dashboard_instrument_panel.py -q`, 74 tests passing, with one existing third-party `StarletteDeprecationWarning` from FastAPI/Starlette TestClient.
+- Full automated suite: `.\.venv\Scripts\python.exe -m pytest -q`, 250 tests passing, with the same existing warning.
+
+Visual QA still pending:
+
+- Product Owner should open and close the drawer, select multiple timeline entries, confirm selected-entry highlighting follows the active conversation, confirm Escape closes the drawer, confirm no horizontal overflow, confirm timeline polling continues with the drawer open, confirm an active conversation remains selected during refresh, confirm unavailable state wording is honest and readable, review 50%, 75%, and 100% browser zoom, review 3440×1440 at 100% Windows display scaling, and confirm reduced-motion mode does not use distracting transitions.
+
 ### Phase 6.5G — Historical Memory Retrieval & Detail Preservation (Approved Plan)
 
 Status: Planned; approved for the roadmap, not implemented.

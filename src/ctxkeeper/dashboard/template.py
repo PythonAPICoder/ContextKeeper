@@ -328,7 +328,7 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
 .pipe {{ position:relative; height:2px; align-self:center; background:linear-gradient(90deg,rgba(45,58,79,.35),rgba(56,189,248,.85),rgba(45,58,79,.35)); border-radius:99px; opacity:.9; }}
 .pipe::before {{ content:""; position:absolute; inset:-12px 0; border-top:1px dashed rgba(148,163,184,.22); top:50%; }}
 .pipe::after {{ content:""; position:absolute; left:50%; top:50%; width:10px; height:10px; border-radius:50%; transform:translate(-50%,-50%); background:rgba(56,189,248,.5); box-shadow:0 0 18px rgba(56,189,248,.42); }}
-@media (prefers-reduced-motion: reduce) {{ html {{ scroll-behavior:auto; }} .flow-panel.flow-active .flow-svg-packet,.flow-panel.flow-active .flow-svg-packet-halo,.flow-panel.flow-waiting .flow-svg-packet,.flow-panel.flow-waiting .flow-svg-packet-halo,.flow-panel.traffic-outbound .flow-svg-packet,.flow-panel.traffic-outbound .flow-svg-packet-halo,.flow-panel.traffic-inbound .flow-svg-packet,.flow-panel.traffic-inbound .flow-svg-packet-halo,.flow-panel.traffic-outbound .flow-stage::after,.flow-panel.traffic-inbound .flow-stage::after,.flow-panel.traffic-outbound [data-flow-link]::after,.flow-panel.traffic-inbound [data-flow-link]::after,.flow-panel.traffic-processing [data-flow-segment="ollama-model"],.flow-panel.traffic-processing [data-flow-link="ollama-model"]::after,.flow-node.status-pulse,.dot,.value-pop,.badge-update,.ops-activity-summary,.ops-activity-summary .ops-health-status,.ops-activity-summary::after {{ animation:none; }} .flow-svg-packet,.flow-svg-packet-halo,.flow-stage::after {{ opacity:0; }} .nav a,.nav a::before,.topbar-status,.topbar-status-dot,.card,.node,.hero-status,.hero-status::before,.hero-status::after,.hero-stat-card,.hero-stat-icon,.hero-stat-value,.badge,.flow-svg-line,.gauge-progress,.fill,.ops-health-row,.ops-activity-summary,.panel-item,.timeline-item,.live-timeline-event,.message,.instrument-gauge-needle,.instrument-gauge-pivot,.instrument-card-value,.trend-line,.trend-area,.request-traffic-bar {{ transition:none; }} .nav a:hover,.nav a:active,.card:hover,.node:hover,.hero-stat-card:hover,.hero-stat-card:focus-within,.hero-stat-card:focus-visible,.hero-stat-card:hover .hero-stat-icon,.hero-stat-card:focus-within .hero-stat-icon,.hero-stat-card:focus-visible .hero-stat-icon,a.badge:hover,a.badge:active,body.is-refreshing .topbar-status-dot {{ transform:none; }} }}
+@media (prefers-reduced-motion: reduce) {{ html {{ scroll-behavior:auto; }} .flow-panel.flow-active .flow-svg-packet,.flow-panel.flow-active .flow-svg-packet-halo,.flow-panel.flow-waiting .flow-svg-packet,.flow-panel.flow-waiting .flow-svg-packet-halo,.flow-panel.traffic-outbound .flow-svg-packet,.flow-panel.traffic-outbound .flow-svg-packet-halo,.flow-panel.traffic-inbound .flow-svg-packet,.flow-panel.traffic-inbound .flow-svg-packet-halo,.flow-panel.traffic-outbound .flow-stage::after,.flow-panel.traffic-inbound .flow-stage::after,.flow-panel.traffic-outbound [data-flow-link]::after,.flow-panel.traffic-inbound [data-flow-link]::after,.flow-panel.traffic-processing [data-flow-segment="ollama-model"],.flow-panel.traffic-processing [data-flow-link="ollama-model"]::after,.flow-node.status-pulse,.dot,.value-pop,.badge-update,.ops-activity-summary,.ops-activity-summary .ops-health-status,.ops-activity-summary::after {{ animation:none; }} .flow-svg-packet,.flow-svg-packet-halo,.flow-stage::after {{ opacity:0; }} .nav a,.nav a::before,.topbar-status,.topbar-status-dot,.card,.node,.hero-status,.hero-status::before,.hero-status::after,.hero-stat-card,.hero-stat-icon,.hero-stat-value,.badge,.flow-svg-line,.gauge-progress,.fill,.ops-health-row,.ops-activity-summary,.panel-item,.timeline-item,.live-timeline-event,.conversation-inspector-drawer,.conversation-inspector-backdrop,.conversation-inspector-close,.message,.instrument-gauge-needle,.instrument-gauge-pivot,.instrument-card-value,.trend-line,.trend-area,.request-traffic-bar {{ transition:none; }} .nav a:hover,.nav a:active,.card:hover,.node:hover,.hero-stat-card:hover,.hero-stat-card:focus-within,.hero-stat-card:focus-visible,.hero-stat-card:hover .hero-stat-icon,.hero-stat-card:focus-within .hero-stat-icon,.hero-stat-card:focus-visible .hero-stat-icon,a.badge:hover,a.badge:active,body.is-refreshing .topbar-status-dot {{ transform:none; }} }}
 .small {{ font-size:12px; color:var(--muted); overflow-wrap:anywhere; }}
 .traffic-panel {{ display:grid; grid-template-rows:auto auto 1fr; gap:12px; align-content:start; padding:14px; }}
 .traffic-stats {{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; align-items:stretch; }}
@@ -360,7 +360,10 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
 .live-timeline-card {{ display:grid; grid-template-rows:auto minmax(0,1fr); gap:10px; padding:14px; }}
 .live-timeline-list {{ min-height:0; overflow-y:auto; overflow-x:hidden; display:grid; align-content:start; gap:8px; padding-right:2px; scrollbar-width:thin; scrollbar-color:rgba(148,163,184,.32) transparent; }}
 .live-timeline-event {{ --timeline-accent:var(--accent); min-width:0; display:grid; grid-template-columns:14px minmax(54px,.34fr) minmax(0,1fr); gap:8px; align-items:start; padding:8px 9px; border:1px solid rgba(203,213,225,.09); border-radius:9px; background:linear-gradient(180deg,rgba(15,23,42,.48),rgba(2,6,23,.24)); box-shadow:var(--surface-inset-highlight); transition:border-color .18s ease,background .18s ease,box-shadow .18s ease; }}
+button.live-timeline-event {{ width:100%; color:inherit; font:inherit; text-align:left; cursor:pointer; appearance:none; -webkit-appearance:none; }}
 .live-timeline-event:hover {{ border-color:rgba(129,140,248,.24); background:rgba(15,23,42,.68); box-shadow:var(--surface-inset-highlight),0 0 16px rgba(129,140,248,.09); }}
+.live-timeline-event:focus-visible {{ outline:2px solid rgba(56,189,248,.68); outline-offset:2px; }}
+.live-timeline-event.is-selected {{ border-color:rgba(56,189,248,.46); background:linear-gradient(180deg,rgba(14,116,144,.2),rgba(15,23,42,.58)); box-shadow:var(--surface-inset-highlight),0 0 0 1px rgba(56,189,248,.12),0 0 18px rgba(56,189,248,.12); }}
 .live-timeline-event.success {{ --timeline-accent:var(--good); }}
 .live-timeline-event.warning {{ --timeline-accent:var(--warn); }}
 .live-timeline-event.error {{ --timeline-accent:var(--bad); }}
@@ -375,6 +378,30 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
 .live-timeline-empty {{ min-height:100%; display:grid; place-items:center; align-content:center; gap:6px; padding:16px 12px; text-align:center; border:1px dashed rgba(148,163,184,.28); border-radius:9px; background:rgba(15,23,42,.32); color:#aebbd0; }}
 .live-timeline-empty-title {{ color:#dbeafe; font-size:12px; font-weight:850; letter-spacing:.03em; text-transform:uppercase; }}
 .live-timeline-empty-detail {{ max-width:280px; color:var(--muted); font-size:11px; line-height:1.35; }}
+.conversation-inspector-backdrop {{ position:fixed; inset:0; z-index:18; background:rgba(2,6,23,.42); opacity:0; pointer-events:none; transition:opacity .2s ease; }}
+.conversation-inspector-drawer {{ position:fixed; top:0; right:0; z-index:19; width:min(660px,calc(100vw - 28px)); height:100vh; height:100dvh; min-width:0; display:grid; grid-template-rows:auto minmax(0,1fr); gap:0; padding:0; overflow:hidden; transform:translateX(calc(100% + 18px)); opacity:.98; pointer-events:none; background:linear-gradient(180deg,rgba(15,23,42,.98),rgba(9,14,26,.96)); border-left:1px solid rgba(203,213,225,.14); box-shadow:-20px 0 52px rgba(2,6,23,.42),var(--surface-inset-highlight); transition:transform .22s cubic-bezier(.2,0,0,1),opacity .18s ease; }}
+body.conversation-inspector-open .conversation-inspector-drawer {{ transform:translateX(0); opacity:1; pointer-events:auto; }}
+.conversation-inspector-header {{ min-width:0; display:grid; gap:10px; padding:18px 20px 14px; border-bottom:1px solid rgba(203,213,225,.1); background:linear-gradient(135deg,rgba(15,23,42,.96),rgba(30,41,59,.78)); box-shadow:var(--surface-inset-highlight); }}
+.conversation-inspector-title-row {{ min-width:0; display:flex; align-items:center; justify-content:space-between; gap:12px; }}
+.conversation-inspector-title {{ margin:0; color:#f8fafc; font-size:15px; line-height:1.2; font-weight:850; letter-spacing:.045em; text-transform:uppercase; }}
+.conversation-inspector-close {{ flex:0 0 auto; width:32px; height:32px; display:grid; place-items:center; border:1px solid rgba(203,213,225,.14); border-radius:9px; color:#dbeafe; background:rgba(15,23,42,.62); box-shadow:var(--surface-inset-highlight); cursor:pointer; transition:border-color .18s ease,background .18s ease,color .18s ease; }}
+.conversation-inspector-close:hover,.conversation-inspector-close:focus-visible {{ border-color:rgba(56,189,248,.42); background:rgba(56,189,248,.12); color:#f8fafc; }}
+.conversation-inspector-close svg {{ width:16px; height:16px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; }}
+.conversation-inspector-kicker {{ min-width:0; display:flex; flex-wrap:wrap; align-items:center; gap:7px; color:var(--soft); font-size:12px; line-height:1.3; }}
+.conversation-inspector-meta-line {{ min-width:0; color:var(--muted); font-size:11px; line-height:1.35; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }}
+.conversation-inspector-body {{ min-height:0; overflow-y:auto; overflow-x:hidden; display:grid; align-content:start; gap:12px; padding:14px 20px 22px; scrollbar-width:thin; scrollbar-color:rgba(148,163,184,.32) transparent; }}
+.conversation-inspector-state {{ min-height:92px; display:grid; place-items:center; align-content:center; gap:4px; padding:12px 14px; text-align:center; border:1px dashed rgba(148,163,184,.22); border-radius:10px; background:rgba(15,23,42,.3); color:#aebbd0; }}
+.conversation-inspector-state[hidden],.conversation-inspector-section[hidden] {{ display:none; }}
+.conversation-inspector-state-title {{ color:#dbeafe; font-size:12px; font-weight:850; letter-spacing:.035em; text-transform:uppercase; }}
+.conversation-inspector-state-detail {{ max-width:380px; color:var(--muted); font-size:11px; line-height:1.35; }}
+.conversation-inspector-section {{ display:grid; gap:12px; min-width:0; }}
+.conversation-inspector-section-title {{ margin:0; padding-bottom:4px; border-bottom:1px solid rgba(203,213,225,.09); color:#dbeafe; font-size:11.5px; line-height:1.2; font-weight:850; letter-spacing:.06em; text-transform:uppercase; }}
+.conversation-inspector-grid {{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; min-width:0; }}
+.conversation-inspector-field {{ min-width:0; display:grid; gap:4px; padding:10px 11px; border:1px solid rgba(203,213,225,.09); border-radius:10px; background:rgba(15,23,42,.42); box-shadow:var(--surface-inset-highlight); }}
+.conversation-inspector-label {{ color:var(--muted); font-size:10px; line-height:1.1; font-weight:850; letter-spacing:.07em; text-transform:uppercase; }}
+.conversation-inspector-value {{ min-width:0; color:#e2e8f0; font-size:12px; line-height:1.28; overflow-wrap:anywhere; }}
+.conversation-inspector-note {{ color:rgba(148,163,184,.78); font-size:10px; line-height:1.35; padding:7px 9px; border:1px solid rgba(203,213,225,.055); border-radius:8px; background:rgba(15,23,42,.2); }}
+.conversation-inspector-live-region {{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }}
 .summary {{ background:rgba(15,23,42,.62); border:1px solid var(--border-card); border-radius:10px; padding:12px; white-space:pre-wrap; box-shadow:var(--surface-inset-highlight); }}
 .messages {{ display:grid; gap:10px; margin-top:12px; }}
 .message {{ background:rgba(15,23,42,.46); border:1px solid var(--border-card); border-radius:10px; padding:10px 12px; box-shadow:var(--surface-inset-highlight); transition:border-color .18s ease,background .18s ease,box-shadow .18s ease; }}
@@ -657,8 +684,8 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
   .conversation-compact .summary {{ padding:8px; }}
   .badge {{ min-height:19px; padding:1px 6px; }}
 }}
-@media (max-width: 1000px) {{ .app-shell {{ grid-template-columns:220px minmax(0,1fr); }} .dashboard-main {{ padding:14px 16px 18px; }} .ops-hero,.system-activity-grid,.operations-lower {{ grid-template-columns:1fr; }} .hero-title {{ white-space:normal; }} .hero-title span:last-child {{ overflow:visible; text-overflow:clip; }} .ops-health-details {{ grid-template-columns:1fr; }} .ops-health-row {{ grid-template-columns:16px minmax(0,1fr) auto; }} .flow-svg-layer {{ display:none; }} .flow-stage {{ grid-template-columns:1fr; }} .pipe {{ height:20px; width:4px; justify-self:center; }} }}
-@media (max-width: 1000px) {{ .app-shell {{ height:100vh; overflow-y:auto; overflow-x:hidden; grid-template-columns:1fr; }} .workspace {{ height:auto; min-height:0; overflow:visible; }} .sidebar {{ position:relative; height:auto; gap:14px; }} .nav {{ grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); }} .sidebar-footer {{ display:none; }} .topbar {{ position:relative; align-items:flex-start; flex-direction:column; }} .dashboard-main {{ height:auto; overflow:visible; padding:18px; }} .page.active,.ops-hero,.system-activity-grid,.operations-lower {{ height:auto; overflow:visible; grid-template-columns:1fr; }} .ops-hero {{ grid-template-areas:"hero" "actions" "stats"; }} .hero-stats-grid {{ grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); }} .traffic-stats {{ grid-template-columns:1fr; }} .instrument-panel {{ grid-template-columns:1fr; }} .instrument-trend-card {{ grid-column:auto; }} .operations-page {{ min-height:auto; grid-template-rows:none; }} .timeline-item {{ grid-template-columns:1fr; }} }}
+@media (max-width: 1000px) {{ .app-shell {{ grid-template-columns:220px minmax(0,1fr); }} .dashboard-main {{ padding:14px 16px 18px; }} .ops-hero,.system-activity-grid,.operations-lower {{ grid-template-columns:1fr; }} .hero-title {{ white-space:normal; }} .hero-title span:last-child {{ overflow:visible; text-overflow:clip; }} .ops-health-details {{ grid-template-columns:1fr; }} .ops-health-row {{ grid-template-columns:16px minmax(0,1fr) auto; }} .flow-svg-layer {{ display:none; }} .flow-stage {{ grid-template-columns:1fr; }} .pipe {{ height:20px; width:4px; justify-self:center; }} body.conversation-inspector-open .conversation-inspector-backdrop {{ opacity:1; pointer-events:auto; }} }}
+@media (max-width: 1000px) {{ .app-shell {{ height:100vh; overflow-y:auto; overflow-x:hidden; grid-template-columns:1fr; }} .workspace {{ height:auto; min-height:0; overflow:visible; }} .sidebar {{ position:relative; height:auto; gap:14px; }} .nav {{ grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); }} .sidebar-footer {{ display:none; }} .topbar {{ position:relative; align-items:flex-start; flex-direction:column; }} .dashboard-main {{ height:auto; overflow:visible; padding:18px; }} .page.active,.ops-hero,.system-activity-grid,.operations-lower {{ height:auto; overflow:visible; grid-template-columns:1fr; }} .ops-hero {{ grid-template-areas:"hero" "actions" "stats"; }} .hero-stats-grid {{ grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); }} .traffic-stats {{ grid-template-columns:1fr; }} .instrument-panel {{ grid-template-columns:1fr; }} .instrument-trend-card {{ grid-column:auto; }} .conversation-inspector-drawer {{ width:100vw; border-left:0; }} .conversation-inspector-grid {{ grid-template-columns:1fr; }} .operations-page {{ min-height:auto; grid-template-rows:none; }} .timeline-item {{ grid-template-columns:1fr; }} }}
 </style>
 </head>
 <body>
@@ -974,6 +1001,39 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
 </main>
 </div>
 </div>
+<div id="conversationInspectorBackdrop" class="conversation-inspector-backdrop" hidden></div>
+<aside id="conversationInspectorDrawer" class="conversation-inspector-drawer" role="complementary" aria-labelledby="conversationInspectorTitle" aria-hidden="true">
+  <header class="conversation-inspector-header">
+    <div class="conversation-inspector-title-row">
+      <h2 id="conversationInspectorTitle" class="conversation-inspector-title">Conversation Inspector</h2>
+      <button id="conversationInspectorClose" type="button" class="conversation-inspector-close" aria-label="Close Conversation Inspector">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12"></path><path d="M18 6 6 18"></path></svg>
+      </button>
+    </div>
+    <div class="conversation-inspector-kicker">
+      <span id="conversationInspectorConversationId">No conversation selected</span>
+      <span id="conversationInspectorStatusBadge" class="badge waiting">Closed</span>
+    </div>
+    <div id="conversationInspectorModelLine" class="conversation-inspector-meta-line">Model not available</div>
+    <div id="conversationInspectorStartedLine" class="conversation-inspector-meta-line">Start time not available</div>
+  </header>
+  <div class="conversation-inspector-body">
+    <div id="conversationInspectorLiveRegion" class="conversation-inspector-live-region" aria-live="polite"></div>
+    <section id="conversationInspectorLoading" class="conversation-inspector-state" aria-live="polite" hidden>
+      <div class="conversation-inspector-state-title">Loading conversation details…</div>
+      <div class="conversation-inspector-state-detail">ContextKeeper is preparing the currently selected conversation metadata.</div>
+    </section>
+    <section id="conversationInspectorUnavailable" class="conversation-inspector-state" aria-live="polite" hidden>
+      <div class="conversation-inspector-state-title">Conversation details unavailable</div>
+      <div class="conversation-inspector-state-detail">The selected conversation is not available in the current dashboard snapshot. Select another timeline entry or wait for fresh activity.</div>
+    </section>
+    <section id="conversationInspectorDetails" class="conversation-inspector-section" aria-label="Selected conversation metadata" hidden>
+      <h3 class="conversation-inspector-section-title">Metadata Summary</h3>
+      <div id="conversationInspectorMetadataGrid" class="conversation-inspector-grid"></div>
+      <div class="conversation-inspector-note">B5.5.1 shows operational metadata only. Prompt text, responses, rolling summaries, request bodies, and retrieved content are deliberately excluded.</div>
+    </section>
+  </div>
+</aside>
 <script>
 const DASHBOARD_REFRESH_INTERVAL_MS = {settings.dashboard.refresh_interval_ms or 1000};
 const TOPOLOGY_OUTBOUND_DURATION_MS = 1300;
@@ -999,6 +1059,14 @@ const INSTRUMENT_GAUGE_SEGMENTS = [
 let lastTopologyActiveRequestCount = null;
 let topologyFlowTimer = null;
 let refreshInFlight = false;
+const conversationInspectorState = {{
+  selectedConversationId:null,
+  inspectorOpen:false,
+  inspectorLoading:false,
+  inspectorError:null,
+  selectedTimelineEventId:null,
+  lastDashboardData:null
+}};
 function byId(id) {{
   return document.getElementById(id);
 }}
@@ -1587,6 +1655,24 @@ function initializePages() {{
   const initial = (location.hash || '#operations').slice(1);
   showPage(byId(initial) ? initial : 'operations');
 }}
+function initializeConversationInspector() {{
+  const list = byId('liveConversationTimelineList');
+  if (list) list.addEventListener('click', handleTimelineInspectorSelection);
+  const closeButton = byId('conversationInspectorClose');
+  if (closeButton) closeButton.addEventListener('click', () => closeConversationInspector());
+  const backdrop = byId('conversationInspectorBackdrop');
+  if (backdrop) {{
+    backdrop.addEventListener('click', () => {{
+      if (window.matchMedia('(max-width: 1000px)').matches) closeConversationInspector();
+    }});
+  }}
+  document.addEventListener('keydown', event => {{
+    if (event.key === 'Escape' && conversationInspectorState.inspectorOpen) {{
+      event.preventDefault();
+      closeConversationInspector();
+    }}
+  }});
+}}
 async function refreshHealth() {{
   const res = await fetch('/health');
   const h = await res.json();
@@ -1647,6 +1733,7 @@ async function refreshDashboardData() {{
   refreshIntelligence(intelligence);
   refreshActiveConversation(data.active_conversation, intelligence.conversation_risk);
   renderLiveConversationTimeline(data.conversation_timeline);
+  updateConversationInspectorFromDashboardData(data);
 }}
 function refreshOperationalActivity(activity) {{
   const current = activity || {{}};
@@ -1714,30 +1801,277 @@ function timelineDetailHtml(event) {{
   const detail = event?.detail === null || event?.detail === undefined ? '' : String(event.detail).trim();
   return detail ? `<div class="live-timeline-detail">${{escapeHtml(detail)}}</div>` : '';
 }}
+function inspectorSafeText(value) {{
+  const text = value === null || value === undefined ? '' : String(value).trim();
+  return text || 'Not available';
+}}
+function inspectorShortId(value) {{
+  const text = value === null || value === undefined ? '' : String(value).trim();
+  if (!text) return 'Not available';
+  return text.length > 12 ? text.slice(0, 4) + '…' + text.slice(-4) : text;
+}}
+function inspectorDateLabel(value) {{
+  const date = new Date(value || '');
+  return Number.isFinite(date.getTime()) ? date.toLocaleTimeString() : 'Not available';
+}}
+function inspectorDurationLabel(start, end) {{
+  const startDate = new Date(start || '');
+  const endDate = new Date(end || '');
+  if (!Number.isFinite(startDate.getTime()) || !Number.isFinite(endDate.getTime())) return 'Not available';
+  const ms = endDate.getTime() - startDate.getTime();
+  if (!Number.isFinite(ms) || ms < 0) return 'Not available';
+  if (ms < 1000) return Math.round(ms) + ' ms';
+  return (ms / 1000).toFixed(ms < 10000 ? 1 : 0).replace(/\\.0$/, '') + ' s';
+}}
+function inspectorModelFromEvent(event) {{
+  const detail = event?.detail === null || event?.detail === undefined ? '' : String(event.detail).trim();
+  if (!detail) return '';
+  if (String(event?.type || '') === 'model_changed' && detail.includes(' -> ')) {{
+    return detail.split(' -> ').pop().trim();
+  }}
+  return detail;
+}}
+function selectedConversationAvailable(data) {{
+  const conversationId = conversationInspectorState.selectedConversationId;
+  if (!conversationId || !data) return false;
+  const activeId = data.active_conversation?.conversation_id || null;
+  const timelineId = data.conversation_timeline?.conversation_id || null;
+  return activeId === conversationId || timelineId === conversationId;
+}}
+function selectedTimelineEvents(data) {{
+  const conversationId = conversationInspectorState.selectedConversationId;
+  if (!conversationId || data?.conversation_timeline?.conversation_id !== conversationId) return [];
+  return Array.isArray(data.conversation_timeline.events) ? data.conversation_timeline.events : [];
+}}
+function latestTimelineEvent(events, types) {{
+  const wanted = new Set(types);
+  for (let index = events.length - 1; index >= 0; index -= 1) {{
+    const event = events[index];
+    if (wanted.has(event?.type)) return event;
+  }}
+  return null;
+}}
+function selectedGenerationRequests(data) {{
+  const conversationId = conversationInspectorState.selectedConversationId;
+  const requests = Array.isArray(data?.requests?.latest) ? data.requests.latest : [];
+  const timelineId = data?.conversation_timeline?.conversation_id || null;
+  return requests.filter(request => {{
+    const endpoint = request?.endpoint;
+    if (endpoint !== '/api/chat' && endpoint !== '/api/generate') return false;
+    const requestConversationId = request?.conversation_id || null;
+    if (requestConversationId) return requestConversationId === conversationId;
+    return timelineId === conversationId;
+  }});
+}}
+function buildConversationInspectorMetadata(data) {{
+  const conversationId = conversationInspectorState.selectedConversationId;
+  const active = data?.active_conversation || {{}};
+  const activeMatches = active.conversation_id === conversationId;
+  const context = activeMatches && active.context ? active.context : {{}};
+  const events = selectedTimelineEvents(data);
+  const requests = selectedGenerationRequests(data);
+  const firstEvent = events[0] || null;
+  const startEvent = events.find(event => event?.type === 'conversation_started') || firstEvent;
+  const completedEvent = latestTimelineEvent(events, ['request_completed', 'request_failed']);
+  const receivedEvent = latestTimelineEvent(events, ['request_received']);
+  const latestModelEvent = latestTimelineEvent(events, ['model_selected', 'model_changed']);
+  const latestRequest = requests[0] || {{}};
+  const activeCount = Number(data?.activity?.active_request_count || 0);
+  const selectedIsCurrentTimeline = data?.conversation_timeline?.conversation_id === conversationId;
+  const activeRequest = activeCount > 0 && selectedIsCurrentTimeline;
+  let statusLabel = events.length ? 'Tracked' : 'Available';
+  let statusClass = 'info';
+  if (activeRequest) {{
+    statusLabel = 'Active';
+    statusClass = 'info';
+  }} else if (completedEvent?.type === 'request_failed') {{
+    statusLabel = 'Failed';
+    statusClass = 'error';
+  }} else if (completedEvent?.type === 'request_completed') {{
+    statusLabel = 'Completed';
+    statusClass = 'success';
+  }}
+  const model = activeMatches && active.model_name
+    ? active.model_name
+    : (latestRequest.model || inspectorModelFromEvent(latestModelEvent) || data?.requests?.last_model || '');
+  const startTimestamp = startEvent?.timestamp || '';
+  const completionTimestamp = completedEvent?.timestamp || '';
+  const requestEvents = events.filter(event => ['request_received', 'request_completed', 'request_failed'].includes(event?.type));
+  const requestCount = requestEvents.length || requests.length || null;
+  const endpoint = latestRequest.endpoint || (completedEvent?.detail || receivedEvent?.detail || '').split(' • ')[0];
+  const client = latestRequest.client_host || latestRequest.client || latestRequest.source || '';
+  const contextWindow = context.context_window_tokens || data?.instrument_panel?.context_usage?.context_window_tokens || null;
+  const contextPercent = context.usage_percent === null || context.usage_percent === undefined ? null : context.usage_percent;
+  const estimatedTokens = context.estimated_tokens === null || context.estimated_tokens === undefined ? null : context.estimated_tokens;
+  return {{
+    statusLabel,
+    statusClass,
+    shortId: inspectorShortId(conversationId),
+    model: inspectorSafeText(model),
+    source: inspectorSafeText(client),
+    started: inspectorDateLabel(startTimestamp),
+    fields: [
+      ['Status', statusLabel],
+      ['Model', inspectorSafeText(model)],
+      ['Client / Source', inspectorSafeText(client)],
+      ['Endpoint', inspectorSafeText(endpoint)],
+      ['Start time', inspectorDateLabel(startTimestamp)],
+      ['Completion time', inspectorDateLabel(completionTimestamp)],
+      ['Duration', inspectorDurationLabel(startTimestamp, completionTimestamp)],
+      ['Request count', requestCount === null ? 'Not available' : String(requestCount)],
+      ['Estimated context tokens', estimatedTokens === null ? 'Not available' : formatTokenValue(estimatedTokens)],
+      ['Context percentage', contextPercent === null ? 'Not available' : formatPercentValue(contextPercent)],
+      ['Detected capacity', contextWindow === null ? 'Not available' : formatTokenValue(contextWindow) + ' tokens']
+    ]
+  }};
+}}
+function setInspectorVisibility(id, visible) {{
+  const el = byId(id);
+  if (el) el.hidden = !visible;
+}}
+function showConversationInspectorPanel(panelName) {{
+  setInspectorVisibility('conversationInspectorLoading', panelName === 'loading');
+  setInspectorVisibility('conversationInspectorUnavailable', panelName === 'unavailable');
+  setInspectorVisibility('conversationInspectorDetails', panelName === 'metadata');
+}}
+function renderConversationInspector() {{
+  const drawer = byId('conversationInspectorDrawer');
+  const backdrop = byId('conversationInspectorBackdrop');
+  if (!drawer) return;
+  const isOpen = Boolean(conversationInspectorState.inspectorOpen);
+  document.body.classList.toggle('conversation-inspector-open', isOpen);
+  drawer.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+  if (backdrop) backdrop.hidden = !isOpen;
+  if (!isOpen) {{
+    setText('conversationInspectorConversationId', 'No conversation selected', false);
+    setStatusBadge('conversationInspectorStatusBadge', 'waiting', 'Closed');
+    setText('conversationInspectorModelLine', 'Model not available', false);
+    setText('conversationInspectorStartedLine', 'Start time not available', false);
+    showConversationInspectorPanel(null);
+    return;
+  }}
+  const data = conversationInspectorState.lastDashboardData;
+  const unavailable = conversationInspectorState.inspectorError === 'unavailable' || !selectedConversationAvailable(data);
+  if (conversationInspectorState.inspectorLoading && !data) {{
+    setText('conversationInspectorConversationId', inspectorShortId(conversationInspectorState.selectedConversationId), false);
+    setStatusBadge('conversationInspectorStatusBadge', 'waiting', 'Loading');
+    setText('conversationInspectorModelLine', 'Loading conversation details…', false);
+    setText('conversationInspectorStartedLine', 'Start time not available', false);
+    showConversationInspectorPanel('loading');
+    setText('conversationInspectorLiveRegion', 'Loading conversation details…', false);
+    return;
+  }}
+  if (unavailable) {{
+    setText('conversationInspectorConversationId', inspectorShortId(conversationInspectorState.selectedConversationId), false);
+    setStatusBadge('conversationInspectorStatusBadge', 'warning', 'Unavailable');
+    setText('conversationInspectorModelLine', 'Model not available', false);
+    setText('conversationInspectorStartedLine', 'Start time not available', false);
+    showConversationInspectorPanel('unavailable');
+    setText('conversationInspectorLiveRegion', 'Conversation details unavailable', false);
+    return;
+  }}
+  const metadata = buildConversationInspectorMetadata(data);
+  setText('conversationInspectorConversationId', metadata.shortId, false);
+  setStatusBadge('conversationInspectorStatusBadge', metadata.statusClass, metadata.statusLabel);
+  setText('conversationInspectorModelLine', metadata.model + ' · ' + metadata.source, false);
+  setText('conversationInspectorStartedLine', 'Started ' + metadata.started, false);
+  const gridHtml = metadata.fields.map(([label, value]) => `<div class="conversation-inspector-field"><div class="conversation-inspector-label">${{escapeHtml(label)}}</div><div class="conversation-inspector-value">${{escapeHtml(value)}}</div></div>`).join('');
+  setHtml('conversationInspectorMetadataGrid', gridHtml);
+  showConversationInspectorPanel('metadata');
+  setText('conversationInspectorLiveRegion', 'Conversation Inspector opened for ' + metadata.shortId, false);
+}}
+function syncTimelineSelectionState() {{
+  document.querySelectorAll('#liveConversationTimelineList [data-inspector-conversation-id]').forEach(entry => {{
+    const selected = Boolean(
+      conversationInspectorState.inspectorOpen
+      && conversationInspectorState.selectedConversationId
+      && entry.dataset.inspectorConversationId === conversationInspectorState.selectedConversationId
+    );
+    entry.classList.toggle('is-selected', selected);
+    entry.setAttribute('aria-pressed', selected ? 'true' : 'false');
+  }});
+}}
+function updateConversationInspectorFromDashboardData(data) {{
+  conversationInspectorState.lastDashboardData = data;
+  if (!conversationInspectorState.inspectorOpen) return;
+  conversationInspectorState.inspectorLoading = false;
+  conversationInspectorState.inspectorError = selectedConversationAvailable(data) ? null : 'unavailable';
+  renderConversationInspector();
+  syncTimelineSelectionState();
+}}
+function openConversationInspector(conversationId, eventId) {{
+  if (!conversationId) return;
+  conversationInspectorState.selectedConversationId = conversationId;
+  conversationInspectorState.selectedTimelineEventId = eventId || null;
+  conversationInspectorState.inspectorOpen = true;
+  conversationInspectorState.inspectorLoading = !conversationInspectorState.lastDashboardData;
+  conversationInspectorState.inspectorError = conversationInspectorState.lastDashboardData && !selectedConversationAvailable(conversationInspectorState.lastDashboardData)
+    ? 'unavailable'
+    : null;
+  renderConversationInspector();
+  syncTimelineSelectionState();
+  const closeButton = byId('conversationInspectorClose');
+  if (closeButton) closeButton.focus({{ preventScroll:true }});
+}}
+function closeConversationInspector(options) {{
+  const eventId = conversationInspectorState.selectedTimelineEventId;
+  conversationInspectorState.selectedConversationId = null;
+  conversationInspectorState.selectedTimelineEventId = null;
+  conversationInspectorState.inspectorOpen = false;
+  conversationInspectorState.inspectorLoading = false;
+  conversationInspectorState.inspectorError = null;
+  renderConversationInspector();
+  syncTimelineSelectionState();
+  const shouldReturnFocus = !options || options.returnFocus !== false;
+  if (!shouldReturnFocus || !eventId) return;
+  const trigger = Array.from(document.querySelectorAll('#liveConversationTimelineList [data-event-id]'))
+    .find(entry => entry.dataset.eventId === eventId);
+  if (trigger && typeof trigger.focus === 'function') trigger.focus({{ preventScroll:true }});
+}}
+function handleTimelineInspectorSelection(event) {{
+  const list = byId('liveConversationTimelineList');
+  const trigger = event.target.closest ? event.target.closest('[data-inspector-conversation-id]') : null;
+  if (!list || !trigger || !list.contains(trigger)) return;
+  const nestedInteractive = event.target.closest('a,input,select,textarea,summary,[data-page-link]');
+  if (nestedInteractive && nestedInteractive !== trigger) return;
+  openConversationInspector(trigger.dataset.inspectorConversationId, trigger.dataset.eventId);
+}}
 function renderLiveConversationTimeline(timeline) {{
   const list = byId('liveConversationTimelineList');
   if (!list) return;
   const events = Array.isArray(timeline?.events) ? timeline.events : (Array.isArray(timeline) ? timeline : []);
-  const signature = events.map(event => String(event?.id || '')).join('|');
+  const conversationId = !Array.isArray(timeline) && timeline?.conversation_id ? String(timeline.conversation_id) : '';
+  const signature = conversationId + '|' + events.map(event => String(event?.id || '')).join('|');
   const status = byId('liveConversationTimelineStatus');
   const countLabel = events.length === 1 ? '1 event' : events.length + ' events';
   if (status) setStatusBadge('liveConversationTimelineStatus', events.length ? 'info' : 'waiting', events.length ? countLabel : 'Waiting');
-  if (list.dataset.renderedSignature === signature) return;
+  if (list.dataset.renderedSignature === signature) {{
+    syncTimelineSelectionState();
+    return;
+  }}
   const wasPinned = list.scrollHeight - list.scrollTop - list.clientHeight < 24;
   if (!events.length) {{
     list.innerHTML = timelineEmptyHtml();
     list.dataset.renderedSignature = signature;
+    syncTimelineSelectionState();
     return;
   }}
   const html = events.map(event => {{
     const severity = safeClass(event?.severity || 'info') || 'info';
-    const type = safeClass(event?.type || 'event') || 'event';
+    const eventType = safeClass(event?.type || 'event') || 'event';
     const eventId = event?.id ? String(event.id) : '';
     const title = event?.title || 'Timeline event';
-    return `<div class="live-timeline-event ${{severity}}" data-event-id="${{escapeHtml(eventId)}}" data-event-type="${{type}}"><div class="live-timeline-marker" aria-hidden="true"></div><div class="live-timeline-time">${{escapeHtml(timelineTimeLabel(event))}}</div><div class="live-timeline-copy"><div class="live-timeline-title">${{escapeHtml(title)}}</div>${{timelineDetailHtml(event)}}</div></div>`;
+    const selected = Boolean(conversationInspectorState.inspectorOpen && conversationId && conversationInspectorState.selectedConversationId === conversationId);
+    const className = 'live-timeline-event ' + severity + (selected ? ' is-selected' : '');
+    const content = `<div class="live-timeline-marker" aria-hidden="true"></div><div class="live-timeline-time">${{escapeHtml(timelineTimeLabel(event))}}</div><div class="live-timeline-copy"><div class="live-timeline-title">${{escapeHtml(title)}}</div>${{timelineDetailHtml(event)}}</div>`;
+    const commonAttrs = `class="${{className}}" data-event-id="${{escapeHtml(eventId)}}" data-event-type="${{eventType}}"`;
+    if (!conversationId) return `<div ${{commonAttrs}}>${{content}}</div>`;
+    const label = 'Open Conversation Inspector for ' + inspectorShortId(conversationId) + ': ' + title;
+    return `<button type="button" ${{commonAttrs}} data-inspector-conversation-id="${{escapeHtml(conversationId)}}" aria-pressed="${{selected ? 'true' : 'false'}}" aria-label="${{escapeHtml(label)}}">${{content}}</button>`;
   }}).join('');
   list.innerHTML = html;
   list.dataset.renderedSignature = signature;
+  syncTimelineSelectionState();
   if (wasPinned) list.scrollTop = list.scrollHeight;
 }}
 function refreshActiveConversation(active, risk) {{
@@ -1792,6 +2126,7 @@ async function refresh() {{
   }}
 }}
 initializePages();
+initializeConversationInspector();
 initializeInstrumentGauges();
 refresh(); setInterval(refresh, DASHBOARD_REFRESH_INTERVAL_MS);
 </script>

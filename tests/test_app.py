@@ -109,6 +109,43 @@ def test_dashboard_endpoint() -> None:
     assert "No active model yet" not in response.text
 
 
+def test_dashboard_conversation_inspector_foundation_contract() -> None:
+    app = create_app(Settings())
+    client = TestClient(app)
+    response = client.get("/dashboard")
+
+    assert response.status_code == 200
+    html = response.text
+    assert 'id="conversationInspectorDrawer"' in html
+    assert 'role="complementary"' in html
+    assert 'aria-labelledby="conversationInspectorTitle"' in html
+    assert "Conversation Inspector" in html
+    assert 'id="conversationInspectorClose"' in html
+    assert 'aria-label="Close Conversation Inspector"' in html
+    assert "Loading conversation details…" in html
+    assert "Conversation details unavailable" in html
+    assert "selectedConversationId:null" in html
+    assert "inspectorOpen:false" in html
+    assert "inspectorLoading:false" in html
+    assert "inspectorError:null" in html
+    assert "data-inspector-conversation-id" in html
+    assert "aria-pressed" in html
+    assert "is-selected" in html
+    assert ".conversation-inspector-state[hidden],.conversation-inspector-section[hidden] { display:none; }" in html
+    assert "showConversationInspectorPanel('loading')" in html
+    assert "showConversationInspectorPanel('unavailable')" in html
+    assert "showConversationInspectorPanel('metadata')" in html
+    assert "handleTimelineInspectorSelection" in html
+    assert "openConversationInspector" in html
+    assert "closeConversationInspector" in html
+    assert "updateConversationInspectorFromDashboardData(data)" in html
+    assert "event.key === 'Escape'" in html
+    assert "conversation-inspector-live-region" in html
+    assert ".conversation-inspector-drawer" in html
+    assert ".conversation-inspector-backdrop" in html
+    assert ".conversation-inspector-drawer,.conversation-inspector-backdrop,.conversation-inspector-close" in html
+
+
 def test_dashboard_connection_flow_animation_contract() -> None:
     app = create_app(Settings())
     client = TestClient(app)

@@ -1,6 +1,6 @@
 # ContextKeeper Test Plan
 
-Status: Current through Phase 6.5F-B6.2.
+Status: Current through Phase 6.5F-B6.3.
 
 This document defines automated and manual validation expectations for ContextKeeper. The automated suite is the default regression gate; manual Visual QA remains required for dashboard layout, motion, responsive behavior, and Product Owner acceptance.
 
@@ -16,6 +16,7 @@ Focused dashboard and inspector tests currently live in:
 - `tests/test_dashboard_instrument_panel.py`
 - `tests/test_dashboard_inspector.py`
 - `tests/test_dashboard_settings.py`
+- `tests/test_dashboard_settings_ui.py`
 
 Other focused modules include:
 
@@ -120,7 +121,7 @@ Validate:
 - Missing, idle, and partial data do not produce JavaScript errors.
 - Dashboard polling continues during active traffic and while the Conversation Inspector drawer is open.
 
-## Settings Snapshot, read API, and update API
+## Settings Snapshot, APIs, and dashboard UI
 
 Validate:
 
@@ -151,9 +152,24 @@ Validate:
 - Atomic rejection is verified: a request containing one valid setting and one invalid setting changes neither value.
 - Empty JSON update bodies are deliberately rejected.
 - `POST`, `PUT`, and `DELETE` on `/api/dashboard/settings` return `405`.
-- No persistence is added, no YAML file is written, and no Settings dashboard UI controls are added.
+- Settings navigation is an interactive keyboard-operable page target inside the existing dashboard shell, and Operations remains available.
+- Opening Settings performs a guarded first `GET /api/dashboard/settings`; repeated page switching does not duplicate listeners, loads, or polling timers.
+- Categories and controls are generated from API metadata rather than a hard-coded setting list.
+- Boolean, integer, and string rendering paths preserve value types; supplied minimum/maximum constraints are represented.
+- Labels, descriptions, status/live regions, runtime-read-only explanations, and restart-required indicators have accessible markup.
+- Confirmed and draft snapshots are separate clones, and confirmed state is protected from draft mutation.
+- Dirty calculation uses typed value equality, excludes non-runtime-editable fields, removes manually restored values from the change set, and drives clean/dirty Save and Discard states.
+- Save guards duplicate submission and sends one nested atomic PATCH containing only changed runtime-editable fields.
+- Successful save accepts the canonical response, refreshes confirmed/draft state, clears dirty state, and provides success feedback.
+- Validation failures map exact API error locations to controls when possible, provide a page-level alert, preserve all draft values, preserve dirty state, and allow correction/retry.
+- Network, server, and malformed-response paths fail safely, render response data as text, preserve the draft, and allow retry.
+- Discard restores the latest confirmed snapshot, clears field errors and dirty state, and performs no network request.
+- The visible Settings notice states that changes are runtime-only, reset on ContextKeeper restart, and do not modify `contextkeeper.yaml`.
+- No persistence, YAML writing, browser storage, reset-to-defaults workflow, or per-setting autosave is added.
 - Manual observation should confirm runtime changes reset after process restart.
-- Existing `/dashboard/data`, proxy behavior, Conversation Inspector, Connection Flow, Request Traffic, context engine, and compression tests remain green.
+- Existing `/dashboard/data`, proxy/streaming behavior, Conversation Inspector, Connection Flow, Request Traffic, Context Trend, instrument panel, reduced-motion, context-engine, and compression tests remain green.
+
+Phase B6.3 Product Owner QA should exercise keyboard navigation between Operations and Settings; manual reversal, Save, retry after a validation failure, and Discard; visible runtime-only messaging; live dashboard behavior during repeated view switching; and layout at the supported desktop and narrow widths. Approval remains a manual checkpoint after automated regression passes.
 
 ## Request Traffic
 
@@ -266,6 +282,9 @@ Manual dashboard review should include:
 - System Activity row: Context Trend and Connection Flow.
 - Operations lower row: Traffic, Active Conversation, Live Conversation Timeline.
 - Conversation Inspector desktop drawer and narrow full-width/backdrop behavior.
+- Settings categories and fields at desktop, tablet/narrow desktop, and mobile widths.
+- Settings labels, descriptions, constraints, badges, feedback, and sticky Save/Discard action bar wrap without horizontal overflow.
+- Settings loading, empty, retry, success, validation-error, and network-error states remain readable without color alone.
 
 ## Reduced motion
 
@@ -323,5 +342,8 @@ Every release candidate should confirm:
 - Context Usage and Context Trend update.
 - Live Conversation Timeline updates.
 - Conversation Inspector opens, updates, and closes.
+- Settings navigation opens the metadata-driven form and returns to Operations without a page reload.
+- Settings Save sends one changed-fields-only update; Discard sends none; failed Save preserves the draft.
+- Runtime settings reset after ContextKeeper restarts and `contextkeeper.yaml` remains unchanged.
 - Reduced-motion behavior is respected.
 - No prompt/response/summary content appears in routine dashboard surfaces.

@@ -69,7 +69,7 @@ Example: `Phase 6.5F-B4.2`
 | Dashboard modernization B4 workstream | Completed | Phase 6.5F-B4.8 automatic model context discovery is implemented and documented. |
 | Live data visualization and rich widgets | Completed through B5.5.2 | Request Traffic, Connection Flow, Live Conversation Timeline, layout refinement, Connection Flow visibility polish, Conversation Inspector foundation, and Conversation Inspector Overview & Intelligence are implemented; B5.6 synchronized documentation to that state. |
 | Documentation audit and synchronization | Completed | Phase 6.5F-B5.6 audited maintained Markdown documents and aligned documentation with the implementation through B5.5.2. |
-| Dashboard customization and user preferences | Active | Phase 6.5F-B6 has delivered the Settings Snapshot/read API foundation and the validated in-memory runtime update API. |
+| Dashboard customization and user preferences | Active | Phase 6.5F-B6 has delivered the Settings Snapshot/read API, validated in-memory update API, and Settings panel UI foundation; B6.3 Product Owner QA is pending. |
 | Release polish and final UX review | Planned | Phase 6.5F-B7 planned before historical memory retrieval and validation certification. |
 | Historical memory retrieval and detail preservation | Planned | Dedicated Phase 6.5G approved before Phase 6.6; no implementation exists yet. |
 | Validation framework and release certification | Planned | Dedicated Phase 6.6 approved after Phase 6.5G and before Phase 7; no implementation exists yet. |
@@ -1607,6 +1607,82 @@ Validation:
 - Related app tests: `.\.venv\Scripts\python.exe -m pytest tests/test_app.py -q`, 43 tests passing, with the existing third-party `StarletteDeprecationWarning`.
 - Full automated suite: `.\.venv\Scripts\python.exe -m pytest -q`, 289 tests passing, with the same existing FastAPI/Starlette warning and the malformed-JSON request-test `httpx` warning.
 
+### Phase 6.5F-B6.3 — Settings Panel UI Foundation
+
+Status: Implemented in the working tree; Product Owner QA pending.
+
+Date: 2026-07-20.
+
+Objective:
+
+- Activate the existing Settings destination inside the dashboard shell.
+- Load setting categories, identities, values, types, constraints, descriptions, editability, and restart metadata dynamically from `GET /api/dashboard/settings`.
+- Provide typed draft editing, meaningful dirty-state detection, one atomic Save action, Discard, and accessible loading/success/error feedback.
+- Keep all changes runtime-only and avoid configuration-file persistence, browser storage, proxy changes, or a frontend toolchain.
+
+Architecture and state:
+
+- Replaced the static Settings placeholder in `src/ctxkeeper/dashboard/template.py` without adding a separate application, frontend framework, build pipeline, dependency, or endpoint.
+- Extended the existing hash-based page switcher; Operations remains the primary dashboard view, and active navigation continues to use `.active` plus `aria-current="page"`.
+- Added a guarded first-load request when Settings opens. Repeated view switching does not duplicate the settings load, event listeners, or dashboard polling timers.
+- Added snapshot shape validation for the current `boolean`, `integer`, and `string` metadata contract. Unexpected or malformed data produces an error/retry state rather than fallback controls.
+- API-supplied display names, descriptions, values, constraints, identifiers, and error messages are created with DOM nodes and `textContent`; Settings rendering does not interpolate API data through `innerHTML`.
+- The browser stores a recursively frozen confirmed snapshot and a separately cloned draft snapshot. Editing mutates only draft setting values.
+- Dirty calculation uses strict type-and-value comparison, excludes non-runtime-editable settings, and returns to clean when values are manually restored.
+
+Save, validation, and Discard behavior:
+
+- Generic render paths create native checkbox, numeric, and text controls from API metadata, including min/max constraints, default-value context, runtime-read-only explanations, and restart-required badges.
+- Save is disabled for a clean or invalid draft and guarded while a request is pending. Editing and Discard are also disabled during the in-flight update so the canonical response cannot overwrite newer edits.
+- The client derives category/field nesting from setting metadata and sends exactly one `PATCH /api/dashboard/settings` containing only changed runtime-editable values. Numeric and boolean values remain JSON numbers and booleans.
+- The successful canonical PATCH snapshot replaces confirmed state and creates the next clean draft; the client performs one confirming GET only if the success response is not a usable snapshot.
+- Field-level API validation locations are associated with controls where possible, while category-level and other errors remain visible in the page alert.
+- Validation, network, server, and confirmation failures preserve the complete draft and dirty state for correction or retry.
+- Discard clones the latest confirmed snapshot, clears validation feedback and dirty state, and performs no request.
+
+Accessibility, responsive behavior, and lifecycle:
+
+- Added an always-visible notice that dashboard changes apply only to the current runtime, reset at restart, and do not modify `contextkeeper.yaml`.
+- Added explicit labels/descriptions, `aria-describedby`, invalid-state association, polite status updates, an assertive page error alert, visible focus styling, native keyboard controls, and text in addition to color for state communication.
+- Added responsive category, field, and action layouts that collapse cleanly at narrow widths without introducing horizontal page overflow.
+- Preserved reduced-motion behavior and the existing dashboard visualization lifecycle.
+- Converted the fixed polling interval into one reschedulable timer. `/dashboard/data.refresh_interval_ms` updates that same timer after a runtime setting change; only one interval can remain active.
+
+Tests added:
+
+- Added `tests/test_dashboard_settings_ui.py` with 13 focused rendered HTML/JavaScript contract tests for Settings navigation/page structure, accessible feedback, runtime-only messaging, canonical GET/PATCH integration, metadata-driven safe rendering, supported types, read-only/restart branches, separate confirmed/draft state, typed dirty behavior, one nested changed-fields-only update, duplicate-save guard, authoritative success, draft-preserving failures, no-request Discard, retry/malformed-data handling, responsive CSS, reduced motion, and polling/listener lifecycle guards.
+- Retained the existing 25 Settings API tests for strict request types, validation, atomicity, canonical responses, and read-after-write behavior.
+- Preserved existing dashboard, proxy, streaming, conversation, visualization, context, compression, and packaging regressions.
+
+Documentation updated:
+
+- `README.md`
+- `docs/README.md`
+- `docs/ARCHITECTURE.md`
+- `docs/CONFIGURATION.md`
+- `docs/TEST_PLAN.md`
+- `docs/ROADMAP.md`
+- `docs/PROJECT_HISTORY.md`
+- `docs/DASHBOARD_LAYOUT.md`
+- `docs/UI_COMPONENT_GUIDE.md`
+
+Deferred:
+
+- Persistence to `contextkeeper.yaml` or another durable store.
+- LocalStorage, SessionStorage, database, or startup restoration of runtime overrides.
+- Reset-to-defaults, import/export, per-setting autosave, and undo history.
+- Authentication, authorization, accounts, multi-user settings, and remote administration.
+- Broader dashboard customization, proxy/streaming changes, and context/compression redesign.
+
+Validation:
+
+- Focused settings/dashboard suite: `.\.venv\Scripts\python.exe -m pytest tests/test_dashboard_settings_ui.py tests/test_dashboard_settings.py tests/test_app.py::test_dashboard_endpoint tests/test_dashboard_instrument_panel.py::test_dashboard_template_has_consistent_page_targets_and_unique_ids -q`, 40 tests passing with the two existing third-party deprecation warnings.
+- Full automated suite: `.\.venv\Scripts\python.exe -m pytest`, 302 tests passing with one existing FastAPI/Starlette TestClient deprecation warning and one existing `httpx` malformed-request test deprecation warning; no skipped tests.
+- Python syntax validation: `.\.venv\Scripts\python.exe -m py_compile src/ctxkeeper/dashboard/template.py tests/test_dashboard_settings_ui.py`, passing.
+- Rendered dashboard JavaScript syntax validation: extracted the dashboard `<script>` from `render_dashboard_html(Settings())` with UTF-8 output and ran `node --check -`, passing.
+- Headless Microsoft Edge engineering smoke checks exercised the real Settings page at `3440×1440` and narrow width, field-specific validation focus, draft preservation, Discard, successful numeric Save, accepted-update reconciliation, and runtime refresh-timer rescheduling; the temporary runtime was stopped afterward.
+- Product Owner visual and interaction QA remains the acceptance checkpoint; this phase is not committed, merged, pushed, or released by this working-tree implementation.
+
 ### Phase 6.5G — Historical Memory Retrieval & Detail Preservation (Approved Plan)
 
 Status: Planned; approved for the roadmap, not implemented.
@@ -1787,11 +1863,11 @@ Scope boundary:
 
 ## Current Project State
 
-- Current active implementation phase: Phase 6.5F-B6.2 — Runtime Settings Update API.
+- Current active implementation phase: Phase 6.5F-B6.3 — Settings Panel UI Foundation; Product Owner QA pending.
 - Phase 6.5F-B4.8 — Automatic Model Context Discovery is implemented.
-- Phase 6.5F-B5.1 through Phase 6.5F-B6.2 are represented in source and tests.
-- Latest verified automated test count for Phase 6.5F-B6.2: 289 tests passing, with the existing third-party FastAPI/Starlette TestClient deprecation warning and one `httpx` malformed-request test deprecation warning.
-- Dashboard status: modern operations-console dashboard with live proxy, Ollama, request, context, compression, conversation, intelligence, health, operational activity, recommendations, grouped five-card system instrument panel, Context Trend, Request Traffic, animated Connection Flow, Live Conversation Timeline, Conversation Inspector drawer, Conversation Inspector Overview, deterministic Conversation Inspector Intelligence, and Settings Snapshot/read-update API foundation.
+- Phase 6.5F-B5.1 through Phase 6.5F-B6.3 are represented in source and tests.
+- Latest verified automated test count for Phase 6.5F-B6.3: 302 tests passing, with the existing third-party FastAPI/Starlette TestClient deprecation warning and one `httpx` malformed-request test deprecation warning; no skipped tests.
+- Dashboard status: modern operations-console dashboard with live proxy, Ollama, request, context, compression, conversation, intelligence, health, operational activity, recommendations, grouped five-card system instrument panel, Context Trend, Request Traffic, animated Connection Flow, Live Conversation Timeline, Conversation Inspector drawer, Conversation Inspector Overview, deterministic Conversation Inspector Intelligence, and an interactive metadata-driven runtime Settings page.
 - Major capabilities currently present:
   - FastAPI-based transparent Ollama proxy.
   - `/api/*` and `/v1/*` passthrough with streaming preservation for supported endpoints.
@@ -1800,11 +1876,11 @@ Scope boundary:
   - Compression manager, compression planning, rolling-summary support, and confirmed compression metadata.
   - Automatic Model Context Discovery and context-window enforcement.
   - Browser dashboard with live monitoring and intelligence.
-  - Dashboard settings snapshot, read API, and validated in-memory runtime update API for approved Context, Compression, and Dashboard settings.
+  - Dashboard settings snapshot, read API, validated in-memory runtime update API, and interactive Settings UI for approved Context, Compression, and Dashboard settings.
   - Windows service foundation, PyInstaller executable foundation, first-run setup wizard, Inno Setup installer foundation, and release build script.
 - Planned work still ahead:
-  - Product Owner QA for Phase 6.5F-B6.2.
-  - Later Phase 6.5F-B6 settings UI editing, persistence, reset/default controls, and broader dashboard preference work after explicit approval.
+  - Product Owner visual and interaction QA for Phase 6.5F-B6.3.
+  - Later Phase 6.5F-B6 configuration persistence, reset/default controls, and broader dashboard preference work after explicit approval.
   - Phase 6.5F-B7 — Release Polish & Final UX Review.
   - Phase 6.5G — Historical Memory Retrieval & Detail Preservation.
   - Phase 6.6 — Validation Framework & Release Certification.
@@ -1820,8 +1896,8 @@ This section is tentative and subject to refinement. These names and boundaries 
 
 - Phase 6.5F-B5 — Live Data Visualization & Rich Widgets.
 - Phase 6.5F-B6 — Dashboard Customization & User Preferences.
-  - Product Owner QA for Phase 6.5F-B6.2 — Runtime Settings Update API.
-  - Later B6 settings UI editing, persistence, reset/default controls, and broader dashboard preference work after explicit approval.
+  - Product Owner QA for Phase 6.5F-B6.3 — Settings Panel UI Foundation.
+  - Later B6 configuration persistence, reset/default controls, and broader dashboard preference work after explicit approval.
 - Phase 6.5F-B7 — Release Polish & Final UX Review.
 - Phase 6.5G — Historical Memory Retrieval & Detail Preservation.
   - Phase 6.5G.1 — Durable Conversation Archive.

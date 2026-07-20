@@ -249,6 +249,56 @@ a.badge:focus-visible {{ outline:2px solid rgba(56,189,248,.72); outline-offset:
 .value {{ font-size:28px; font-weight:750; overflow-wrap:anywhere; }}
 .muted {{ color:var(--muted); overflow-wrap:anywhere; }}
 .ok {{ color:var(--good); }} .warn {{ color:var(--warn); }} .bad {{ color:var(--bad); }}
+.settings-page {{ gap:12px; padding-bottom:2px; }}
+.settings-page [hidden] {{ display:none !important; }}
+.settings-runtime-notice {{ display:grid; grid-template-columns:auto minmax(0,1fr); gap:10px; align-items:start; padding:12px 14px; border:1px solid rgba(245,158,11,.28); border-left:4px solid var(--warn); border-radius:10px; background:linear-gradient(135deg,rgba(245,158,11,.12),rgba(15,23,42,.62)); box-shadow:var(--surface-inset-highlight),var(--glow-warn); }}
+.settings-runtime-icon {{ display:grid; place-items:center; width:26px; height:26px; border-radius:50%; color:#fde68a; background:rgba(245,158,11,.16); border:1px solid rgba(245,158,11,.28); font-weight:900; }}
+.settings-runtime-title {{ margin:0; color:#fde68a; font-size:13px; line-height:1.35; font-weight:850; }}
+.settings-runtime-copy {{ margin:3px 0 0; color:var(--soft); font-size:12px; line-height:1.45; overflow-wrap:anywhere; }}
+.settings-status,.settings-feedback {{ min-width:0; padding:9px 11px; border:1px solid rgba(56,189,248,.16); border-radius:8px; background:rgba(56,189,248,.07); color:#bae6fd; font-size:12px; line-height:1.4; overflow-wrap:anywhere; }}
+.settings-status.success {{ border-color:rgba(34,197,94,.22); background:rgba(34,197,94,.08); color:#bbf7d0; }}
+.settings-status.warning {{ border-color:rgba(245,158,11,.24); background:rgba(245,158,11,.08); color:#fde68a; }}
+.settings-feedback-error {{ border-color:rgba(239,68,68,.28); background:rgba(239,68,68,.1); color:#fecaca; }}
+.settings-state {{ min-height:150px; display:grid; place-items:center; align-content:center; gap:10px; padding:24px; border:1px dashed rgba(148,163,184,.28); border-radius:10px; background:rgba(15,23,42,.38); text-align:center; }}
+.settings-state-title {{ color:var(--soft); font-size:15px; font-weight:800; }}
+.settings-state-detail {{ max-width:620px; color:var(--muted); font-size:12px; line-height:1.45; }}
+.settings-form {{ display:grid; gap:12px; min-width:0; }}
+.settings-categories {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr)); gap:12px; min-width:0; align-items:start; }}
+.settings-category {{ min-width:0; display:grid; gap:12px; align-content:start; padding:14px; }}
+.settings-category-header {{ min-width:0; padding-bottom:10px; border-bottom:1px solid rgba(203,213,225,.1); }}
+.settings-category-title {{ margin:0; color:#f8fafc; font-size:16px; line-height:1.25; }}
+.settings-category-description {{ margin:4px 0 0; color:var(--muted); font-size:12px; line-height:1.4; overflow-wrap:anywhere; }}
+.settings-list {{ display:grid; gap:10px; min-width:0; }}
+.settings-item {{ min-width:0; display:grid; grid-template-columns:minmax(0,1fr) minmax(180px,260px); gap:14px; align-items:start; padding:11px; border:1px solid rgba(203,213,225,.1); border-radius:9px; background:rgba(15,23,42,.42); box-shadow:var(--surface-inset-highlight); }}
+.settings-item:focus-within {{ border-color:rgba(56,189,248,.3); box-shadow:var(--surface-inset-highlight),0 0 0 2px rgba(56,189,248,.08); }}
+.settings-item-meta,.settings-control-panel {{ min-width:0; }}
+.settings-label-row {{ display:flex; flex-wrap:wrap; align-items:center; gap:6px; }}
+.settings-label {{ color:var(--text); font-size:13px; line-height:1.3; font-weight:800; cursor:pointer; overflow-wrap:anywhere; }}
+.settings-item-description {{ margin:4px 0 0; color:var(--muted); font-size:11px; line-height:1.4; overflow-wrap:anywhere; }}
+.settings-metadata {{ display:flex; flex-wrap:wrap; gap:6px 10px; margin-top:7px; color:#aebbd0; font-size:10px; line-height:1.35; }}
+.settings-control-panel {{ display:grid; gap:6px; align-content:start; }}
+.settings-input {{ width:100%; min-width:0; height:38px; padding:7px 9px; border:1px solid rgba(148,163,184,.28); border-radius:8px; outline:none; background:rgba(2,6,23,.52); color:var(--text); font:inherit; font-size:13px; transition:border-color .18s ease,background .18s ease,box-shadow .18s ease; }}
+.settings-input:hover:not(:disabled) {{ border-color:rgba(148,163,184,.46); background:rgba(2,6,23,.68); }}
+.settings-input:focus-visible,.settings-checkbox:focus-visible {{ outline:2px solid rgba(56,189,248,.72); outline-offset:2px; }}
+.settings-input:focus {{ border-color:rgba(56,189,248,.52); box-shadow:0 0 0 3px rgba(56,189,248,.1); }}
+.settings-input[aria-invalid="true"] {{ border-color:rgba(239,68,68,.62); box-shadow:0 0 0 2px rgba(239,68,68,.1); }}
+.settings-input:disabled,.settings-checkbox:disabled {{ cursor:not-allowed; opacity:.62; }}
+.settings-checkbox-row {{ min-height:38px; display:flex; align-items:center; gap:9px; padding:7px 9px; border:1px solid rgba(148,163,184,.2); border-radius:8px; background:rgba(2,6,23,.38); }}
+.settings-checkbox {{ width:19px; height:19px; flex:0 0 auto; margin:0; accent-color:var(--accent); }}
+.settings-checkbox-state {{ color:var(--soft); font-size:12px; font-weight:750; }}
+.settings-field-note {{ color:var(--muted); font-size:10px; line-height:1.35; overflow-wrap:anywhere; }}
+.settings-field-error {{ color:#fecaca; font-size:11px; line-height:1.35; overflow-wrap:anywhere; }}
+.settings-action-bar {{ position:sticky; z-index:3; bottom:0; min-width:0; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:11px 12px; border:1px solid rgba(203,213,225,.13); border-radius:10px; background:linear-gradient(135deg,rgba(15,23,42,.96),rgba(24,33,50,.94)); box-shadow:0 -10px 28px rgba(2,6,23,.3),var(--surface-inset-highlight); backdrop-filter:blur(18px); }}
+.settings-dirty-summary {{ min-width:0; color:var(--muted); font-size:12px; line-height:1.35; overflow-wrap:anywhere; }}
+.settings-actions {{ flex:0 0 auto; display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; }}
+.settings-button {{ min-height:36px; padding:7px 13px; border:1px solid rgba(148,163,184,.28); border-radius:8px; color:var(--soft); background:rgba(15,23,42,.72); font-weight:800; cursor:pointer; transition:border-color .18s ease,background .18s ease,color .18s ease,box-shadow .18s ease,transform .14s ease; }}
+.settings-button:hover:not(:disabled) {{ border-color:rgba(56,189,248,.38); background:rgba(56,189,248,.12); color:#fff; transform:translateY(-1px); }}
+.settings-button.primary {{ border-color:rgba(56,189,248,.4); background:linear-gradient(135deg,rgba(14,165,233,.78),rgba(79,70,229,.74)); color:#fff; box-shadow:0 8px 18px rgba(14,165,233,.16); }}
+.settings-button.primary:hover:not(:disabled) {{ background:linear-gradient(135deg,rgba(14,165,233,.92),rgba(79,70,229,.88)); }}
+.settings-button:disabled {{ cursor:not-allowed; opacity:.5; box-shadow:none; transform:none; }}
+.settings-button:focus-visible {{ outline:2px solid rgba(56,189,248,.72); outline-offset:2px; }}
+@media (prefers-reduced-motion: reduce) {{ .settings-button,.settings-input {{ transition:none; }} .settings-button:hover:not(:disabled) {{ transform:none; }} }}
+@media (max-width: 700px) {{ .settings-runtime-notice {{ grid-template-columns:1fr; }} .settings-runtime-icon {{ display:none; }} .settings-category {{ padding:11px; }} .settings-item {{ grid-template-columns:1fr; gap:9px; }} .settings-action-bar {{ align-items:stretch; flex-direction:column; }} .settings-actions {{ width:100%; }} .settings-button {{ flex:1 1 130px; }} }}
 .bar {{ height:12px; border-radius:999px; background:#334155; overflow:hidden; margin:10px 0; }}
 .fill {{ height:100%; background:var(--accent); width:0%; transition:width .25s ease; }}
 table {{ width:100%; border-collapse:collapse; font-size:13px; table-layout:fixed; }}
@@ -1004,13 +1054,34 @@ body.conversation-inspector-open .conversation-inspector-drawer {{ transform:tra
   <div id="activity" class="card activity-card"><h2><span class="icon-label"><span class="icon-mark">#</span>Live Activity</span></h2><table><thead><tr><th>Time</th><th>Client</th><th>Endpoint</th><th>Model</th><th>Status</th><th>Latency</th></tr></thead><tbody id="recent"></tbody></table></div>
 </section>
 
-<section id="settings" class="page" data-page="settings">
-  <div class="page-header"><div><h2 class="page-title">Settings</h2><div class="page-sub">Current dashboard and upstream connection settings.</div></div></div>
-  <div class="grid">
-    <div class="card"><h2>Proxy</h2><div class="value ok">Running</div><div class="muted">Listening on port {settings.server.port}</div></div>
-    <div class="card"><h2>Ollama</h2><div class="value">Configured</div><div class="muted">{settings.ollama.base_url}</div></div>
-    <div class="card"><h2>Refresh</h2><div class="value">{settings.dashboard.refresh_interval_ms or 1000} ms</div><div class="muted">Dashboard polling interval</div></div>
+<section id="settings" class="page settings-page" data-page="settings" aria-labelledby="settingsPageTitle">
+  <div class="page-header">
+    <div><h2 id="settingsPageTitle" class="page-title">Settings</h2><div class="page-sub">Review and adjust settings exposed by the current ContextKeeper runtime.</div></div>
   </div>
+  <aside class="settings-runtime-notice" role="note" aria-labelledby="settingsRuntimeNoticeTitle">
+    <div class="settings-runtime-icon" aria-hidden="true">!</div>
+    <div>
+      <h3 id="settingsRuntimeNoticeTitle" class="settings-runtime-title">Runtime-only changes</h3>
+      <p class="settings-runtime-copy">Changes made here apply only to the current ContextKeeper runtime and reset when ContextKeeper restarts. They do not modify contextkeeper.yaml.</p>
+    </div>
+  </aside>
+  <div id="settingsStatus" class="settings-status" role="status" aria-live="polite" aria-atomic="true">Settings load when this page is opened.</div>
+  <div id="settingsErrorSummary" class="settings-feedback settings-feedback-error" role="alert" aria-live="assertive" tabindex="-1" hidden></div>
+  <div id="settingsLoadState" class="settings-state" hidden>
+    <div id="settingsLoadStateTitle" class="settings-state-title">Loading settings</div>
+    <div id="settingsLoadStateDetail" class="settings-state-detail">Requesting the current runtime settings from ContextKeeper.</div>
+    <button id="settingsRetryButton" class="settings-button" type="button" hidden>Retry loading settings</button>
+  </div>
+  <form id="settingsForm" class="settings-form" novalidate hidden>
+    <div id="settingsCategories" class="settings-categories" aria-label="Runtime settings categories"></div>
+    <div class="settings-action-bar">
+      <div id="settingsDirtySummary" class="settings-dirty-summary">No unsaved changes.</div>
+      <div class="settings-actions">
+        <button id="settingsDiscardButton" class="settings-button" type="button" disabled>Discard changes</button>
+        <button id="settingsSaveButton" class="settings-button primary" type="submit" disabled>Save changes</button>
+      </div>
+    </div>
+  </form>
 </section>
 </main>
 </div>
@@ -1064,6 +1135,7 @@ body.conversation-inspector-open .conversation-inspector-drawer {{ transform:tra
 </aside>
 <script>
 const DASHBOARD_REFRESH_INTERVAL_MS = {settings.dashboard.refresh_interval_ms or 1000};
+const SETTINGS_ENDPOINT = '/api/dashboard/settings';
 const TOPOLOGY_OUTBOUND_DURATION_MS = 1300;
 const TOPOLOGY_INBOUND_DURATION_MS = 1200;
 const REQUEST_TRAFFIC_BUCKETS = 24;
@@ -1087,6 +1159,21 @@ const INSTRUMENT_GAUGE_SEGMENTS = [
 let lastTopologyActiveRequestCount = null;
 let topologyFlowTimer = null;
 let refreshInFlight = false;
+let refreshAfterCurrent = false;
+let dashboardRefreshTimer = null;
+let dashboardRefreshIntervalMs = DASHBOARD_REFRESH_INTERVAL_MS;
+const settingsPageState = {{
+  confirmedSnapshot:null,
+  draftSnapshot:null,
+  draftSettingsById:new Map(),
+  controlsById:new Map(),
+  errorElementsById:new Map(),
+  fieldErrors:new Map(),
+  loaded:false,
+  loading:false,
+  saving:false,
+  confirmationRequired:false
+}};
 const conversationInspectorState = {{
   selectedConversationId:null,
   inspectorOpen:false,
@@ -1660,6 +1747,602 @@ function updateInstrumentPanel(instrumentPanel) {{
   renderContextTrend(panel.context_trend);
   updateCompressionInstrument(panel.compression_status);
 }}
+function cloneSettingsSnapshot(snapshot) {{
+  return JSON.parse(JSON.stringify(snapshot));
+}}
+function freezeSettingsSnapshot(value) {{
+  if (!value || typeof value !== 'object' || Object.isFrozen(value)) return value;
+  Object.getOwnPropertyNames(value).forEach(key => freezeSettingsSnapshot(value[key]));
+  return Object.freeze(value);
+}}
+function settingValueMatchesDataType(dataType, value) {{
+  if (dataType === 'boolean') return typeof value === 'boolean';
+  if (dataType === 'integer') return Number.isSafeInteger(value);
+  if (dataType === 'string') return typeof value === 'string';
+  return false;
+}}
+function validateSettingsSnapshot(snapshot) {{
+  const invalid = () => {{ throw new Error('The settings response format is not supported.'); }};
+  if (!snapshot || typeof snapshot !== 'object' || snapshot.schema_version !== 1 || !Array.isArray(snapshot.categories)) invalid();
+  const categoryIds = new Set();
+  const settingIds = new Set();
+  snapshot.categories.forEach(category => {{
+    if (!category || typeof category !== 'object' || typeof category.id !== 'string' || !category.id ||
+        typeof category.display_name !== 'string' || typeof category.description !== 'string' || !Array.isArray(category.settings) ||
+        categoryIds.has(category.id)) invalid();
+    categoryIds.add(category.id);
+    category.settings.forEach(setting => {{
+      if (!setting || typeof setting !== 'object' || typeof setting.id !== 'string' || typeof setting.category !== 'string' ||
+          typeof setting.display_name !== 'string' || typeof setting.description !== 'string' ||
+          typeof setting.runtime_editable !== 'boolean' || typeof setting.restart_required !== 'boolean' ||
+          !['boolean','integer','string'].includes(setting.data_type) || setting.category !== category.id || settingIds.has(setting.id) ||
+          !settingValueMatchesDataType(setting.data_type, setting.value) ||
+          !settingValueMatchesDataType(setting.data_type, setting.default_value)) invalid();
+      const prefix = category.id + '.';
+      const fieldName = setting.id.startsWith(prefix) ? setting.id.slice(prefix.length) : '';
+      if (!fieldName || fieldName.includes('.')) invalid();
+      if (setting.minimum !== null && !Number.isSafeInteger(setting.minimum)) invalid();
+      if (setting.maximum !== null && !Number.isSafeInteger(setting.maximum)) invalid();
+      if (setting.data_type !== 'integer' && (setting.minimum !== null || setting.maximum !== null)) invalid();
+      if (setting.minimum !== null && setting.maximum !== null && setting.minimum > setting.maximum) invalid();
+      if (setting.data_type === 'integer' && setting.minimum !== null &&
+          (setting.value < setting.minimum || setting.default_value < setting.minimum)) invalid();
+      if (setting.data_type === 'integer' && setting.maximum !== null &&
+          (setting.value > setting.maximum || setting.default_value > setting.maximum)) invalid();
+      settingIds.add(setting.id);
+    }});
+  }});
+  return snapshot;
+}}
+function settingsIndex(snapshot) {{
+  const index = new Map();
+  if (!snapshot) return index;
+  snapshot.categories.forEach(category => category.settings.forEach(setting => index.set(setting.id, setting)));
+  return index;
+}}
+function setSettingsStatus(message, tone) {{
+  const status = byId('settingsStatus');
+  if (!status) return;
+  status.className = 'settings-status' + (tone ? ' ' + safeClass(tone) : '');
+  status.textContent = message;
+}}
+function clearSettingsPageError() {{
+  const summary = byId('settingsErrorSummary');
+  if (!summary) return;
+  summary.textContent = '';
+  summary.hidden = true;
+}}
+function settingsPageIsActive() {{
+  const page = byId('settings');
+  return Boolean(page && page.classList.contains('active'));
+}}
+function showSettingsPageError(message, focusSummary) {{
+  const summary = byId('settingsErrorSummary');
+  if (!summary) return;
+  summary.textContent = message;
+  summary.hidden = false;
+  if (focusSummary && settingsPageIsActive()) summary.focus();
+}}
+function showSettingsLoadState(title, detail, retryable) {{
+  const state = byId('settingsLoadState');
+  if (!state) return;
+  setText('settingsLoadStateTitle', title, false);
+  setText('settingsLoadStateDetail', detail, false);
+  const retry = byId('settingsRetryButton');
+  if (retry) retry.hidden = !retryable;
+  state.hidden = false;
+}}
+function hideSettingsLoadState() {{
+  const state = byId('settingsLoadState');
+  if (state) state.hidden = true;
+}}
+function createSettingsElement(tagName, className, textValue) {{
+  const element = document.createElement(tagName);
+  if (className) element.className = className;
+  if (textValue !== undefined) element.textContent = String(textValue);
+  return element;
+}}
+function formatSettingValue(value, dataType) {{
+  if (dataType === 'boolean') return value ? 'Enabled' : 'Disabled';
+  return String(value);
+}}
+function settingsDescriptionIds(controlId, setting) {{
+  const ids = [controlId + '-description', controlId + '-metadata', controlId + '-error'];
+  if (!setting.runtime_editable) ids.push(controlId + '-readonly');
+  return ids.join(' ');
+}}
+function createSettingsBadge(label, state) {{
+  return createSettingsElement('span', 'badge ' + state, label);
+}}
+function createSettingsControl(setting, controlId) {{
+  let control;
+  if (setting.data_type === 'boolean') {{
+    const row = createSettingsElement('div', 'settings-checkbox-row');
+    control = createSettingsElement('input', 'settings-checkbox');
+    control.type = 'checkbox';
+    control.checked = setting.value;
+    const state = createSettingsElement('span', 'settings-checkbox-state', setting.value ? 'Enabled' : 'Disabled');
+    state.id = controlId + '-boolean-state';
+    row.append(control, state);
+    row.settingsControl = control;
+    return row;
+  }}
+  control = createSettingsElement('input', 'settings-input');
+  if (setting.data_type === 'integer') {{
+    control.type = 'number';
+    control.step = '1';
+    control.required = true;
+    control.inputMode = 'numeric';
+    if (setting.minimum !== null) control.min = String(setting.minimum);
+    if (setting.maximum !== null) control.max = String(setting.maximum);
+  }} else {{
+    control.type = 'text';
+    control.autocomplete = 'off';
+    control.autocapitalize = 'none';
+  }}
+  control.value = String(setting.value);
+  control.settingsControl = control;
+  return control;
+}}
+function configureSettingsControl(controlRoot, setting, controlId) {{
+  const control = controlRoot.settingsControl || controlRoot;
+  control.id = controlId;
+  control.name = setting.id;
+  control.dataset.settingId = setting.id;
+  control.dataset.settingType = setting.data_type;
+  control.setAttribute('aria-describedby', settingsDescriptionIds(controlId, setting));
+  control.disabled = !setting.runtime_editable || settingsPageState.saving;
+  if (control.disabled) control.setAttribute('aria-disabled', 'true');
+  else control.removeAttribute('aria-disabled');
+  settingsPageState.controlsById.set(setting.id, control);
+  return control;
+}}
+function createSettingsItem(setting, itemNumber) {{
+  const controlId = 'settings-control-' + itemNumber;
+  const item = createSettingsElement('article', 'settings-item');
+  const metadata = createSettingsElement('div', 'settings-item-meta');
+  const labelRow = createSettingsElement('div', 'settings-label-row');
+  const label = createSettingsElement('label', 'settings-label', setting.display_name);
+  label.htmlFor = controlId;
+  labelRow.append(label);
+  if (!setting.runtime_editable) labelRow.append(createSettingsBadge('Runtime read-only', 'disabled'));
+  if (setting.restart_required) labelRow.append(createSettingsBadge('Restart required', 'warning'));
+  const description = createSettingsElement('p', 'settings-item-description', setting.description);
+  description.id = controlId + '-description';
+  const metadataLine = createSettingsElement('div', 'settings-metadata');
+  metadataLine.id = controlId + '-metadata';
+  metadataLine.append(createSettingsElement('span', '', 'Default: ' + formatSettingValue(setting.default_value, setting.data_type)));
+  if (setting.minimum !== null || setting.maximum !== null) {{
+    const minimum = setting.minimum === null ? 'no minimum' : String(setting.minimum);
+    const maximum = setting.maximum === null ? 'no maximum' : String(setting.maximum);
+    metadataLine.append(createSettingsElement('span', '', 'Allowed range: ' + minimum + ' to ' + maximum));
+  }}
+  metadata.append(labelRow, description, metadataLine);
+
+  const controlPanel = createSettingsElement('div', 'settings-control-panel');
+  const controlRoot = createSettingsControl(setting, controlId);
+  const control = configureSettingsControl(controlRoot, setting, controlId);
+  controlPanel.append(controlRoot);
+  if (!setting.runtime_editable) {{
+    const readOnly = createSettingsElement('div', 'settings-field-note', 'This setting cannot be changed during the current runtime.');
+    readOnly.id = controlId + '-readonly';
+    controlPanel.append(readOnly);
+  }}
+  const error = createSettingsElement('div', 'settings-field-error');
+  error.id = controlId + '-error';
+  error.hidden = true;
+  controlPanel.append(error);
+  settingsPageState.errorElementsById.set(setting.id, error);
+  item.append(metadata, controlPanel);
+  return item;
+}}
+function renderSettingsCategories() {{
+  const container = byId('settingsCategories');
+  if (!container || !settingsPageState.draftSnapshot) return false;
+  settingsPageState.controlsById = new Map();
+  settingsPageState.errorElementsById = new Map();
+  const fragment = document.createDocumentFragment();
+  let itemNumber = 0;
+  settingsPageState.draftSnapshot.categories.forEach((category, categoryIndex) => {{
+    const section = createSettingsElement('section', 'card settings-category');
+    const headingId = 'settings-category-' + (categoryIndex + 1);
+    section.setAttribute('aria-labelledby', headingId);
+    const header = createSettingsElement('header', 'settings-category-header');
+    const heading = createSettingsElement('h3', 'settings-category-title', category.display_name);
+    heading.id = headingId;
+    const description = createSettingsElement('p', 'settings-category-description', category.description);
+    header.append(heading, description);
+    const list = createSettingsElement('div', 'settings-list');
+    if (category.settings.length) {{
+      category.settings.forEach(setting => {{
+        itemNumber += 1;
+        list.append(createSettingsItem(setting, itemNumber));
+      }});
+    }} else {{
+      list.append(createSettingsElement('div', 'settings-field-note', 'No settings are exposed in this category.'));
+    }}
+    section.append(header, list);
+    fragment.append(section);
+  }});
+  container.replaceChildren(fragment);
+  return itemNumber > 0;
+}}
+function settingsValuesEqual(confirmedValue, draftValue) {{
+  return typeof confirmedValue === typeof draftValue && confirmedValue === draftValue;
+}}
+function changedRuntimeSettings() {{
+  if (!settingsPageState.confirmedSnapshot || !settingsPageState.draftSnapshot) return [];
+  const changes = [];
+  settingsPageState.confirmedSnapshot.categories.forEach(category => category.settings.forEach(confirmedSetting => {{
+    if (!confirmedSetting.runtime_editable) return;
+    const draftSetting = settingsPageState.draftSettingsById.get(confirmedSetting.id);
+    if (draftSetting && !settingsValuesEqual(confirmedSetting.value, draftSetting.value)) {{
+      changes.push({{ setting:confirmedSetting, value:draftSetting.value }});
+    }}
+  }}));
+  return changes;
+}}
+function settingsDraftValueIsValid(setting, value) {{
+  if (!settingValueMatchesDataType(setting.data_type, value)) return false;
+  if (setting.data_type !== 'integer') return true;
+  if (setting.minimum !== null && value < setting.minimum) return false;
+  if (setting.maximum !== null && value > setting.maximum) return false;
+  return true;
+}}
+function settingsDraftIsValid() {{
+  if (!settingsPageState.draftSnapshot) return false;
+  for (const setting of settingsPageState.draftSettingsById.values()) {{
+    if (setting.runtime_editable && !settingsDraftValueIsValid(setting, setting.value)) return false;
+  }}
+  for (const control of settingsPageState.controlsById.values()) {{
+    if (!control.disabled && typeof control.checkValidity === 'function' && !control.checkValidity()) return false;
+  }}
+  return true;
+}}
+function settingsValidationMessage(setting, value) {{
+  if (setting.data_type === 'integer') {{
+    if (value === null || value === undefined || Number.isNaN(value)) return 'Enter a whole number.';
+    if (!Number.isSafeInteger(value)) return 'Enter a whole number within the supported safe range.';
+    if (setting.minimum !== null && value < setting.minimum) return 'Enter a value of at least ' + setting.minimum + '.';
+    if (setting.maximum !== null && value > setting.maximum) return 'Enter a value no greater than ' + setting.maximum + '.';
+  }}
+  return '';
+}}
+function refreshSettingsFieldError(settingId) {{
+  const error = settingsPageState.errorElementsById.get(settingId);
+  const control = settingsPageState.controlsById.get(settingId);
+  if (!error || !control) return;
+  const message = settingsPageState.fieldErrors.get(settingId) || '';
+  error.textContent = message;
+  error.hidden = !message;
+  if (message) control.setAttribute('aria-invalid', 'true');
+  else control.removeAttribute('aria-invalid');
+}}
+function clearSettingsFieldErrors() {{
+  settingsPageState.fieldErrors = new Map();
+  settingsPageState.errorElementsById.forEach((error, settingId) => refreshSettingsFieldError(settingId));
+}}
+function refreshSettingsPageErrorFromFields() {{
+  const messages = Array.from(new Set(settingsPageState.fieldErrors.values()));
+  if (!messages.length) {{
+    clearSettingsPageError();
+    return;
+  }}
+  showSettingsPageError('Some settings still need attention. ' + messages.join(' '), false);
+}}
+function updateSettingsActions() {{
+  const changes = changedRuntimeSettings();
+  const draftValid = settingsDraftIsValid();
+  const busy = settingsPageState.loading || settingsPageState.saving;
+  const locked = busy || settingsPageState.confirmationRequired;
+  const save = byId('settingsSaveButton');
+  const discard = byId('settingsDiscardButton');
+  if (save) save.disabled = locked || !settingsPageState.loaded || !changes.length || !draftValid;
+  if (discard) discard.disabled = locked || !settingsPageState.loaded || !changes.length;
+  settingsPageState.controlsById.forEach((control, settingId) => {{
+    const setting = settingsPageState.draftSettingsById.get(settingId);
+    control.disabled = locked || !setting || !setting.runtime_editable;
+    if (control.disabled) control.setAttribute('aria-disabled', 'true');
+    else control.removeAttribute('aria-disabled');
+  }});
+  const form = byId('settingsForm');
+  if (form) {{
+    form.setAttribute('aria-busy', busy ? 'true' : 'false');
+    form.setAttribute('aria-disabled', settingsPageState.confirmationRequired ? 'true' : 'false');
+  }}
+  const summary = byId('settingsDirtySummary');
+  if (summary) {{
+    if (settingsPageState.confirmationRequired) summary.textContent = 'Confirm the current server values before making another change.';
+    else if (!changes.length) summary.textContent = 'No unsaved changes.';
+    else if (!draftValid) summary.textContent = changes.length + ' unsaved change' + (changes.length === 1 ? '' : 's') + '. Correct invalid values before saving.';
+    else summary.textContent = changes.length + ' unsaved change' + (changes.length === 1 ? '' : 's') + '.';
+  }}
+}}
+function acceptSettingsSnapshot(snapshot) {{
+  validateSettingsSnapshot(snapshot);
+  const confirmed = freezeSettingsSnapshot(cloneSettingsSnapshot(snapshot));
+  const draft = cloneSettingsSnapshot(confirmed);
+  settingsPageState.confirmedSnapshot = confirmed;
+  settingsPageState.draftSnapshot = draft;
+  settingsPageState.draftSettingsById = settingsIndex(draft);
+  settingsPageState.fieldErrors = new Map();
+  settingsPageState.loaded = true;
+  settingsPageState.confirmationRequired = false;
+  const hasSettings = renderSettingsCategories();
+  const form = byId('settingsForm');
+  if (form) form.hidden = !hasSettings;
+  hideSettingsLoadState();
+  if (!hasSettings) {{
+    showSettingsLoadState('No settings available', 'ContextKeeper did not expose any settings for this runtime.', false);
+  }}
+  clearSettingsPageError();
+  updateSettingsActions();
+  return hasSettings;
+}}
+function valueFromSettingsControl(control, setting) {{
+  if (setting.data_type === 'boolean') return control.checked;
+  if (setting.data_type === 'integer') {{
+    const rawValue = control.value.trim();
+    return rawValue === '' ? null : Number(rawValue);
+  }}
+  return control.value;
+}}
+function handleSettingsInput(event) {{
+  const control = event.target.closest ? event.target.closest('.settings-input,.settings-checkbox') : null;
+  if (!control || settingsPageState.saving || settingsPageState.confirmationRequired) return;
+  const settingId = control.dataset.settingId;
+  const setting = settingsPageState.draftSettingsById.get(settingId);
+  if (!setting || !setting.runtime_editable) return;
+  setting.value = valueFromSettingsControl(control, setting);
+  if (setting.data_type === 'boolean') {{
+    const state = byId(control.id + '-boolean-state');
+    if (state) state.textContent = setting.value ? 'Enabled' : 'Disabled';
+  }}
+  settingsPageState.fieldErrors.delete(settingId);
+  const validationMessage = settingsValidationMessage(setting, setting.value);
+  if (validationMessage) settingsPageState.fieldErrors.set(settingId, validationMessage);
+  refreshSettingsFieldError(settingId);
+  refreshSettingsPageErrorFromFields();
+  updateSettingsActions();
+  const changes = changedRuntimeSettings();
+  if (!changes.length) setSettingsStatus('No unsaved changes.', '');
+  else if (!settingsDraftIsValid()) setSettingsStatus('Review the invalid setting values before saving.', 'warning');
+  else setSettingsStatus(changes.length + ' unsaved change' + (changes.length === 1 ? '' : 's') + '.', 'warning');
+}}
+function buildSettingsPatchPayload() {{
+  const payload = Object.create(null);
+  changedRuntimeSettings().forEach(change => {{
+    const category = change.setting.category;
+    const prefix = category + '.';
+    const fieldName = change.setting.id.startsWith(prefix) ? change.setting.id.slice(prefix.length) : '';
+    if (!fieldName || fieldName.includes('.')) throw new Error('A setting could not be mapped to the update request.');
+    if (!Object.prototype.hasOwnProperty.call(payload, category)) payload[category] = Object.create(null);
+    payload[category][fieldName] = change.value;
+  }});
+  return payload;
+}}
+async function readSettingsResponse(response) {{
+  try {{
+    return await response.json();
+  }} catch (error) {{
+    return null;
+  }}
+}}
+function settingsErrorMessages(payload) {{
+  if (!payload || typeof payload !== 'object') return [];
+  if (typeof payload.detail === 'string' && payload.detail.trim()) return [payload.detail.trim()];
+  if (!Array.isArray(payload.detail)) return [];
+  return payload.detail
+    .filter(detail => detail && typeof detail === 'object' && typeof detail.msg === 'string' && detail.msg.trim())
+    .map(detail => detail.msg.trim());
+}}
+function settingsErrorMessage(payload, statusCode, action) {{
+  const messages = settingsErrorMessages(payload);
+  if (messages.length) return Array.from(new Set(messages)).join(' ');
+  return 'ContextKeeper could not ' + action + ' settings (HTTP ' + statusCode + ').';
+}}
+function settingIdFromErrorLocation(location) {{
+  if (!Array.isArray(location)) return null;
+  const parts = location[0] === 'body' ? location.slice(1) : location.slice();
+  if (parts.length !== 2 || parts.some(part => typeof part !== 'string')) return null;
+  const settingId = parts.join('.');
+  return settingsPageState.draftSettingsById.has(settingId) ? settingId : null;
+}}
+function applySettingsValidationErrors(payload) {{
+  clearSettingsFieldErrors();
+  if (!payload || !Array.isArray(payload.detail)) return null;
+  let firstInvalidControl = null;
+  payload.detail.forEach(detail => {{
+    if (!detail || typeof detail !== 'object' || typeof detail.msg !== 'string') return;
+    const settingId = settingIdFromErrorLocation(detail.loc);
+    if (!settingId) return;
+    settingsPageState.fieldErrors.set(settingId, detail.msg);
+    refreshSettingsFieldError(settingId);
+    if (!firstInvalidControl) firstInvalidControl = settingsPageState.controlsById.get(settingId) || null;
+  }});
+  return firstInvalidControl;
+}}
+async function requestSettingsSnapshot() {{
+  let response;
+  try {{
+    response = await fetch(SETTINGS_ENDPOINT, {{
+      method:'GET',
+      headers:{{'Accept':'application/json'}}
+    }});
+  }} catch (error) {{
+    throw new Error('ContextKeeper could not be reached. Check the connection and try again.');
+  }}
+  const payload = await readSettingsResponse(response);
+  if (!response.ok) throw new Error(settingsErrorMessage(payload, response.status, 'load'));
+  return validateSettingsSnapshot(payload);
+}}
+async function loadSettings() {{
+  if (settingsPageState.loading || settingsPageState.saving) return;
+  settingsPageState.loading = true;
+  clearSettingsPageError();
+  const form = byId('settingsForm');
+  if (form) form.hidden = true;
+  showSettingsLoadState('Loading settings', 'Requesting the current runtime settings from ContextKeeper.', false);
+  setSettingsStatus('Loading settings...', '');
+  updateSettingsActions();
+  try {{
+    const snapshot = await requestSettingsSnapshot();
+    const hasSettings = acceptSettingsSnapshot(snapshot);
+    setSettingsStatus(hasSettings ? 'Settings loaded. No unsaved changes.' : 'No settings are currently available.', hasSettings ? 'success' : 'warning');
+  }} catch (error) {{
+    settingsPageState.loaded = false;
+    settingsPageState.confirmedSnapshot = null;
+    settingsPageState.draftSnapshot = null;
+    settingsPageState.draftSettingsById = new Map();
+    settingsPageState.controlsById = new Map();
+    settingsPageState.errorElementsById = new Map();
+    settingsPageState.fieldErrors = new Map();
+    const message = error instanceof Error && error.message
+      ? error.message
+      : 'ContextKeeper could not load settings. Check the connection and try again.';
+    showSettingsLoadState('Settings could not be loaded', message, true);
+    showSettingsPageError(message, false);
+    setSettingsStatus('Settings load failed. Retry is available.', 'warning');
+  }} finally {{
+    settingsPageState.loading = false;
+    updateSettingsActions();
+  }}
+}}
+function ensureSettingsLoaded() {{
+  if (!settingsPageState.loaded && !settingsPageState.loading) void loadSettings();
+}}
+async function confirmSettingsAfterAcceptedUpdate() {{
+  if (!settingsPageState.confirmationRequired || settingsPageState.loading || settingsPageState.saving) return;
+  settingsPageState.loading = true;
+  clearSettingsPageError();
+  showSettingsLoadState('Confirming current settings', 'Requesting the authoritative values after the accepted update.', false);
+  setSettingsStatus('Confirming current settings...', '');
+  updateSettingsActions();
+  try {{
+    const snapshot = await requestSettingsSnapshot();
+    acceptSettingsSnapshot(snapshot);
+    setSettingsStatus('Current runtime settings confirmed. No unsaved changes.', 'success');
+  }} catch (error) {{
+    const message = error instanceof Error && error.message
+      ? error.message
+      : 'ContextKeeper could not confirm the current settings. Check the connection and try again.';
+    showSettingsLoadState('Current settings still need confirmation', message, true);
+    showSettingsPageError(message, false);
+    setSettingsStatus('Current settings could not be confirmed. Retry is available.', 'warning');
+  }} finally {{
+    settingsPageState.loading = false;
+    updateSettingsActions();
+  }}
+}}
+function restoreSettingsDraft() {{
+  if (!settingsPageState.confirmedSnapshot) return;
+  settingsPageState.draftSnapshot = cloneSettingsSnapshot(settingsPageState.confirmedSnapshot);
+  settingsPageState.draftSettingsById = settingsIndex(settingsPageState.draftSnapshot);
+  settingsPageState.fieldErrors = new Map();
+  renderSettingsCategories();
+  clearSettingsPageError();
+  updateSettingsActions();
+}}
+function discardSettingsDraft() {{
+  if (settingsPageState.loading || settingsPageState.saving || settingsPageState.confirmationRequired || !settingsPageState.confirmedSnapshot) return;
+  if (!changedRuntimeSettings().length) {{
+    setSettingsStatus('No changes to discard.', '');
+    return;
+  }}
+  restoreSettingsDraft();
+  setSettingsStatus('Unsaved changes discarded.', 'success');
+}}
+async function authoritativeSettingsSnapshot(patchPayload) {{
+  try {{
+    return validateSettingsSnapshot(patchPayload);
+  }} catch (error) {{
+    return await requestSettingsSnapshot();
+  }}
+}}
+async function saveSettings() {{
+  if (settingsPageState.saving || settingsPageState.loading || settingsPageState.confirmationRequired || !settingsPageState.loaded) return;
+  const changes = changedRuntimeSettings();
+  if (!changes.length) {{
+    setSettingsStatus('No changes to save.', '');
+    return;
+  }}
+  if (!settingsDraftIsValid()) {{
+    const firstInvalid = Array.from(settingsPageState.controlsById.values()).find(control => !control.checkValidity());
+    showSettingsPageError('Correct the invalid setting values before saving.', false);
+    setSettingsStatus('Settings were not saved.', 'warning');
+    if (firstInvalid) firstInvalid.focus();
+    return;
+  }}
+  let payload;
+  try {{
+    payload = buildSettingsPatchPayload();
+  }} catch (error) {{
+    showSettingsPageError('The changed settings could not be prepared safely. Reload the page and try again.', true);
+    setSettingsStatus('Settings were not saved.', 'warning');
+    return;
+  }}
+
+  settingsPageState.saving = true;
+  clearSettingsPageError();
+  clearSettingsFieldErrors();
+  setSettingsStatus('Saving settings...', '');
+  updateSettingsActions();
+  let patchAccepted = false;
+  let focusAfterSave = null;
+  try {{
+    const response = await fetch(SETTINGS_ENDPOINT, {{
+      method:'PATCH',
+      headers:{{'Accept':'application/json','Content-Type':'application/json'}},
+      body:JSON.stringify(payload)
+    }});
+    const responsePayload = await readSettingsResponse(response);
+    if (!response.ok) {{
+      const firstInvalid = applySettingsValidationErrors(responsePayload);
+      const message = settingsErrorMessage(responsePayload, response.status, 'save');
+      showSettingsPageError(message, !firstInvalid);
+      setSettingsStatus(response.status === 400 || response.status === 422 ? 'Validation failed. Your changes are still available to correct.' : 'Settings were not saved. Your changes are still available.', 'warning');
+      focusAfterSave = firstInvalid;
+      return;
+    }}
+    patchAccepted = true;
+    const snapshot = await authoritativeSettingsSnapshot(responsePayload);
+    acceptSettingsSnapshot(snapshot);
+    setSettingsStatus('Settings saved for the current runtime.', 'success');
+    requestDashboardRefresh();
+  }} catch (error) {{
+    if (patchAccepted) {{
+      settingsPageState.confirmationRequired = true;
+      showSettingsLoadState('Confirm current settings', 'ContextKeeper accepted the update, but the current values could not be confirmed. Retry the authoritative settings load before making another change.', true);
+      showSettingsPageError('ContextKeeper accepted the update, but the current values could not be confirmed. Your draft remains visible while editing and Save are paused.', false);
+      setSettingsStatus('The accepted settings update requires confirmation.', 'warning');
+    }} else {{
+      showSettingsPageError('ContextKeeper could not confirm whether settings were saved. Your changes were not discarded; check the connection and retry Save.', false);
+      setSettingsStatus('Save could not be confirmed. Your changes are still available.', 'warning');
+    }}
+  }} finally {{
+    settingsPageState.saving = false;
+    updateSettingsActions();
+    if (focusAfterSave && settingsPageIsActive()) focusAfterSave.focus();
+  }}
+}}
+function initializeSettingsPage() {{
+  const form = byId('settingsForm');
+  if (form) {{
+    form.addEventListener('input', handleSettingsInput);
+    form.addEventListener('submit', event => {{
+      event.preventDefault();
+      void saveSettings();
+    }});
+  }}
+  const discard = byId('settingsDiscardButton');
+  if (discard) discard.addEventListener('click', discardSettingsDraft);
+  const retry = byId('settingsRetryButton');
+  if (retry) retry.addEventListener('click', () => {{
+    if (settingsPageState.confirmationRequired) void confirmSettingsAfterAcceptedUpdate();
+    else void loadSettings();
+  }});
+  updateSettingsActions();
+}}
 function showPage(pageName) {{
   const target = pageName || 'operations';
   document.querySelectorAll('[data-page]').forEach(page => page.classList.toggle('active', page.dataset.page === target));
@@ -1672,6 +2355,7 @@ function showPage(pageName) {{
     }}
   }});
   if (location.hash !== '#' + target) history.replaceState(null, '', '#' + target);
+  if (target === 'settings') ensureSettingsLoaded();
 }}
 function initializePages() {{
   document.querySelectorAll('[data-page-link]').forEach(link => {{
@@ -1727,7 +2411,7 @@ async function refreshHealth() {{
   setText('modelSub', modelLabel);
   setStatusBadge('opsModelStatus', c.model.status || 'waiting');
   setText('opsModelDetail', modelLabel);
-  setText('opsLastRefreshDetail', 'Every ' + DASHBOARD_REFRESH_INTERVAL_MS + ' ms');
+  setText('opsLastRefreshDetail', 'Every ' + dashboardRefreshIntervalMs + ' ms');
   setStatusBadge('opsLastRefreshStatus', 'running', new Date().toLocaleTimeString());
   refreshOperationalActivity(h.activity);
   updateTopologyState(c, h.activity);
@@ -1745,6 +2429,7 @@ async function refreshMetrics() {{
 async function refreshDashboardData() {{
   const res = await fetch('/dashboard/data');
   const data = await res.json();
+  scheduleDashboardRefresh(data.refresh_interval_ms);
   const context = data.context;
   const compression = data.compression;
   const intelligence = data.intelligence || {{}};
@@ -2114,6 +2799,21 @@ function setRefreshBusy(isBusy) {{
   document.body.classList.toggle('is-refreshing', isBusy);
   document.body.setAttribute('aria-busy', isBusy ? 'true' : 'false');
 }}
+function scheduleDashboardRefresh(intervalMs) {{
+  if (!Number.isInteger(intervalMs) || intervalMs < 1) return;
+  if (dashboardRefreshTimer !== null && dashboardRefreshIntervalMs === intervalMs) return;
+  if (dashboardRefreshTimer !== null) clearInterval(dashboardRefreshTimer);
+  dashboardRefreshIntervalMs = intervalMs;
+  dashboardRefreshTimer = setInterval(refresh, dashboardRefreshIntervalMs);
+  setText('opsLastRefreshDetail', 'Every ' + dashboardRefreshIntervalMs + ' ms', false);
+}}
+function requestDashboardRefresh() {{
+  if (refreshInFlight) {{
+    refreshAfterCurrent = true;
+    return;
+  }}
+  void refresh();
+}}
 async function refresh() {{
   if (refreshInFlight) return;
   refreshInFlight = true;
@@ -2126,12 +2826,18 @@ async function refresh() {{
   }} finally {{
     refreshInFlight = false;
     setRefreshBusy(false);
+    if (refreshAfterCurrent) {{
+      refreshAfterCurrent = false;
+      void refresh();
+    }}
   }}
 }}
+initializeSettingsPage();
 initializePages();
 initializeConversationInspector();
 initializeInstrumentGauges();
-refresh(); setInterval(refresh, DASHBOARD_REFRESH_INTERVAL_MS);
+scheduleDashboardRefresh(DASHBOARD_REFRESH_INTERVAL_MS);
+refresh();
 </script>
 </body>
 </html>

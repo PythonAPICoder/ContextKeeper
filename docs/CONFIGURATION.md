@@ -1,6 +1,6 @@
 # ContextKeeper Configuration
 
-Status: Current through Phase 6.5F-B6.2 and verified against `src/ctxkeeper/config.py` and `src/ctxkeeper/dashboard/settings_snapshot.py`.
+Status: Current through the Phase 6.5F-B6.3 working-tree implementation; Product Owner review is pending. Verified against `src/ctxkeeper/config.py`, `src/ctxkeeper/dashboard/settings_snapshot.py`, and `src/ctxkeeper/dashboard/template.py`.
 
 ContextKeeper is configured through `contextkeeper.yaml`, with a small set of environment variable overrides. The first-run wizard creates this file when it is missing.
 
@@ -92,16 +92,18 @@ Current source behavior:
 
 The `--configure` command-line flag launches the configuration wizard and exits. It does not provide per-setting runtime overrides.
 
-## Runtime Settings API
+## Dashboard Settings page and Runtime Settings API
 
-The dashboard Settings API exposes the approved runtime settings snapshot and supports validated in-memory updates:
+The Settings destination inside the existing dashboard shell is a client of the approved runtime Settings API:
 
 ```text
 GET /api/dashboard/settings
 PATCH /api/dashboard/settings
 ```
 
-The endpoint exposes only approved runtime configuration metadata for future dashboard Settings UI work. It does not expose environment variables, file paths, secrets, passwords, API tokens, server bind details, Ollama base URLs, logging paths, model override maps, or future configuration.
+The page requests the snapshot when Settings is first opened and constructs its category sections and controls from the response. Setting identifiers, names, descriptions, values, defaults, constraints, data types, editability, and restart guidance come from the API rather than a hard-coded setting list. Display metadata is rendered as text, not executable markup.
+
+The endpoint exposes only approved runtime configuration metadata. It does not expose environment variables, file paths, secrets, passwords, API tokens, server bind details, Ollama base URLs, logging paths, model override maps, or future configuration.
 
 Snapshot categories:
 
@@ -122,9 +124,15 @@ Each setting includes:
 - runtime-editable flag;
 - restart-required flag.
 
-B6.2 adds runtime update support for the approved settings. These settings are marked `runtime_editable: true` and `restart_required: false` because changes apply to the current process immediately.
+B6.2 added runtime update support for the approved settings. The currently exposed settings are marked `runtime_editable: true` and `restart_required: false` because changes apply to the current process immediately. The B6.3 renderer also honors generic read-only and restart-required metadata: non-runtime-editable controls are disabled with an explanation, and restart-required settings receive a visible indicator.
 
-Runtime updates are temporary. They mutate the in-memory `Settings` instance only, are immediately visible through `GET /api/dashboard/settings`, and reset when ContextKeeper restarts. No YAML file is rewritten and no persistence store is created.
+Runtime updates are temporary. The Settings page keeps the most recently confirmed server snapshot separate from the editable draft and calculates unsaved changes from type-preserving value differences. Manually restoring every edited value returns the page to a clean state.
+
+Save constructs one nested `PATCH /api/dashboard/settings` body containing only changed settings that the API marks runtime-editable. Numeric, boolean, and string values retain their JSON types. The backend merges the partial update into the current complete state, validates the proposal, and mutates the shared in-memory `Settings` instance only after validation succeeds. A successful canonical response becomes both the new confirmed state and a fresh draft.
+
+Discard restores the draft from the latest confirmed snapshot, clears draft validation feedback, and does not send GET or PATCH. If PATCH validation, network communication, or server processing fails, the browser preserves the complete draft and dirty state so the user can correct or retry it. Field-specific validation details are associated with controls when the response identifies a field, and page-level feedback remains available for all failures.
+
+The runtime-only notice remains visible on the page: changes reset when ContextKeeper restarts and do not modify `contextkeeper.yaml`. No YAML file is rewritten, no browser storage is used, and no persistence store is created.
 
 `PATCH /api/dashboard/settings` accepts partial updates using the same category nesting as the read API. Omitted settings retain their current values. The complete proposed state is validated before mutation; if any supplied value is invalid, the entire update is rejected and the previous runtime state remains unchanged.
 
@@ -193,7 +201,7 @@ dashboard:
 - `dashboard.title` controls the HTML document title.
 - `dashboard.refresh_interval_ms` controls the browser dashboard polling interval.
 
-The current dashboard uses the same refresh path for Operations, Request Traffic, Connection Flow, Context Trend, Live Conversation Timeline, and Conversation Inspector updates. No separate inspector polling interval exists.
+The current dashboard uses the same refresh path for Operations, Request Traffic, Connection Flow, Context Trend, Live Conversation Timeline, and Conversation Inspector updates. Opening Settings or switching between Settings and Operations does not create another dashboard polling timer. No separate inspector or Settings polling interval exists.
 
 ## Context thresholds
 

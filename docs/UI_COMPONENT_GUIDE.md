@@ -1,6 +1,6 @@
 # ContextKeeper UI Component Guide
 
-Status: Current through Phase 6.5F-B5.5.2.
+Status: Current through the Phase 6.5F-B6.3 working-tree implementation; Product Owner review is pending.
 
 ## Purpose
 
@@ -19,6 +19,8 @@ Rules:
 
 - Keep sidebar navigation persistent on desktop.
 - Allow sidebar width to compact at medium desktop widths.
+- Identify the active destination visually and with navigation semantics.
+- Switch between Operations and Settings within the shell without registering duplicate listeners or refresh timers.
 - Treat the browser UI as a desktop application; avoid landing-page composition.
 - Page containers may scroll vertically when needed.
 
@@ -195,21 +197,40 @@ Rules:
 - Use deterministic metadata and aggregate signals only.
 - Do not add transcript browsing until a later inspector phase.
 
-## Settings Toggles
+## Settings Page Controls
 
-Settings should eventually include controls for:
+The Settings page renders categories and controls from `GET /api/dashboard/settings` metadata. It does not maintain a browser-side list of setting identities.
 
-- animations enabled
-- sound enabled
-- refresh interval
-- log visibility/detail
-- Ollama endpoint configuration
+Components:
+
+- visible runtime-only notice;
+- category cards with API-provided names and descriptions;
+- setting labels and descriptions;
+- default and minimum/maximum metadata where supplied;
+- runtime read-only and restart-required badges;
+- boolean checkbox, integer number input, and string text input renderers;
+- polite status region and assertive error summary;
+- loading, retry, empty, and error states;
+- unsaved-change summary;
+- Discard and Save actions.
 
 Rules:
 
-- Sound defaults to disabled.
-- Animation defaults should respect reduced-motion preferences.
-- Toggles must have clear labels and visible state.
+- Use API metadata as the authority for setting identity, display text, value, type, constraint, editability, and restart guidance.
+- Associate every control with a visible label and descriptive metadata.
+- Render API text with safe DOM text operations rather than HTML injection.
+- Disable non-runtime-editable controls and explain why they cannot be changed during the current runtime.
+- Preserve boolean, numeric, and string values in the draft without type conversion artifacts.
+- Keep confirmed server state separate from editable draft state.
+- Enable Save only for a valid changed draft; enable Discard only while unsaved changes exist.
+- Save sends one atomic PATCH containing only changed runtime-editable values.
+- Discard restores the latest confirmed snapshot and performs no network request.
+- Preserve the draft and dirty state after validation, network, or server failure.
+- Disable editing and duplicate submissions while Save is pending.
+- Keep the runtime-only notice visible: changes reset when ContextKeeper restarts and do not modify `contextkeeper.yaml`.
+- Use visible focus indicators, live feedback, explicit state text, and native keyboard-operable controls.
+- Stack setting rows and action controls cleanly at narrow widths.
+- Respect reduced-motion preferences without removing status information.
 
 ## Empty, Error, and Loading States
 
@@ -230,9 +251,11 @@ Error states:
 - include clear cause when known
 - provide next action when available
 - avoid exposing sensitive details
+- preserve Settings draft values when a save fails
 
 Loading states:
 
 - use stable placeholders
 - avoid layout shift
 - avoid large spinners in Operations
+- provide a safe retry action when Settings cannot be loaded

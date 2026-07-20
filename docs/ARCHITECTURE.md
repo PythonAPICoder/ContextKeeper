@@ -1,6 +1,6 @@
 # ContextKeeper Architecture
 
-Status: Current through Phase 6.5F-B6.2.
+Status: Current through Phase 6.5F-B6.3.
 
 ContextKeeper is a local FastAPI application that presents an Ollama-compatible API to clients while observing, measuring, and managing conversation context before requests reach Ollama.
 
@@ -170,8 +170,9 @@ Source:
 
 - `src/ctxkeeper/dashboard/settings_snapshot.py`
 - `src/ctxkeeper/dashboard/routes.py`
+- `src/ctxkeeper/dashboard/template.py`
 
-Phase 6.5F-B6.1 added the backend foundation for the future Settings dashboard. Phase 6.5F-B6.2 adds validated in-memory runtime updates on the same settings resource:
+Phase 6.5F-B6.1 added the settings snapshot/read foundation, Phase 6.5F-B6.2 added validated in-memory runtime updates on the same resource, and Phase 6.5F-B6.3 adds the metadata-driven browser client inside the existing dashboard shell:
 
 ```text
 GET /api/dashboard/settings
@@ -194,15 +195,24 @@ Runtime settings architecture:
 - Failed validation is atomic: no partial setting changes are applied.
 - Successful updates return the same canonical snapshot shape as the read API and are immediately visible to a subsequent GET.
 - Exposed runtime settings are marked `runtime_editable: true` and `restart_required: false`.
+- The Settings page requests the snapshot only when first opened and constructs categories, labels, descriptions, constraints, default-value context, controls, and editability indicators from API metadata rather than a browser-side setting list.
+- The browser holds a frozen confirmed snapshot and a separately cloned draft snapshot. Edits affect only the draft until Save succeeds.
+- Dirty state compares typed confirmed and draft values. Returning a field to its confirmed value removes it from the changed set.
+- Save derives the nested request shape from setting category/id metadata and issues one `PATCH` containing only changed fields that the snapshot marks runtime-editable.
+- The successful PATCH snapshot becomes the new authoritative confirmed state and a fresh draft. If a success response cannot be interpreted, the client performs at most one settings GET to confirm the accepted state. If that confirmation also fails, the visible draft is locked and an explicit retry-load action prevents further edits against stale confirmed state.
+- Validation and network failures leave the draft and dirty state intact. API error messages are rendered as text, and exact field locations are associated with controls where the response supplies them.
+- Discard clones the latest confirmed snapshot without a PATCH, GET, browser storage, or configuration-file operation.
 
-Current B6.2 boundary:
+Current B6.3 boundary:
 
-- No Settings dashboard UI controls.
+- The Settings page is a runtime API client, not another source of configuration rules or setting ownership.
+- Settings controls are temporary browser state; no LocalStorage or SessionStorage is used.
 - No configuration persistence.
 - No YAML writing.
-- No browser storage.
 - No authentication or multi-user setting ownership.
 - No startup restoration of runtime overrides.
+- No reset-to-defaults workflow.
+- No proxy, streaming, context-engine, or compression-engine contract changes.
 
 ## Dashboard visualization path
 
@@ -220,9 +230,10 @@ The browser dashboard is a vanilla HTML/CSS/JavaScript operations console. It cu
 - Active Conversation summary;
 - Live Conversation Timeline;
 - Conversation Inspector drawer with Overview and Intelligence;
-- secondary pages for Conversations, Context, Analytics, Logs, and Settings.
+- client-side navigation between Operations, Conversations, Context, Analytics, Logs, and the interactive Settings page;
+- a visible runtime-only notice, metadata-driven category form, feedback regions, and Save/Discard actions on Settings.
 
-The dashboard polls the existing endpoints on the configured refresh interval, defaulting to `1000 ms`. It uses a single refresh loop and a guard to avoid overlapping refreshes.
+The dashboard polls the existing endpoints on the configured refresh interval, defaulting to `1000 ms`. It uses one reschedulable interval and a guard to avoid overlapping refreshes. Page switching does not create polling timers or duplicate listeners. When the runtime refresh interval changes, the canonical `/dashboard/data` value reschedules that same timer; opening Settings adds only its guarded first-load request.
 
 ## Module layout
 

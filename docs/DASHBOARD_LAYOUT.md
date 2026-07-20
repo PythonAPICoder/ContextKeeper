@@ -1,12 +1,12 @@
 # ContextKeeper Dashboard Layout
 
-Status: Current through the Phase 6.5F-B6.3 working-tree implementation; Product Owner review is pending.
+Status: Current through the Phase 6.5F-B6.4 working-tree implementation; Product Owner and architect review are pending.
 
 This document describes the current dashboard shell, Operations hierarchy, Settings page, and layout contract. It defines layout and user flow; source code remains authoritative for exact CSS and DOM details.
 
 ## Purpose
 
-The ContextKeeper Operations dashboard is the primary AI operations console for the local proxy. It should help users understand system health, request flow, Context Usage, Compression activity, and required action without reading logs or reports. The Settings page provides a focused runtime-configuration surface without replacing or duplicating Operations.
+The ContextKeeper Operations dashboard is the primary AI operations console for the local proxy. It should help users understand system health, request flow, Context Usage, Compression activity, and required action without reading logs or reports. The Settings page provides a focused runtime-and-persisted-configuration management surface without replacing or duplicating Operations.
 
 ## Layout principles
 
@@ -158,25 +158,28 @@ These pages remain subordinate to the Operations dashboard and should not duplic
 Purpose:
 
 - Review settings exposed by the current ContextKeeper runtime.
-- Edit only controls that API metadata marks runtime-editable.
+- Edit controls that API metadata marks runtime-editable, persistable, or both.
 - Keep temporary edits visible until they are saved or discarded.
-- Make the runtime-only, non-persistent behavior unambiguous.
+- Keep runtime Save and configuration persistence separate and explicit.
+- Make runtime, persisted, default, and restart-required states understandable.
 
 Current hierarchy:
 
 ```text
 Settings header and introduction
-Runtime-only notice
+Runtime-versus-saved configuration notice
 Accessible status and error feedback
 Loading, retry, or empty state
 Metadata-driven category cards
-Setting labels, descriptions, metadata, and controls
-Sticky unsaved-change summary with Discard and Save
+Setting labels, descriptions, runtime/saved/default metadata, difference text, badges, and controls
+Sticky change summary with Discard, Save to configuration, and Save runtime changes
 ```
 
-The page loads `GET /api/dashboard/settings` when first opened. Category cards and boolean, integer, and string controls are generated from the returned metadata. Read-only and restart-required states use explicit text or badges rather than color alone.
+The page loads `GET /api/dashboard/settings` when first opened. Category cards and boolean, integer, and string controls are generated from schema-v2 metadata. Runtime-read-only, non-persistable, runtime-different-from-saved, and restart-required states use explicit text or badges rather than color alone. Every setting displays the saved configuration value and dynamic text describing how the draft compares with the current runtime and persisted value.
 
-The browser maintains separate confirmed and draft snapshots. Save sends one changed-fields-only atomic `PATCH /api/dashboard/settings`; Discard restores the most recent confirmed snapshot without a network request. Failed saves leave the draft available for correction or retry. The visible notice states that changes reset on restart and do not modify `contextkeeper.yaml`.
+The browser maintains separate confirmed and draft snapshots. Save runtime changes sends one changed-fields-only atomic `PATCH /api/dashboard/settings`. Save to configuration is a separate non-submit button that sends one changed-fields-only `PUT /api/dashboard/settings/config` containing only eligible draft values that differ from saved configuration. Editing never triggers persistence automatically. Discard restores the most recent confirmed runtime draft without a network request.
+
+A PUT success refreshes runtime/persisted metadata while restoring the user's draft, so a setting can be saved to disk yet remain pending runtime application. Failed runtime or configuration saves leave the draft available for correction or retry. While either save is pending, controls and actions are locked to prevent duplicate submission. The visible notice explains that runtime Save does not write YAML, configuration Save does not change runtime state, and neither action restarts ContextKeeper.
 
 Switching views does not register another Settings listener or multiply the existing dashboard polling timer. Operations polling and visualization updates continue through the same refresh lifecycle.
 
@@ -190,7 +193,7 @@ Requirements:
 - Do not introduce horizontal page overflow.
 - Ensure the Conversation Inspector becomes effectively full-width on narrow layouts.
 - Allow Settings labels, descriptions, constraints, badges, and controls to wrap without compressing the form into unreadable columns.
-- Stack Settings rows and the Save/Discard action area at the narrow breakpoint while keeping both actions reachable.
+- Stack Settings rows and the Discard/runtime Save/configuration Save action area at the narrow breakpoint while keeping all actions reachable.
 - Keep dashboard controls reachable while preserving context.
 
 Manual review should include:
@@ -227,9 +230,9 @@ Before accepting layout changes, verify:
 - Conversation Inspector opens without causing unpredictable card reflow.
 - Settings navigation works by keyboard and the active page is announced by navigation semantics.
 - Settings categories and controls remain readable at wide, standard, and narrow widths.
-- Save and Discard accurately reflect clean, dirty, invalid, and saving states.
-- Loading, success, validation, network/server failure, discard, and retry feedback remain understandable without color alone.
-- The runtime-only notice remains visible and unambiguously states that `contextkeeper.yaml` is not modified.
+- Runtime Save, Save to configuration, and Discard accurately reflect clean, runtime-dirty, persistence-dirty, invalid, and in-progress states.
+- Loading, runtime success, configuration success, validation, storage/network/server failure, discard, and retry feedback remain understandable without color alone.
+- The separation notice remains visible and unambiguously explains PATCH, PUT, draft preservation, and no automatic restart.
 - No clipping or horizontal overflow.
 - Request Traffic, Connection Flow, Timeline, and Inspector remain readable under active polling.
 - Reduced-motion mode is calm and still informative.

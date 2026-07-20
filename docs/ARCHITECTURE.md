@@ -1,6 +1,6 @@
 # ContextKeeper Architecture
 
-Status: Current through Phase 6.5F-B6.3.
+Status: Current through the Phase 6.5F-B6.4 working-tree implementation; Product Owner and architect review are pending.
 
 ContextKeeper is a local FastAPI application that presents an Ollama-compatible API to clients while observing, measuring, and managing conversation context before requests reach Ollama.
 
@@ -143,6 +143,7 @@ Source:
 - `src/ctxkeeper/dashboard/timeline.py`
 - `src/ctxkeeper/dashboard/inspector.py`
 - `src/ctxkeeper/dashboard/settings_snapshot.py`
+- `src/ctxkeeper/dashboard/config_persistence.py`
 - `src/ctxkeeper/dashboard/trends.py`
 
 The dashboard exposes:
@@ -152,6 +153,7 @@ The dashboard exposes:
 - `GET /dashboard/data`
 - `GET /api/dashboard/settings`
 - `PATCH /api/dashboard/settings`
+- `PUT /api/dashboard/settings/config`
 - `GET /dashboard`
 
 `/dashboard/data` builds one coherent dashboard status payload from current metrics, current Ollama status, current activity, one conversation-store snapshot, context scan results, derived compression history, active conversation data, timeline events, inspector metadata/intelligence, and instrument-panel data.
@@ -162,55 +164,100 @@ Important constraints:
 - The conversation list is captured once per dashboard payload build and reused for context, compression, active-conversation, timeline, and inspector derivation.
 - Timeline and inspector data are deterministic views of existing state.
 - No additional polling loop was introduced for the Conversation Inspector.
-- The settings snapshot and update API expose only approved Context, Compression, and Dashboard configuration metadata. They do not expose environment variables, config paths, secrets, server settings, Ollama base URLs, logging paths, model override maps, or startup-only controls.
+- The settings snapshot, runtime-update, and persistence APIs expose only approved Context, Compression, and Dashboard configuration metadata. They do not expose environment variables, config paths, secrets, server settings, Ollama base URLs, logging paths, model override maps, or startup-only controls.
 
 ## Settings snapshot path
 
 Source:
 
 - `src/ctxkeeper/dashboard/settings_snapshot.py`
+- `src/ctxkeeper/dashboard/config_persistence.py`
 - `src/ctxkeeper/dashboard/routes.py`
 - `src/ctxkeeper/dashboard/template.py`
+- `src/ctxkeeper/app.py`
+- `src/ctxkeeper/resources.py`
 
-Phase 6.5F-B6.1 added the settings snapshot/read foundation, Phase 6.5F-B6.2 added validated in-memory runtime updates on the same resource, and Phase 6.5F-B6.3 adds the metadata-driven browser client inside the existing dashboard shell:
+Phase 6.5F-B6.1 added the settings snapshot/read foundation, B6.2 added validated in-memory runtime updates, B6.3 added the metadata-driven browser client, and B6.4 adds explicit configuration persistence without merging the runtime and persisted state concepts:
 
 ```text
 GET /api/dashboard/settings
 PATCH /api/dashboard/settings
+PUT /api/dashboard/settings/config
 ```
 
-The endpoint returns:
+The GET endpoint returns schema version 2 with:
 
 - `schema_version`;
 - ordered categories: Context, Compression, Dashboard;
-- setting id, category, display name, description, value, built-in default value, data type, minimum/maximum validation metadata where applicable, runtime-editable flag, and restart-required flag.
+- setting id, category, display name, description, data type, and minimum/maximum validation metadata where applicable;
+- current runtime `value`, current disk-derived `persisted_value`, and built-in `default_value`;
+- `differs_from_persisted`, `runtime_editable`, `persistable`, and `restart_required` flags.
 
-Runtime settings architecture:
+The authoritative setting catalog remains in `settings_snapshot.py`; persistence does not introduce a second list of dashboard-managed fields. All eight approved Context, Compression, and Dashboard settings are currently both runtime-editable and persistable. The metadata model and browser renderer also support future settings that are runtime-only, persistence-only, non-persistable, or restart-required.
+
+Runtime PATCH architecture:
 
 - `src/ctxkeeper/dashboard/settings_snapshot.py` owns the canonical dashboard settings snapshot and runtime update models.
-- `GET /api/dashboard/settings` returns the complete sanitized snapshot.
 - `PATCH /api/dashboard/settings` accepts partial updates using the same Context, Compression, and Dashboard category nesting.
 - Omitted settings retain their current in-memory values.
 - The update path merges submitted values into a proposed complete `Settings` state, validates the complete proposal, and mutates the shared in-memory `Settings` instance only after validation succeeds.
 - Failed validation is atomic: no partial setting changes are applied.
 - Successful updates return the same canonical snapshot shape as the read API and are immediately visible to a subsequent GET.
-- Exposed runtime settings are marked `runtime_editable: true` and `restart_required: false`.
+- PATCH reads persisted state before runtime mutation so its schema-v2 response cannot manufacture disk metadata; an unavailable or invalid active configuration fails safely before runtime changes are applied.
+- Settings GET and PATCH use FastAPI synchronous handlers, keeping configuration disk I/O and process-lock waits off the async proxy/streaming event loop.
+- PATCH never writes `contextkeeper.yaml`; runtime changes remain process-local and reset at restart unless separately persisted with PUT.
+
+Configuration persistence architecture:
+
+- Application startup resolves the active configuration path with the existing `resolve_config_path` rules and supplies that same resolved path to one `ConfigurationPersistenceService`.
+- Source mode resolves the default filename from the current working directory. Frozen mode prefers an editable file beside the executable, falls back to the bundled resource when present, and otherwise returns the expected path beside the executable.
+- `PUT /api/dashboard/settings/config` accepts a non-empty JSON object grouped by approved category and persists only explicitly supplied, metadata-approved, persistable fields.
+- Strict Pydantic request models reject unknown categories and fields, nulls, strings/floats in integer positions, non-boolean boolean values, blank model names, malformed category shapes, and unsupported settings.
+- The complete candidate is validated through `Settings` plus the same dashboard business rule used by PATCH: the warning threshold must remain strictly lower than the compression threshold.
+- The persistence service re-reads the active file while holding a process-global reentrant lock. It never relies only on a startup-time settings copy.
+- If the file is missing, the service begins with validated built-in defaults, creates missing parent directories, and writes a new configuration containing the explicitly supplied categories and fields. The success result reports `configuration_created: true`.
+- Existing unrelated categories, values, and model-specific entries are retained in the in-memory YAML mapping and emitted with the candidate.
+- The complete candidate is serialized with PyYAML `safe_dump`, `sort_keys=False`, block style, Unicode support, and UTF-8/LF output; it is parsed and validated again before any destination replacement.
+- A temporary file is created in the destination directory. ContextKeeper writes the complete candidate, flushes it, calls `fsync`, closes it, reads it back, verifies the bytes, and parses it again.
+- A SHA-256 fingerprint captured from the fresh read is compared with another immediate read before replacement. A mismatch returns a stale-configuration conflict instead of overwriting the newer file.
+- `os.replace` performs the final same-filesystem atomic replacement. Failures retain the original destination and trigger best-effort temporary-file cleanup; cleanup failures are logged without obscuring the primary safe API error.
+- PUT returns `status`, sorted `persisted_setting_ids`, `configuration_created`, and a refreshed schema-v2 snapshot under `settings`.
+- Persisting does not mutate the shared runtime `Settings`, apply a PATCH, or restart ContextKeeper.
+
+Concurrency boundary:
+
+- One process-global `RLock` serializes persisted-state reads and writes within the running ContextKeeper process, so two in-process requests cannot interleave candidate replacement.
+- The fingerprint check provides best-effort stale-write detection for external edits during preparation.
+- There is no operating-system, distributed, or multi-process lock. An external writer can still race after the final fingerprint check and before `os.replace`.
+
+Serialization and safety boundary:
+
+- PyYAML preserves parsed configuration data, including unmanaged and model-specific mappings, but does not round-trip comments, quoting, anchors, key formatting, or exact whitespace. A successful persistence operation can normalize the complete document.
+- Malformed YAML, non-mapping YAML, invalid UTF-8, invalid existing configuration, inaccessible files, directory failures, temporary-write/verification failures, stale fingerprints, and atomic-replace failures return safe client details without exposing the resolved path or configuration contents.
+- Logs record safe error codes/statuses or successful setting counts and file-creation state; secrets and full configuration contents are not logged.
+
+Settings browser architecture:
+
 - The Settings page requests the snapshot only when first opened and constructs categories, labels, descriptions, constraints, default-value context, controls, and editability indicators from API metadata rather than a browser-side setting list.
 - The browser holds a frozen confirmed snapshot and a separately cloned draft snapshot. Edits affect only the draft until Save succeeds.
-- Dirty state compares typed confirmed and draft values. Returning a field to its confirmed value removes it from the changed set.
-- Save derives the nested request shape from setting category/id metadata and issues one `PATCH` containing only changed fields that the snapshot marks runtime-editable.
-- The successful PATCH snapshot becomes the new authoritative confirmed state and a fresh draft. If a success response cannot be interpreted, the client performs at most one settings GET to confirm the accepted state. If that confirmation also fails, the visible draft is locked and an explicit retry-load action prevents further edits against stale confirmed state.
-- Validation and network failures leave the draft and dirty state intact. API error messages are rendered as text, and exact field locations are associated with controls where the response supplies them.
+- Dirty state compares typed draft values separately with confirmed runtime and persisted values.
+- Save runtime changes derives a nested payload from metadata and issues one `PATCH` containing only changed runtime-editable fields.
+- Save to configuration is a separate button, never an edit/input side effect. It issues one `PUT /api/dashboard/settings/config` containing only persistable draft values that differ from the confirmed `persisted_value`.
+- While either save is pending, controls and both save actions are locked to prevent duplicate or conflicting submissions.
+- The successful PATCH snapshot becomes the new authoritative confirmed state and a fresh draft while retaining any future persistence-only draft values that PATCH was not eligible to apply. If a success response cannot be interpreted, the client performs at most one settings GET to confirm the accepted state. If that confirmation also fails, the visible draft is locked and an explicit retry-load action prevents further edits against stale confirmed state.
+- A successful PUT accepts the refreshed runtime/persisted snapshot while restoring the user's draft values. This allows a value to be saved for a later restart without silently applying it to the current process.
+- Validation, persistence, and network failures leave the draft and dirty state intact. API error messages are rendered as text, and exact field locations are associated with controls where the response supplies them.
 - Discard clones the latest confirmed snapshot without a PATCH, GET, browser storage, or configuration-file operation.
 
-Current B6.3 boundary:
+Current B6.4 boundary:
 
-- The Settings page is a runtime API client, not another source of configuration rules or setting ownership.
+- The Settings page is a management API client, not another source of configuration rules or setting ownership.
 - Settings controls are temporary browser state; no LocalStorage or SessionStorage is used.
-- No configuration persistence.
-- No YAML writing.
+- Persistence occurs only after explicit PUT or Save to configuration action; PATCH and editing never persist automatically.
+- No automatic restart or restart orchestration.
+- Restart-required metadata is represented generically. If a future persistable setting requires restart, its persisted value can differ from the active runtime value until a manual restart; no currently approved setting is marked restart-required.
+- No history browser, backup-management UI, rollback workflow, import/export, or multi-process locking.
 - No authentication or multi-user setting ownership.
-- No startup restoration of runtime overrides.
 - No reset-to-defaults workflow.
 - No proxy, streaming, context-engine, or compression-engine contract changes.
 
@@ -231,7 +278,7 @@ The browser dashboard is a vanilla HTML/CSS/JavaScript operations console. It cu
 - Live Conversation Timeline;
 - Conversation Inspector drawer with Overview and Intelligence;
 - client-side navigation between Operations, Conversations, Context, Analytics, Logs, and the interactive Settings page;
-- a visible runtime-only notice, metadata-driven category form, feedback regions, and Save/Discard actions on Settings.
+- a visible runtime-versus-saved notice, metadata-driven category form, persisted-value/difference guidance, feedback regions, separate runtime/configuration Save actions, and Discard on Settings.
 
 The dashboard polls the existing endpoints on the configured refresh interval, defaulting to `1000 ms`. It uses one reschedulable interval and a guard to avoid overlapping refreshes. Page switching does not create polling timers or duplicate listeners. When the runtime refresh interval changes, the canonical `/dashboard/data` value reschedules that same timer; opening Settings adds only its guarded first-load request.
 

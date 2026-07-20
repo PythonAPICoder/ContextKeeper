@@ -1,10 +1,15 @@
+import inspect
 import json
+from pathlib import Path
 
+import pytest
+import yaml
 from fastapi.testclient import TestClient
 
 from ctxkeeper.app import create_app
 from ctxkeeper.config import Settings
-from ctxkeeper.dashboard.settings_snapshot import build_dashboard_settings_snapshot
+from ctxkeeper.dashboard.routes import create_dashboard_router
+from ctxkeeper.dashboard.settings_snapshot import DashboardSetting, build_dashboard_settings_snapshot
 
 
 SETTING_KEYS = {
@@ -13,13 +18,23 @@ SETTING_KEYS = {
     "display_name",
     "description",
     "value",
+    "persisted_value",
     "default_value",
+    "differs_from_persisted",
     "minimum",
     "maximum",
     "runtime_editable",
+    "persistable",
     "restart_required",
     "data_type",
 }
+
+
+@pytest.fixture(autouse=True)
+def _isolate_default_config_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep settings API reads and writes isolated from the repository config."""
+
+    monkeypatch.chdir(tmp_path)
 
 
 def _settings_by_id(snapshot: dict[str, object]) -> dict[str, dict[str, object]]:
@@ -36,15 +51,25 @@ def _setting_value(snapshot: dict[str, object], setting_id: str) -> object:
     return _settings_by_id(snapshot)[setting_id]["value"]
 
 
-def _settings_client(settings: Settings | None = None) -> TestClient:
-    return TestClient(create_app(settings or Settings()))
+def _settings_client(
+    settings: Settings | None = None,
+    *,
+    config_path: str | Path = "contextkeeper.yaml",
+) -> TestClient:
+    return TestClient(create_app(settings or Settings(), config_path=config_path))
+
+
+def _write_config(path: Path, data: dict[str, object]) -> bytes:
+    serialized = yaml.safe_dump(data, sort_keys=False)
+    path.write_text(serialized, encoding="utf-8")
+    return path.read_bytes()
 
 
 def test_dashboard_settings_snapshot_schema_and_categories() -> None:
     snapshot = build_dashboard_settings_snapshot(Settings()).to_dict()
 
     assert set(snapshot) == {"schema_version", "categories"}
-    assert snapshot["schema_version"] == 1
+    assert snapshot["schema_version"] == 2
     categories = snapshot["categories"]
     assert isinstance(categories, list)
     assert [category["id"] for category in categories] == ["context", "compression", "dashboard"]
@@ -58,7 +83,10 @@ def test_dashboard_settings_snapshot_schema_and_categories() -> None:
             assert set(setting) == SETTING_KEYS
             assert setting["category"] == category["id"]
             assert setting["runtime_editable"] is True
+            assert setting["persistable"] is True
             assert setting["restart_required"] is False
+            assert setting["persisted_value"] == setting["value"]
+            assert setting["differs_from_persisted"] is False
             assert setting["data_type"] in {"boolean", "integer", "string"}
 
 
@@ -114,6 +142,57 @@ def test_dashboard_settings_snapshot_values_defaults_and_validation_metadata() -
     assert by_id["dashboard.refresh_interval_ms"]["minimum"] == 1
 
 
+def test_dashboard_settings_snapshot_distinguishes_runtime_and_persisted_values() -> None:
+    runtime = Settings(
+        context={"warning_threshold_percent": 60, "compression_threshold_percent": 90},
+        compression={"enabled": False},
+    )
+    persisted = Settings(
+        context={"warning_threshold_percent": 70, "compression_threshold_percent": 90},
+        compression={"enabled": True},
+    )
+
+    snapshot = build_dashboard_settings_snapshot(runtime, persisted).to_dict()
+    by_id = _settings_by_id(snapshot)
+
+    warning = by_id["context.warning_threshold_percent"]
+    assert warning["value"] == 60
+    assert warning["persisted_value"] == 70
+    assert warning["default_value"] == 75
+    assert warning["differs_from_persisted"] is True
+    assert warning["persistable"] is True
+    compression = by_id["compression.enabled"]
+    assert compression["value"] is False
+    assert compression["persisted_value"] is True
+    assert compression["differs_from_persisted"] is True
+    assert by_id["dashboard.refresh_interval_ms"]["differs_from_persisted"] is False
+
+
+def test_dashboard_setting_supports_restart_required_persisted_runtime_divergence() -> None:
+    setting = DashboardSetting(
+        id="example.restart_setting",
+        category="example",
+        display_name="Restart setting",
+        description="Synthetic metadata contract coverage.",
+        value=True,
+        persisted_value=False,
+        default_value=True,
+        data_type="boolean",
+        runtime_editable=False,
+        persistable=True,
+        restart_required=True,
+    )
+
+    data = setting.to_dict()
+
+    assert data["value"] is True
+    assert data["persisted_value"] is False
+    assert data["differs_from_persisted"] is True
+    assert data["runtime_editable"] is False
+    assert data["persistable"] is True
+    assert data["restart_required"] is True
+
+
 def test_dashboard_settings_snapshot_exposes_only_approved_settings() -> None:
     settings = Settings(
         app={"name": "HiddenAppName"},
@@ -159,7 +238,7 @@ def test_dashboard_settings_api_endpoint_returns_snapshot() -> None:
 
     assert response.status_code == 200
     data = response.json()
-    assert data["schema_version"] == 1
+    assert data["schema_version"] == 2
     assert [category["id"] for category in data["categories"]] == ["context", "compression", "dashboard"]
     by_id = _settings_by_id(data)
     assert by_id["context.warning_threshold_percent"]["value"] == 50
@@ -455,3 +534,289 @@ def test_dashboard_settings_api_does_not_change_existing_dashboard_payload(monke
     assert "conversation_inspector" in dashboard_response.json()
     assert "categories" in settings_response.json()
     assert "categories" not in dashboard_response.json()
+
+
+def test_dashboard_settings_config_put_persists_and_returns_refreshed_snapshot(
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / "contextkeeper.yaml"
+    _write_config(
+        config_path,
+        {
+            "context": {
+                "enabled": True,
+                "warning_threshold_percent": 75,
+                "compression_threshold_percent": 85,
+            },
+            "compression": {"enabled": True},
+        },
+    )
+    runtime = Settings()
+    client = _settings_client(runtime, config_path=config_path)
+
+    response = client.put(
+        "/api/dashboard/settings/config",
+        json={
+            "context": {"enabled": False, "warning_threshold_percent": 70},
+            "compression": {"enabled": False},
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert set(data) == {
+        "status",
+        "persisted_setting_ids",
+        "configuration_created",
+        "settings",
+    }
+    assert data["status"] == "saved"
+    assert data["persisted_setting_ids"] == [
+        "compression.enabled",
+        "context.enabled",
+        "context.warning_threshold_percent",
+    ]
+    assert data["configuration_created"] is False
+    assert data["settings"]["schema_version"] == 2
+    by_id = _settings_by_id(data["settings"])
+    assert by_id["context.enabled"]["value"] is True
+    assert by_id["context.enabled"]["persisted_value"] is False
+    assert by_id["context.enabled"]["differs_from_persisted"] is True
+    assert by_id["context.warning_threshold_percent"]["value"] == 75
+    assert by_id["context.warning_threshold_percent"]["persisted_value"] == 70
+    assert by_id["compression.enabled"]["value"] is True
+    assert by_id["compression.enabled"]["persisted_value"] is False
+
+    persisted = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    assert persisted["context"]["enabled"] is False
+    assert persisted["context"]["warning_threshold_percent"] == 70
+    assert persisted["compression"]["enabled"] is False
+
+    refreshed = client.get("/api/dashboard/settings")
+    assert refreshed.status_code == 200
+    assert _settings_by_id(refreshed.json())["context.enabled"]["persisted_value"] is False
+
+
+def test_dashboard_settings_config_put_creates_missing_configuration(
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / "missing" / "contextkeeper.yaml"
+    client = _settings_client(config_path=config_path)
+
+    response = client.put(
+        "/api/dashboard/settings/config",
+        json={"dashboard": {"refresh_interval_ms": 2400}},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["configuration_created"] is True
+    assert config_path.exists()
+    persisted = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    assert persisted == {"dashboard": {"refresh_interval_ms": 2400}}
+
+
+def test_dashboard_settings_config_put_does_not_mutate_runtime_state(tmp_path: Path) -> None:
+    config_path = tmp_path / "contextkeeper.yaml"
+    _write_config(config_path, {"context": {"enabled": True}})
+    runtime = Settings(context={"enabled": True})
+    app = create_app(runtime, config_path=config_path)
+    client = TestClient(app)
+
+    response = client.put(
+        "/api/dashboard/settings/config",
+        json={"context": {"enabled": False}},
+    )
+
+    assert response.status_code == 200
+    assert app.state.settings is runtime
+    assert runtime.context.enabled is True
+    assert _setting_value(response.json()["settings"], "context.enabled") is True
+    persisted = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    assert persisted["context"]["enabled"] is False
+
+
+def test_runtime_patch_remains_separate_and_does_not_write_configuration(tmp_path: Path) -> None:
+    config_path = tmp_path / "contextkeeper.yaml"
+    original = _write_config(config_path, {"context": {"enabled": True}})
+    client = _settings_client(config_path=config_path)
+
+    response = client.patch(
+        "/api/dashboard/settings",
+        json={"context": {"enabled": False}},
+    )
+
+    assert response.status_code == 200
+    setting = _settings_by_id(response.json())["context.enabled"]
+    assert setting["value"] is False
+    assert setting["persisted_value"] is True
+    assert setting["differs_from_persisted"] is True
+    assert config_path.read_bytes() == original
+
+
+@pytest.mark.parametrize(
+    ("payload", "expected_status"),
+    [
+        ({}, 400),
+        ({"context": {}}, 400),
+        ({"server": {"port": 11600}}, 422),
+        ({"context": {"unknown_setting": 1}}, 422),
+        ({"context": {"enabled": "false"}}, 422),
+        ({"context": {"warning_threshold_percent": "70"}}, 422),
+        ({"context": {"warning_threshold_percent": -1}}, 422),
+        ({"context": {"compression_threshold_percent": 101}}, 422),
+        ({"context": {"warning_threshold_percent": 85}}, 422),
+        ({"context": False}, 422),
+        ({"compression": []}, 422),
+        ([], 422),
+    ],
+)
+def test_dashboard_settings_config_put_returns_meaningful_validation_statuses(
+    tmp_path: Path,
+    payload: object,
+    expected_status: int,
+) -> None:
+    config_path = tmp_path / "contextkeeper.yaml"
+    client = _settings_client(config_path=config_path)
+
+    response = client.put("/api/dashboard/settings/config", json=payload)
+
+    assert response.status_code == expected_status
+    assert "detail" in response.json()
+    assert not config_path.exists()
+
+
+def test_dashboard_settings_config_put_rejects_missing_and_malformed_json(
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / "contextkeeper.yaml"
+    client = _settings_client(config_path=config_path)
+
+    missing = client.put("/api/dashboard/settings/config")
+    malformed = client.put(
+        "/api/dashboard/settings/config",
+        content="{not-json",
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert missing.status_code == 422
+    assert malformed.status_code == 422
+    assert not config_path.exists()
+
+
+def test_dashboard_settings_config_put_reports_malformed_existing_yaml_safely(
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / "contextkeeper.yaml"
+    original = b"context:\n  enabled: [\n"
+    config_path.write_bytes(original)
+    client = _settings_client(config_path=config_path)
+
+    response = client.put(
+        "/api/dashboard/settings/config",
+        json={"context": {"enabled": False}},
+    )
+
+    assert response.status_code == 409
+    assert "malformed YAML" in response.json()["detail"]
+    assert str(config_path) not in response.text
+    assert config_path.read_bytes() == original
+    assert list(tmp_path.glob(".contextkeeper.yaml.*.tmp")) == []
+
+
+def test_dashboard_settings_config_put_reports_atomic_replace_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config_path = tmp_path / "contextkeeper.yaml"
+    original = _write_config(config_path, {"context": {"enabled": True}})
+    app = create_app(Settings(), config_path=config_path)
+    persistence = app.state.configuration_persistence
+
+    def failed_replace(temporary_path: Path) -> None:
+        raise PermissionError("read-only destination")
+
+    monkeypatch.setattr(persistence, "_replace_configuration", failed_replace)
+    client = TestClient(app)
+
+    response = client.put(
+        "/api/dashboard/settings/config",
+        json={"context": {"enabled": False}},
+    )
+
+    assert response.status_code == 500
+    assert response.json()["detail"] == (
+        "The configuration update could not replace the active file atomically."
+    )
+    assert str(config_path) not in response.text
+    assert config_path.read_bytes() == original
+    assert list(tmp_path.glob(".contextkeeper.yaml.*.tmp")) == []
+
+
+def test_dashboard_settings_get_reports_persisted_read_failure_without_stack_trace(
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / "contextkeeper.yaml"
+    config_path.write_text("context: [\n", encoding="utf-8")
+    client = _settings_client(config_path=config_path)
+
+    response = client.get("/api/dashboard/settings")
+
+    assert response.status_code == 409
+    assert "malformed YAML" in response.json()["detail"]
+    assert str(config_path) not in response.text
+    assert "Traceback" not in response.text
+
+
+def test_dashboard_settings_patch_rejects_unavailable_persisted_state_before_runtime_mutation(
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / "contextkeeper.yaml"
+    original = b"context:\n  enabled: [\n"
+    config_path.write_bytes(original)
+    runtime = Settings(context={"enabled": True})
+    client = _settings_client(runtime, config_path=config_path)
+
+    response = client.patch(
+        "/api/dashboard/settings",
+        json={"context": {"enabled": False}},
+    )
+
+    assert response.status_code == 409
+    assert "malformed YAML" in response.json()["detail"]
+    assert runtime.context.enabled is True
+    assert config_path.read_bytes() == original
+
+
+def test_settings_get_and_patch_disk_reads_use_sync_threadpool_routes() -> None:
+    router = create_dashboard_router(Settings())
+    endpoints = {
+        (route.path, method): route.endpoint
+        for route in router.routes
+        if hasattr(route, "endpoint")
+        for method in getattr(route, "methods", set())
+    }
+
+    assert not inspect.iscoroutinefunction(
+        endpoints[("/api/dashboard/settings", "GET")]
+    )
+    assert not inspect.iscoroutinefunction(
+        endpoints[("/api/dashboard/settings", "PATCH")]
+    )
+
+
+def test_dashboard_settings_base_resource_unsupported_methods_remain_unchanged() -> None:
+    client = _settings_client()
+
+    for method in ("POST", "PUT", "DELETE"):
+        response = client.request(method, "/api/dashboard/settings", json={})
+        assert response.status_code == 405
+        assert response.json()["detail"] == "Use PATCH to update runtime settings."
+
+
+def test_dashboard_settings_config_resource_unsupported_methods_use_fastapi_405() -> None:
+    client = _settings_client()
+
+    for method in ("GET", "POST", "PATCH", "DELETE"):
+        response = client.request(method, "/api/dashboard/settings/config", json={})
+        assert response.status_code == 405
+        assert response.headers["allow"] == "PUT"

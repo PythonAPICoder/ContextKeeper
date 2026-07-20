@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import platform
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 import uvicorn
@@ -31,16 +32,20 @@ def run_contextkeeper(
     """
     config_path = resolve_config_path(DEFAULT_CONFIG_NAME)
     resolved_settings = settings or load_config(config_path)
-    app = create_contextkeeper_app(resolved_settings)
+    app = create_contextkeeper_app(resolved_settings, config_path=config_path)
     _print_startup_banner(resolved_settings, str(config_path))
     _log_startup(resolved_settings, str(config_path))
     runner = server_runner or uvicorn.run
     runner(app, host=resolved_settings.server.host, port=resolved_settings.server.port)
 
 
-def create_contextkeeper_app(settings: Settings) -> FastAPI:
+def create_contextkeeper_app(
+    settings: Settings,
+    *,
+    config_path: str | Path = DEFAULT_CONFIG_NAME,
+) -> FastAPI:
     """Create the ContextKeeper ASGI application for a runtime host."""
-    return create_app(settings)
+    return create_app(settings, config_path=config_path)
 
 
 def _print_startup_banner(settings: Settings, config_path: str) -> None:

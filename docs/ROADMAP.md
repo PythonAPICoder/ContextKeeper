@@ -1,6 +1,6 @@
 # ContextKeeper Roadmap
 
-Status: Current through Phase 6.5F-B6.3.
+Status: Current through the Phase 6.5F-B6.4 working-tree implementation; Product Owner and architect review are pending.
 
 This document records approved product direction. It is not a claim that planned work already exists. For completed implementation details, use [Project History](PROJECT_HISTORY.md).
 
@@ -23,7 +23,7 @@ Version 1 must preserve:
 
 ## Implemented foundation
 
-Implemented work through Phase 6.5F-B6.3, with Product Owner QA still pending for B6.3, includes:
+Implemented work through the Phase 6.5F-B6.4 working tree, with Product Owner and architect review still pending for B6.4, includes:
 
 - Transparent Ollama-compatible proxy.
 - `/api/*` and `/v1/*` passthrough.
@@ -46,7 +46,8 @@ Implemented work through Phase 6.5F-B6.3, with Product Owner QA still pending fo
 - Conversation Inspector Overview and deterministic Intelligence.
 - Documentation audit and synchronization through B5.6.
 - Dashboard Settings Snapshot plus read and validated in-memory update APIs on `/api/dashboard/settings`.
-- Interactive metadata-driven Settings page with typed draft editing, changed-fields-only atomic Save, Discard, validation feedback, and explicit runtime-only guidance.
+- Interactive metadata-driven Settings page with typed draft editing, changed-fields-only runtime Save, Discard, validation feedback, and explicit runtime-state guidance.
+- Schema-v2 runtime-versus-persisted Settings metadata, explicit `PUT /api/dashboard/settings/config`, defensive atomic YAML persistence, and a separate Save to configuration UI action.
 - First-run configuration wizard.
 - PyInstaller executable foundation.
 - Windows service host foundation.
@@ -54,23 +55,24 @@ Implemented work through Phase 6.5F-B6.3, with Product Owner QA still pending fo
 
 ## Current milestone
 
-### Phase 6.5F-B6.3 — Settings Panel UI Foundation
+### Phase 6.5F-B6.4 — Configuration Persistence Foundation
 
-Status: Implemented in the working tree; Product Owner QA pending.
+Status: Implemented in the working tree; Product Owner and architect review pending.
 
 Objective:
 
-- Activate Settings inside the existing dashboard shell.
-- Render categories and typed controls from `GET /api/dashboard/settings` metadata.
-- Keep confirmed server state separate from a temporary browser draft and detect meaningful changes.
-- Submit one changed-fields-only atomic `PATCH /api/dashboard/settings`, then accept the canonical response.
-- Preserve drafts on validation/network failure and provide Save, Discard, retry, accessible feedback, and responsive layout behavior.
+- Keep runtime updates and persisted configuration as separate explicit concepts.
+- Extend GET with schema-v2 runtime, persisted, default, difference, editability, persistence, and restart metadata.
+- Add `PUT /api/dashboard/settings/config` for selected metadata-approved settings without changing runtime state or restarting ContextKeeper.
+- Re-read, validate, serialize, verify, fingerprint-check, and atomically replace the resolved active YAML file while retaining unrelated/model-specific configuration data.
+- Add Save to configuration to the existing draft-based Settings page with duplicate-submit protection, inline feedback, and draft retention.
 
 Scope:
 
-- Runtime-editable settings only; API-marked non-runtime settings remain read-only.
-- Changes affect the current process and reset on ContextKeeper restart.
-- No persistence, `contextkeeper.yaml` writing, browser storage, or reset-to-defaults workflow.
+- Persist only explicitly requested approved settings; no automatic persistence after PATCH or editing.
+- Serialize writes within one running process and use best-effort fingerprint stale-write protection; no multi-process/distributed lock.
+- Use PyYAML plus standard-library temporary-file, `fsync`, and `os.replace` primitives; comments and exact formatting are not preserved.
+- No automatic restart, restart orchestration, browser storage, rollback/history UI, import/export, or reset-to-defaults workflow.
 - No changes to proxy compatibility, streaming, context, compression, or Conversation Inspector behavior.
 
 ## Completed Phase 6.5F-B5 live visualization workstream
@@ -103,18 +105,19 @@ Phase 6.5G must occur before Phase 6.6 so the Validation Framework can certify h
 
 ## Phase 6.5F-B6 — Dashboard Customization & User Preferences
 
-Status: Active; B6.1 provides the Settings Snapshot/read foundation, B6.2 provides the validated in-memory update API, and B6.3 provides the Settings panel UI foundation pending Product Owner QA.
+Status: Active; B6.1 provides the Settings Snapshot/read foundation, B6.2 the validated in-memory update API, B6.3 the Settings panel UI foundation, and B6.4 the configuration-persistence foundation pending Product Owner and architect review.
 
 Implemented B6 scope:
 
 - Metadata-driven runtime Settings controls inside the existing dashboard shell.
 - Separate confirmed/draft state, typed dirty detection, changed-fields-only atomic Save, Discard, and failure-preserving correction/retry.
-- Clear restart-reset and no-`contextkeeper.yaml` messaging.
+- Explicit runtime-versus-persisted metadata and separate PATCH/runtime and PUT/configuration actions.
+- Atomic same-directory YAML replacement with in-process serialization, best-effort stale-write detection, safe failures, and no runtime mutation or restart side effect.
 - Preserve existing Operations dashboard behavior.
 - Avoid destabilizing B5 live widgets.
 - Keep preferences local and understandable.
 
-Future B6 work, including configuration-file persistence, reset/default controls, broader preferences, authentication, and multi-user ownership, remains separate and requires explicit Product Owner approval.
+Future B6 work, including reset/default controls, broader preferences, authentication, and multi-user ownership, remains separate and requires explicit Product Owner approval.
 
 ## Phase 6.5F-B7 — Release Polish & Final UX Review
 

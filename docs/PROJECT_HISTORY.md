@@ -69,7 +69,7 @@ Example: `Phase 6.5F-B4.2`
 | Dashboard modernization B4 workstream | Completed | Phase 6.5F-B4.8 automatic model context discovery is implemented and documented. |
 | Live data visualization and rich widgets | Completed through B5.5.2 | Request Traffic, Connection Flow, Live Conversation Timeline, layout refinement, Connection Flow visibility polish, Conversation Inspector foundation, and Conversation Inspector Overview & Intelligence are implemented; B5.6 synchronized documentation to that state. |
 | Documentation audit and synchronization | Completed | Phase 6.5F-B5.6 audited maintained Markdown documents and aligned documentation with the implementation through B5.5.2. |
-| Dashboard customization and user preferences | Active | Phase 6.5F-B6 has delivered the Settings Snapshot/read API, validated in-memory update API, and Settings panel UI foundation; B6.3 Product Owner QA is pending. |
+| Dashboard customization and user preferences | Active | Phase 6.5F-B6 has delivered the Settings Snapshot/read API, validated in-memory update API, Settings panel UI foundation, and B6.4 explicit configuration-persistence foundation; B6.4 Product Owner and architect review are pending. |
 | Release polish and final UX review | Planned | Phase 6.5F-B7 planned before historical memory retrieval and validation certification. |
 | Historical memory retrieval and detail preservation | Planned | Dedicated Phase 6.5G approved before Phase 6.6; no implementation exists yet. |
 | Validation framework and release certification | Planned | Dedicated Phase 6.6 approved after Phase 6.5G and before Phase 7; no implementation exists yet. |
@@ -1683,6 +1683,107 @@ Validation:
 - Headless Microsoft Edge engineering smoke checks exercised the real Settings page at `3440×1440` and narrow width, field-specific validation focus, draft preservation, Discard, successful numeric Save, accepted-update reconciliation, and runtime refresh-timer rescheduling; the temporary runtime was stopped afterward.
 - Product Owner visual and interaction QA remains the acceptance checkpoint; this phase is not committed, merged, pushed, or released by this working-tree implementation.
 
+### Phase 6.5F-B6.4 — Configuration Persistence Foundation
+
+Status: Implemented in the working tree; Product Owner and architect review pending.
+
+Date: 2026-07-20.
+
+Objective:
+
+- Keep temporary runtime updates and durable configuration writes as separate, explicit operations.
+- Persist only approved dashboard settings selected by the user.
+- Preserve unrelated and model-specific configuration data while replacing the active YAML file atomically and defensively.
+- Expose runtime-versus-persisted metadata and add Save to configuration to the existing draft-based Settings page.
+- Preserve Ollama proxy/streaming behavior and the completed B6.1, B6.2, and B6.3 contracts.
+
+Architecture:
+
+- Added `src/ctxkeeper/dashboard/config_persistence.py` as the focused persistence service rather than expanding routes or creating a second settings catalog.
+- Reused `RuntimeSettingsUpdate`, strict Pydantic models, authoritative `DashboardSetting` metadata, complete `Settings` validation, and the shared dashboard threshold-order business rule.
+- Application startup now resolves the active configuration path once and supplies that path to both loading and `ConfigurationPersistenceService`; the service uses the existing source/frozen `resolve_config_path` rules.
+- The service reads disk state freshly for GET metadata and immediately before each PUT; it does not write from an old startup-time configuration copy.
+- Added one process-global `RLock` around persisted-state reads and persistence operations. The boundary serializes competing operations only inside one running ContextKeeper process.
+
+Settings snapshot and API contract:
+
+- Advanced the canonical settings snapshot to schema version 2.
+- Added `persisted_value`, `differs_from_persisted`, and `persistable` while retaining `value`, `default_value`, validation constraints, `runtime_editable`, `restart_required`, and existing display metadata.
+- `GET /api/dashboard/settings` remains read-only and now reports runtime and freshly read persisted state.
+- `PATCH /api/dashboard/settings` remains the temporary runtime-only update operation. It does not call persistence or write YAML.
+- GET and PATCH run as synchronous FastAPI handlers so disk reads and persistence-lock waits use the worker pool rather than blocking the async proxy/streaming event loop.
+- PATCH validates that persisted state is available before runtime mutation, preventing an error path from returning fabricated persisted metadata.
+- Added `PUT /api/dashboard/settings/config` with the same category-grouped partial request shape.
+- Successful PUT returns `status: "saved"`, sorted `persisted_setting_ids`, `configuration_created`, and a refreshed schema-v2 snapshot in `settings`.
+- PUT changes disk state only: it does not mutate the shared runtime `Settings`, apply PATCH implicitly, or restart ContextKeeper.
+- `POST`, `PUT`, and `DELETE` on `/api/dashboard/settings` itself remain `405`; persistence is available only through the dedicated `/api/dashboard/settings/config` resource.
+
+Validation and safe errors:
+
+- Requests containing no setting values return `400`; malformed structures, unknown categories/fields, non-persistable fields, nulls, strict boolean/integer violations, range violations, blank model names, and cross-field conflicts return `422`.
+- Existing malformed/non-mapping YAML, invalid UTF-8, invalid configuration, and detected stale writes return `409` without replacing the file.
+- Read, directory, serialization, temporary-write/verification, and atomic-replace failures return safe server errors without stack traces, filesystem paths, secrets, or full configuration contents.
+- A missing file is handled deliberately: validated defaults supply effective persisted metadata, an explicit PUT creates missing parent directories/file, and success reports `configuration_created: true`.
+- Logs record safe error code/status metadata or success setting counts and creation state, not configuration bodies or secret values.
+
+Atomic persistence behavior:
+
+- The service parses the active YAML mapping, deep-copies it, and changes only explicitly supplied approved fields, preserving unmanaged categories, values, and model-specific entries.
+- The merged complete candidate is validated before serialization.
+- PyYAML `safe_dump` emits readable block-style Unicode YAML with source key order retained where possible; the serialized candidate is parsed and validated again.
+- A temporary file is created in the destination directory, written as UTF-8/LF, flushed, `fsync`ed, closed, read back, byte-verified, and parsed before replacement.
+- A SHA-256 source fingerprint is checked immediately before commit. A detected intervening edit returns `409` rather than overwriting the newer content.
+- `os.replace` performs the same-directory atomic replacement only after all preparation succeeds.
+- Failed preparation/replacement retains the original destination and triggers best-effort temporary-file cleanup; cleanup failures are logged safely.
+
+Settings UI behavior:
+
+- Replaced the earlier runtime-only notice with explicit runtime-versus-saved guidance.
+- Runtime form submission remains changed-fields-only PATCH and is labeled Save runtime changes.
+- Added a separate button labeled Save to configuration; editing/input never invokes it automatically.
+- Persistence payloads include only metadata-approved persistable draft values that differ from confirmed `persisted_value`.
+- Each setting shows its saved configuration value, typed runtime/persisted/draft difference text, and applicable runtime-read-only, non-persistable, runtime-differs-from-saved, and restart-required badges.
+- Save to configuration is disabled when nothing eligible differs, displays an in-progress state, and locks both save actions and controls while pending to prevent duplicate/conflicting requests.
+- Successful persistence accepts the refreshed snapshot while restoring the user's current draft, allowing disk-only changes to remain pending runtime application.
+- Persistence validation, storage, network, and malformed-response failures retain the draft and use the existing inline status/error/focus patterns.
+- No restart button or automatic restart behavior was added.
+
+Tests added or updated:
+
+- Added `tests/test_config_persistence.py` for single/multi-setting persistence, preservation, strict validation, malformed/missing/inaccessible files, temporary and replacement failures, original-file retention, cleanup, fingerprint conflicts, and concurrent in-process serialization.
+- Expanded `tests/test_dashboard_settings.py` for schema-v2/refreshed metadata, generic restart-required divergence, PUT success/response/status/error behavior, no runtime mutation, GET/PATCH preservation, and unsupported-method regression.
+- Expanded `tests/test_dashboard_settings_ui.py` rendered HTML/JavaScript contract coverage for the explicit persistence action, request selection, no autosave, loading/duplicate guards, draft-preserving success/failure, runtime/persisted differences, and restart guidance.
+- Preserved proxy, streaming, dashboard, context, compression, service, wizard, packaging, and existing Settings regressions.
+
+Documentation updated:
+
+- `README.md`
+- `docs/README.md`
+- `docs/ARCHITECTURE.md`
+- `docs/API_COMPATIBILITY.md`
+- `docs/CONFIGURATION.md`
+- `docs/TEST_PLAN.md`
+- `docs/ROADMAP.md`
+- `docs/PROJECT_HISTORY.md`
+- `docs/ContextKeeper_Project_Plan.md`
+- `docs/DASHBOARD_LAYOUT.md`
+- `docs/UI_COMPONENT_GUIDE.md`
+
+Limitations and boundaries:
+
+- The lock is process-local; no operating-system, distributed, or multi-process lock was added. Fingerprinting is best-effort and cannot close the final external-writer race between the check and `os.replace`.
+- PyYAML preserves parsed data but not comments, exact whitespace, anchors, quoting choices, or original source formatting. B6.4 does not add a complex round-trip YAML dependency.
+- No automatic persistence after PATCH or editing, automatic restart, service orchestration, reset-to-defaults, rollback history, backup UI, import/export, secrets management, authentication, multi-user conflict resolution, database, or cloud synchronization was added.
+
+Validation:
+
+- Focused persistence/service/API/UI validation: `.\.venv\Scripts\python.exe -m pytest tests/test_config_persistence.py tests/test_dashboard_settings.py tests/test_dashboard_settings_ui.py -q`, 117 tests passing in 1.27 seconds with one third-party FastAPI/Starlette TestClient deprecation warning and one existing `httpx` raw-content deprecation warning.
+- Full automated suite: `.\.venv\Scripts\python.exe -m pytest -q`, 381 tests passing in 6.53 seconds with the same two third-party deprecation warnings and no skipped tests.
+- Python syntax validation for the changed source and tests with `py_compile`, passing.
+- Rendered dashboard JavaScript syntax validation with `node --check`, passing.
+- Whitespace/error validation with `git diff --check`, passing.
+- Product Owner and architect review remain the acceptance checkpoint; this phase is not committed, merged, pushed, or released by this working-tree implementation.
+
 ### Phase 6.5G — Historical Memory Retrieval & Detail Preservation (Approved Plan)
 
 Status: Planned; approved for the roadmap, not implemented.
@@ -1863,11 +1964,12 @@ Scope boundary:
 
 ## Current Project State
 
-- Current active implementation phase: Phase 6.5F-B6.3 — Settings Panel UI Foundation; Product Owner QA pending.
+- Current active implementation phase: Phase 6.5F-B6.4 — Configuration Persistence Foundation; Product Owner and architect review pending.
 - Phase 6.5F-B4.8 — Automatic Model Context Discovery is implemented.
-- Phase 6.5F-B5.1 through Phase 6.5F-B6.3 are represented in source and tests.
-- Latest verified automated test count for Phase 6.5F-B6.3: 302 tests passing, with the existing third-party FastAPI/Starlette TestClient deprecation warning and one `httpx` malformed-request test deprecation warning; no skipped tests.
-- Dashboard status: modern operations-console dashboard with live proxy, Ollama, request, context, compression, conversation, intelligence, health, operational activity, recommendations, grouped five-card system instrument panel, Context Trend, Request Traffic, animated Connection Flow, Live Conversation Timeline, Conversation Inspector drawer, Conversation Inspector Overview, deterministic Conversation Inspector Intelligence, and an interactive metadata-driven runtime Settings page.
+- Phase 6.5F-B5.1 through the B6.4 working tree are represented in source and tests.
+- Latest focused B6.4 Settings persistence/service/API/UI validation: 117 tests passing with two third-party deprecation warnings.
+- Latest full-suite result for B6.4: 381 tests passing with the same two third-party deprecation warnings and no skipped tests.
+- Dashboard status: modern operations-console dashboard with live proxy, Ollama, request, context, compression, conversation, intelligence, health, operational activity, recommendations, grouped five-card system instrument panel, Context Trend, Request Traffic, animated Connection Flow, Live Conversation Timeline, Conversation Inspector drawer, Conversation Inspector Overview, deterministic Conversation Inspector Intelligence, and an interactive metadata-driven runtime-versus-persisted Settings page.
 - Major capabilities currently present:
   - FastAPI-based transparent Ollama proxy.
   - `/api/*` and `/v1/*` passthrough with streaming preservation for supported endpoints.
@@ -1876,11 +1978,11 @@ Scope boundary:
   - Compression manager, compression planning, rolling-summary support, and confirmed compression metadata.
   - Automatic Model Context Discovery and context-window enforcement.
   - Browser dashboard with live monitoring and intelligence.
-  - Dashboard settings snapshot, read API, validated in-memory runtime update API, and interactive Settings UI for approved Context, Compression, and Dashboard settings.
+  - Dashboard schema-v2 Settings snapshot, read API, validated in-memory runtime update API, explicit atomic configuration-persistence API, and interactive Settings UI for approved Context, Compression, and Dashboard settings.
   - Windows service foundation, PyInstaller executable foundation, first-run setup wizard, Inno Setup installer foundation, and release build script.
 - Planned work still ahead:
-  - Product Owner visual and interaction QA for Phase 6.5F-B6.3.
-  - Later Phase 6.5F-B6 configuration persistence, reset/default controls, and broader dashboard preference work after explicit approval.
+  - Product Owner and architect review for Phase 6.5F-B6.4.
+  - Later Phase 6.5F-B6 reset/default controls and broader dashboard preference work after explicit approval.
   - Phase 6.5F-B7 — Release Polish & Final UX Review.
   - Phase 6.5G — Historical Memory Retrieval & Detail Preservation.
   - Phase 6.6 — Validation Framework & Release Certification.
@@ -1888,7 +1990,7 @@ Scope boundary:
   - Version 1.0 Release.
   - Version 2+ architectural ideas tracked in `docs/FUTURE_IDEAS.md`, intentionally outside the Version 1.0 release scope.
 
-Do not treat planned Phase 6.5F-B6/B7, Phase 6.5G, Phase 6.6, Phase 7, or Version 2+ roadmap content as implemented until source and tests confirm that state.
+Do not treat remaining planned Phase 6.5F-B6/B7, Phase 6.5G, Phase 6.6, Phase 7, or Version 2+ roadmap content as implemented until source and tests confirm that state.
 
 ## Planned Next Steps
 
@@ -1896,8 +1998,8 @@ This section is tentative and subject to refinement. These names and boundaries 
 
 - Phase 6.5F-B5 — Live Data Visualization & Rich Widgets.
 - Phase 6.5F-B6 — Dashboard Customization & User Preferences.
-  - Product Owner QA for Phase 6.5F-B6.3 — Settings Panel UI Foundation.
-  - Later B6 configuration persistence, reset/default controls, and broader dashboard preference work after explicit approval.
+  - Product Owner and architect review for Phase 6.5F-B6.4 — Configuration Persistence Foundation.
+  - Later B6 reset/default controls and broader dashboard preference work after explicit approval.
 - Phase 6.5F-B7 — Release Polish & Final UX Review.
 - Phase 6.5G — Historical Memory Retrieval & Detail Preservation.
   - Phase 6.5G.1 — Durable Conversation Archive.

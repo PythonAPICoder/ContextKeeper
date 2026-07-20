@@ -287,6 +287,9 @@ a.badge:focus-visible {{ outline:2px solid rgba(56,189,248,.72); outline-offset:
 .settings-checkbox {{ width:19px; height:19px; flex:0 0 auto; margin:0; accent-color:var(--accent); }}
 .settings-checkbox-state {{ color:var(--soft); font-size:12px; font-weight:750; }}
 .settings-field-note {{ color:var(--muted); font-size:10px; line-height:1.35; overflow-wrap:anywhere; }}
+.settings-difference {{ color:var(--muted); font-size:10px; line-height:1.35; overflow-wrap:anywhere; }}
+.settings-difference.warning {{ color:#fde68a; }}
+.settings-difference.success {{ color:#bbf7d0; }}
 .settings-field-error {{ color:#fecaca; font-size:11px; line-height:1.35; overflow-wrap:anywhere; }}
 .settings-action-bar {{ position:sticky; z-index:3; bottom:0; min-width:0; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:11px 12px; border:1px solid rgba(203,213,225,.13); border-radius:10px; background:linear-gradient(135deg,rgba(15,23,42,.96),rgba(24,33,50,.94)); box-shadow:0 -10px 28px rgba(2,6,23,.3),var(--surface-inset-highlight); backdrop-filter:blur(18px); }}
 .settings-dirty-summary {{ min-width:0; color:var(--muted); font-size:12px; line-height:1.35; overflow-wrap:anywhere; }}
@@ -1056,29 +1059,30 @@ body.conversation-inspector-open .conversation-inspector-drawer {{ transform:tra
 
 <section id="settings" class="page settings-page" data-page="settings" aria-labelledby="settingsPageTitle">
   <div class="page-header">
-    <div><h2 id="settingsPageTitle" class="page-title">Settings</h2><div class="page-sub">Review and adjust settings exposed by the current ContextKeeper runtime.</div></div>
+    <div><h2 id="settingsPageTitle" class="page-title">Settings</h2><div class="page-sub">Review current runtime values, saved configuration, and eligible draft changes.</div></div>
   </div>
   <aside class="settings-runtime-notice" role="note" aria-labelledby="settingsRuntimeNoticeTitle">
     <div class="settings-runtime-icon" aria-hidden="true">!</div>
     <div>
-      <h3 id="settingsRuntimeNoticeTitle" class="settings-runtime-title">Runtime-only changes</h3>
-      <p class="settings-runtime-copy">Changes made here apply only to the current ContextKeeper runtime and reset when ContextKeeper restarts. They do not modify contextkeeper.yaml.</p>
+      <h3 id="settingsRuntimeNoticeTitle" class="settings-runtime-title">Runtime and saved configuration are separate</h3>
+      <p class="settings-runtime-copy">The Save runtime changes action applies eligible values to the current ContextKeeper process only. Save to configuration explicitly writes eligible draft values to contextkeeper.yaml without changing the current runtime or restarting ContextKeeper.</p>
     </div>
   </aside>
   <div id="settingsStatus" class="settings-status" role="status" aria-live="polite" aria-atomic="true">Settings load when this page is opened.</div>
   <div id="settingsErrorSummary" class="settings-feedback settings-feedback-error" role="alert" aria-live="assertive" tabindex="-1" hidden></div>
   <div id="settingsLoadState" class="settings-state" hidden>
     <div id="settingsLoadStateTitle" class="settings-state-title">Loading settings</div>
-    <div id="settingsLoadStateDetail" class="settings-state-detail">Requesting the current runtime settings from ContextKeeper.</div>
+    <div id="settingsLoadStateDetail" class="settings-state-detail">Requesting current runtime and persisted settings from ContextKeeper.</div>
     <button id="settingsRetryButton" class="settings-button" type="button" hidden>Retry loading settings</button>
   </div>
   <form id="settingsForm" class="settings-form" novalidate hidden>
-    <div id="settingsCategories" class="settings-categories" aria-label="Runtime settings categories"></div>
+    <div id="settingsCategories" class="settings-categories" aria-label="ContextKeeper settings categories"></div>
     <div class="settings-action-bar">
       <div id="settingsDirtySummary" class="settings-dirty-summary">No unsaved changes.</div>
       <div class="settings-actions">
         <button id="settingsDiscardButton" class="settings-button" type="button" disabled>Discard changes</button>
-        <button id="settingsSaveButton" class="settings-button primary" type="submit" disabled>Save changes</button>
+        <button id="settingsPersistButton" class="settings-button" type="button" disabled>Save to configuration</button>
+        <button id="settingsSaveButton" class="settings-button primary" type="submit" disabled>Save runtime changes</button>
       </div>
     </div>
   </form>
@@ -1136,6 +1140,7 @@ body.conversation-inspector-open .conversation-inspector-drawer {{ transform:tra
 <script>
 const DASHBOARD_REFRESH_INTERVAL_MS = {settings.dashboard.refresh_interval_ms or 1000};
 const SETTINGS_ENDPOINT = '/api/dashboard/settings';
+const SETTINGS_CONFIG_ENDPOINT = '/api/dashboard/settings/config';
 const TOPOLOGY_OUTBOUND_DURATION_MS = 1300;
 const TOPOLOGY_INBOUND_DURATION_MS = 1200;
 const REQUEST_TRAFFIC_BUCKETS = 24;
@@ -1165,14 +1170,18 @@ let dashboardRefreshIntervalMs = DASHBOARD_REFRESH_INTERVAL_MS;
 const settingsPageState = {{
   confirmedSnapshot:null,
   draftSnapshot:null,
+  confirmedSettingsById:new Map(),
   draftSettingsById:new Map(),
   controlsById:new Map(),
   errorElementsById:new Map(),
+  differenceElementsById:new Map(),
   fieldErrors:new Map(),
   loaded:false,
   loading:false,
   saving:false,
-  confirmationRequired:false
+  persisting:false,
+  confirmationRequired:false,
+  confirmationAction:null
 }};
 const conversationInspectorState = {{
   selectedConversationId:null,
@@ -1763,7 +1772,7 @@ function settingValueMatchesDataType(dataType, value) {{
 }}
 function validateSettingsSnapshot(snapshot) {{
   const invalid = () => {{ throw new Error('The settings response format is not supported.'); }};
-  if (!snapshot || typeof snapshot !== 'object' || snapshot.schema_version !== 1 || !Array.isArray(snapshot.categories)) invalid();
+  if (!snapshot || typeof snapshot !== 'object' || snapshot.schema_version !== 2 || !Array.isArray(snapshot.categories)) invalid();
   const categoryIds = new Set();
   const settingIds = new Set();
   snapshot.categories.forEach(category => {{
@@ -1775,8 +1784,10 @@ function validateSettingsSnapshot(snapshot) {{
       if (!setting || typeof setting !== 'object' || typeof setting.id !== 'string' || typeof setting.category !== 'string' ||
           typeof setting.display_name !== 'string' || typeof setting.description !== 'string' ||
           typeof setting.runtime_editable !== 'boolean' || typeof setting.restart_required !== 'boolean' ||
+          typeof setting.persistable !== 'boolean' || typeof setting.differs_from_persisted !== 'boolean' ||
           !['boolean','integer','string'].includes(setting.data_type) || setting.category !== category.id || settingIds.has(setting.id) ||
           !settingValueMatchesDataType(setting.data_type, setting.value) ||
+          !settingValueMatchesDataType(setting.data_type, setting.persisted_value) ||
           !settingValueMatchesDataType(setting.data_type, setting.default_value)) invalid();
       const prefix = category.id + '.';
       const fieldName = setting.id.startsWith(prefix) ? setting.id.slice(prefix.length) : '';
@@ -1786,9 +1797,10 @@ function validateSettingsSnapshot(snapshot) {{
       if (setting.data_type !== 'integer' && (setting.minimum !== null || setting.maximum !== null)) invalid();
       if (setting.minimum !== null && setting.maximum !== null && setting.minimum > setting.maximum) invalid();
       if (setting.data_type === 'integer' && setting.minimum !== null &&
-          (setting.value < setting.minimum || setting.default_value < setting.minimum)) invalid();
+          (setting.value < setting.minimum || setting.persisted_value < setting.minimum || setting.default_value < setting.minimum)) invalid();
       if (setting.data_type === 'integer' && setting.maximum !== null &&
-          (setting.value > setting.maximum || setting.default_value > setting.maximum)) invalid();
+          (setting.value > setting.maximum || setting.persisted_value > setting.maximum || setting.default_value > setting.maximum)) invalid();
+      if (setting.differs_from_persisted !== !settingsValuesEqual(setting.value, setting.persisted_value)) invalid();
       settingIds.add(setting.id);
     }});
   }});
@@ -1847,8 +1859,9 @@ function formatSettingValue(value, dataType) {{
   return String(value);
 }}
 function settingsDescriptionIds(controlId, setting) {{
-  const ids = [controlId + '-description', controlId + '-metadata', controlId + '-error'];
-  if (!setting.runtime_editable) ids.push(controlId + '-readonly');
+  const ids = [controlId + '-description', controlId + '-metadata', controlId + '-difference', controlId + '-error'];
+  if (!setting.runtime_editable || !setting.persistable) ids.push(controlId + '-availability');
+  if (setting.restart_required) ids.push(controlId + '-restart');
   return ids.join(' ');
 }}
 function createSettingsBadge(label, state) {{
@@ -1891,7 +1904,7 @@ function configureSettingsControl(controlRoot, setting, controlId) {{
   control.dataset.settingId = setting.id;
   control.dataset.settingType = setting.data_type;
   control.setAttribute('aria-describedby', settingsDescriptionIds(controlId, setting));
-  control.disabled = !setting.runtime_editable || settingsPageState.saving;
+  control.disabled = (!setting.runtime_editable && !setting.persistable) || settingsPageState.loading || settingsPageState.saving || settingsPageState.persisting;
   if (control.disabled) control.setAttribute('aria-disabled', 'true');
   else control.removeAttribute('aria-disabled');
   settingsPageState.controlsById.set(setting.id, control);
@@ -1906,12 +1919,15 @@ function createSettingsItem(setting, itemNumber) {{
   label.htmlFor = controlId;
   labelRow.append(label);
   if (!setting.runtime_editable) labelRow.append(createSettingsBadge('Runtime read-only', 'disabled'));
+  if (!setting.persistable) labelRow.append(createSettingsBadge('Not persistable', 'disabled'));
+  if (setting.differs_from_persisted) labelRow.append(createSettingsBadge('Runtime differs from saved', 'warning'));
   if (setting.restart_required) labelRow.append(createSettingsBadge('Restart required', 'warning'));
   const description = createSettingsElement('p', 'settings-item-description', setting.description);
   description.id = controlId + '-description';
   const metadataLine = createSettingsElement('div', 'settings-metadata');
   metadataLine.id = controlId + '-metadata';
   metadataLine.append(createSettingsElement('span', '', 'Default: ' + formatSettingValue(setting.default_value, setting.data_type)));
+  metadataLine.append(createSettingsElement('span', '', 'Saved configuration: ' + formatSettingValue(setting.persisted_value, setting.data_type)));
   if (setting.minimum !== null || setting.maximum !== null) {{
     const minimum = setting.minimum === null ? 'no minimum' : String(setting.minimum);
     const maximum = setting.maximum === null ? 'no maximum' : String(setting.maximum);
@@ -1923,11 +1939,24 @@ function createSettingsItem(setting, itemNumber) {{
   const controlRoot = createSettingsControl(setting, controlId);
   const control = configureSettingsControl(controlRoot, setting, controlId);
   controlPanel.append(controlRoot);
-  if (!setting.runtime_editable) {{
-    const readOnly = createSettingsElement('div', 'settings-field-note', 'This setting cannot be changed during the current runtime.');
-    readOnly.id = controlId + '-readonly';
-    controlPanel.append(readOnly);
+  if (!setting.runtime_editable || !setting.persistable) {{
+    let availabilityMessage = '';
+    if (!setting.runtime_editable && setting.persistable) availabilityMessage = 'This draft can be saved to configuration, but it cannot be applied to the current runtime.';
+    else if (setting.runtime_editable && !setting.persistable) availabilityMessage = 'This setting can be changed for the current runtime, but it cannot be saved to configuration.';
+    else availabilityMessage = 'This setting cannot be changed during the current runtime or saved to configuration.';
+    const availability = createSettingsElement('div', 'settings-field-note', availabilityMessage);
+    availability.id = controlId + '-availability';
+    controlPanel.append(availability);
   }}
+  if (setting.restart_required) {{
+    const restart = createSettingsElement('div', 'settings-field-note', 'Saved changes require a ContextKeeper restart before they become active. ContextKeeper is not restarted automatically.');
+    restart.id = controlId + '-restart';
+    controlPanel.append(restart);
+  }}
+  const difference = createSettingsElement('div', 'settings-difference');
+  difference.id = controlId + '-difference';
+  controlPanel.append(difference);
+  settingsPageState.differenceElementsById.set(setting.id, difference);
   const error = createSettingsElement('div', 'settings-field-error');
   error.id = controlId + '-error';
   error.hidden = true;
@@ -1941,6 +1970,7 @@ function renderSettingsCategories() {{
   if (!container || !settingsPageState.draftSnapshot) return false;
   settingsPageState.controlsById = new Map();
   settingsPageState.errorElementsById = new Map();
+  settingsPageState.differenceElementsById = new Map();
   const fragment = document.createDocumentFragment();
   let itemNumber = 0;
   settingsPageState.draftSnapshot.categories.forEach((category, categoryIndex) => {{
@@ -1965,22 +1995,56 @@ function renderSettingsCategories() {{
     fragment.append(section);
   }});
   container.replaceChildren(fragment);
+  settingsPageState.differenceElementsById.forEach((element, settingId) => refreshSettingsDifference(settingId));
   return itemNumber > 0;
 }}
 function settingsValuesEqual(confirmedValue, draftValue) {{
   return typeof confirmedValue === typeof draftValue && confirmedValue === draftValue;
 }}
-function changedRuntimeSettings() {{
+function changedDraftSettings() {{
   if (!settingsPageState.confirmedSnapshot || !settingsPageState.draftSnapshot) return [];
   const changes = [];
   settingsPageState.confirmedSnapshot.categories.forEach(category => category.settings.forEach(confirmedSetting => {{
-    if (!confirmedSetting.runtime_editable) return;
+    if (!confirmedSetting.runtime_editable && !confirmedSetting.persistable) return;
     const draftSetting = settingsPageState.draftSettingsById.get(confirmedSetting.id);
     if (draftSetting && !settingsValuesEqual(confirmedSetting.value, draftSetting.value)) {{
       changes.push({{ setting:confirmedSetting, value:draftSetting.value }});
     }}
   }}));
   return changes;
+}}
+function changedRuntimeSettings() {{
+  return changedDraftSettings().filter(change => change.setting.runtime_editable);
+}}
+function changedPersistableSettings() {{
+  if (!settingsPageState.confirmedSnapshot || !settingsPageState.draftSnapshot) return [];
+  const changes = [];
+  settingsPageState.confirmedSnapshot.categories.forEach(category => category.settings.forEach(confirmedSetting => {{
+    if (!confirmedSetting.persistable) return;
+    const draftSetting = settingsPageState.draftSettingsById.get(confirmedSetting.id);
+    if (draftSetting && !settingsValuesEqual(confirmedSetting.persisted_value, draftSetting.value)) {{
+      changes.push({{ setting:confirmedSetting, value:draftSetting.value }});
+    }}
+  }}));
+  return changes;
+}}
+function settingsDifferenceMessage(settingId) {{
+  const confirmed = settingsPageState.confirmedSettingsById.get(settingId);
+  const draft = settingsPageState.draftSettingsById.get(settingId);
+  if (!confirmed || !draft) return {{ message:'', state:'' }};
+  const differsFromRuntime = !settingsValuesEqual(confirmed.value, draft.value);
+  const differsFromPersisted = !settingsValuesEqual(confirmed.persisted_value, draft.value);
+  if (differsFromRuntime && differsFromPersisted) return {{ message:'Draft differs from the current runtime and saved configuration.', state:'warning' }};
+  if (differsFromRuntime) return {{ message:'Draft matches the saved configuration and differs from the current runtime.', state:'warning' }};
+  if (differsFromPersisted) return {{ message:'Current runtime differs from the saved configuration.', state:'warning' }};
+  return {{ message:'Draft matches the current runtime and saved configuration.', state:'success' }};
+}}
+function refreshSettingsDifference(settingId) {{
+  const element = settingsPageState.differenceElementsById.get(settingId);
+  if (!element) return;
+  const difference = settingsDifferenceMessage(settingId);
+  element.className = 'settings-difference' + (difference.state ? ' ' + difference.state : '');
+  element.textContent = difference.message;
 }}
 function settingsDraftValueIsValid(setting, value) {{
   if (!settingValueMatchesDataType(setting.data_type, value)) return false;
@@ -1992,7 +2056,7 @@ function settingsDraftValueIsValid(setting, value) {{
 function settingsDraftIsValid() {{
   if (!settingsPageState.draftSnapshot) return false;
   for (const setting of settingsPageState.draftSettingsById.values()) {{
-    if (setting.runtime_editable && !settingsDraftValueIsValid(setting, setting.value)) return false;
+    if ((setting.runtime_editable || setting.persistable) && !settingsDraftValueIsValid(setting, setting.value)) return false;
   }}
   for (const control of settingsPageState.controlsById.values()) {{
     if (!control.disabled && typeof control.checkValidity === 'function' && !control.checkValidity()) return false;
@@ -2031,17 +2095,24 @@ function refreshSettingsPageErrorFromFields() {{
   showSettingsPageError('Some settings still need attention. ' + messages.join(' '), false);
 }}
 function updateSettingsActions() {{
-  const changes = changedRuntimeSettings();
+  const draftChanges = changedDraftSettings();
+  const runtimeChanges = changedRuntimeSettings();
+  const persistenceChanges = changedPersistableSettings();
   const draftValid = settingsDraftIsValid();
-  const busy = settingsPageState.loading || settingsPageState.saving;
+  const busy = settingsPageState.loading || settingsPageState.saving || settingsPageState.persisting;
   const locked = busy || settingsPageState.confirmationRequired;
   const save = byId('settingsSaveButton');
+  const persist = byId('settingsPersistButton');
   const discard = byId('settingsDiscardButton');
-  if (save) save.disabled = locked || !settingsPageState.loaded || !changes.length || !draftValid;
-  if (discard) discard.disabled = locked || !settingsPageState.loaded || !changes.length;
+  if (save) save.disabled = locked || !settingsPageState.loaded || !runtimeChanges.length || !draftValid;
+  if (persist) {{
+    persist.disabled = locked || !settingsPageState.loaded || !persistenceChanges.length || !draftValid;
+    persist.textContent = settingsPageState.persisting ? 'Saving to configuration...' : 'Save to configuration';
+  }}
+  if (discard) discard.disabled = locked || !settingsPageState.loaded || !draftChanges.length;
   settingsPageState.controlsById.forEach((control, settingId) => {{
     const setting = settingsPageState.draftSettingsById.get(settingId);
-    control.disabled = locked || !setting || !setting.runtime_editable;
+    control.disabled = locked || !setting || (!setting.runtime_editable && !setting.persistable);
     if (control.disabled) control.setAttribute('aria-disabled', 'true');
     else control.removeAttribute('aria-disabled');
   }});
@@ -2053,21 +2124,48 @@ function updateSettingsActions() {{
   const summary = byId('settingsDirtySummary');
   if (summary) {{
     if (settingsPageState.confirmationRequired) summary.textContent = 'Confirm the current server values before making another change.';
-    else if (!changes.length) summary.textContent = 'No unsaved changes.';
-    else if (!draftValid) summary.textContent = changes.length + ' unsaved change' + (changes.length === 1 ? '' : 's') + '. Correct invalid values before saving.';
-    else summary.textContent = changes.length + ' unsaved change' + (changes.length === 1 ? '' : 's') + '.';
+    else if (!draftChanges.length && !persistenceChanges.length) summary.textContent = 'Runtime and saved configuration values are aligned. No unsaved changes.';
+    else if (!draftValid) summary.textContent = 'Correct invalid draft values before saving.';
+    else {{
+      const runtimeLabel = runtimeChanges.length + ' runtime change' + (runtimeChanges.length === 1 ? '' : 's');
+      const configurationLabel = persistenceChanges.length + ' configuration change' + (persistenceChanges.length === 1 ? '' : 's');
+      summary.textContent = runtimeLabel + '; ' + configurationLabel + ' eligible to save.';
+    }}
   }}
 }}
-function acceptSettingsSnapshot(snapshot) {{
+function captureSettingsDraftValues() {{
+  const values = new Map();
+  settingsPageState.draftSettingsById.forEach((setting, settingId) => values.set(settingId, setting.value));
+  return values;
+}}
+function capturePersistenceOnlyDraftValues() {{
+  const values = new Map();
+  settingsPageState.draftSettingsById.forEach((setting, settingId) => {{
+    const confirmed = settingsPageState.confirmedSettingsById.get(settingId);
+    if (confirmed && !confirmed.runtime_editable && confirmed.persistable) values.set(settingId, setting.value);
+  }});
+  return values;
+}}
+function acceptSettingsSnapshot(snapshot, preservedDraftValues) {{
   validateSettingsSnapshot(snapshot);
   const confirmed = freezeSettingsSnapshot(cloneSettingsSnapshot(snapshot));
   const draft = cloneSettingsSnapshot(confirmed);
+  const confirmedIndex = settingsIndex(confirmed);
+  const draftIndex = settingsIndex(draft);
+  if (preservedDraftValues instanceof Map) {{
+    preservedDraftValues.forEach((value, settingId) => {{
+      const draftSetting = draftIndex.get(settingId);
+      if (draftSetting && settingValueMatchesDataType(draftSetting.data_type, value)) draftSetting.value = value;
+    }});
+  }}
   settingsPageState.confirmedSnapshot = confirmed;
   settingsPageState.draftSnapshot = draft;
-  settingsPageState.draftSettingsById = settingsIndex(draft);
+  settingsPageState.confirmedSettingsById = confirmedIndex;
+  settingsPageState.draftSettingsById = draftIndex;
   settingsPageState.fieldErrors = new Map();
   settingsPageState.loaded = true;
   settingsPageState.confirmationRequired = false;
+  settingsPageState.confirmationAction = null;
   const hasSettings = renderSettingsCategories();
   const form = byId('settingsForm');
   if (form) form.hidden = !hasSettings;
@@ -2089,10 +2187,10 @@ function valueFromSettingsControl(control, setting) {{
 }}
 function handleSettingsInput(event) {{
   const control = event.target.closest ? event.target.closest('.settings-input,.settings-checkbox') : null;
-  if (!control || settingsPageState.saving || settingsPageState.confirmationRequired) return;
+  if (!control || settingsPageState.loading || settingsPageState.saving || settingsPageState.persisting || settingsPageState.confirmationRequired) return;
   const settingId = control.dataset.settingId;
   const setting = settingsPageState.draftSettingsById.get(settingId);
-  if (!setting || !setting.runtime_editable) return;
+  if (!setting || (!setting.runtime_editable && !setting.persistable)) return;
   setting.value = valueFromSettingsControl(control, setting);
   if (setting.data_type === 'boolean') {{
     const state = byId(control.id + '-boolean-state');
@@ -2102,16 +2200,18 @@ function handleSettingsInput(event) {{
   const validationMessage = settingsValidationMessage(setting, setting.value);
   if (validationMessage) settingsPageState.fieldErrors.set(settingId, validationMessage);
   refreshSettingsFieldError(settingId);
+  refreshSettingsDifference(settingId);
   refreshSettingsPageErrorFromFields();
   updateSettingsActions();
-  const changes = changedRuntimeSettings();
-  if (!changes.length) setSettingsStatus('No unsaved changes.', '');
+  const runtimeChanges = changedRuntimeSettings();
+  const persistenceChanges = changedPersistableSettings();
+  if (!runtimeChanges.length && !persistenceChanges.length) setSettingsStatus('No unsaved changes.', '');
   else if (!settingsDraftIsValid()) setSettingsStatus('Review the invalid setting values before saving.', 'warning');
-  else setSettingsStatus(changes.length + ' unsaved change' + (changes.length === 1 ? '' : 's') + '.', 'warning');
+  else setSettingsStatus(runtimeChanges.length + ' runtime and ' + persistenceChanges.length + ' configuration change' + (persistenceChanges.length === 1 ? '' : 's') + ' available.', 'warning');
 }}
-function buildSettingsPatchPayload() {{
+function buildSettingsPayload(changes) {{
   const payload = Object.create(null);
-  changedRuntimeSettings().forEach(change => {{
+  changes.forEach(change => {{
     const category = change.setting.category;
     const prefix = category + '.';
     const fieldName = change.setting.id.startsWith(prefix) ? change.setting.id.slice(prefix.length) : '';
@@ -2121,12 +2221,33 @@ function buildSettingsPatchPayload() {{
   }});
   return payload;
 }}
+function buildSettingsPatchPayload() {{
+  return buildSettingsPayload(changedRuntimeSettings());
+}}
+function buildSettingsConfigPayload() {{
+  return buildSettingsPayload(changedPersistableSettings());
+}}
 async function readSettingsResponse(response) {{
   try {{
     return await response.json();
   }} catch (error) {{
     return null;
   }}
+}}
+function validateSettingsPersistenceResponse(payload) {{
+  if (!payload || typeof payload !== 'object' || payload.status !== 'saved' ||
+      !Array.isArray(payload.persisted_setting_ids) || typeof payload.configuration_created !== 'boolean') {{
+    throw new Error('The configuration persistence response format is not supported.');
+  }}
+  const persistedSettingIds = new Set();
+  payload.persisted_setting_ids.forEach(settingId => {{
+    if (typeof settingId !== 'string' || !settingId || persistedSettingIds.has(settingId)) {{
+      throw new Error('The configuration persistence response format is not supported.');
+    }}
+    persistedSettingIds.add(settingId);
+  }});
+  validateSettingsSnapshot(payload.settings);
+  return payload;
 }}
 function settingsErrorMessages(payload) {{
   if (!payload || typeof payload !== 'object') return [];
@@ -2177,25 +2298,30 @@ async function requestSettingsSnapshot() {{
   return validateSettingsSnapshot(payload);
 }}
 async function loadSettings() {{
-  if (settingsPageState.loading || settingsPageState.saving) return;
+  if (settingsPageState.loading || settingsPageState.saving || settingsPageState.persisting) return;
   settingsPageState.loading = true;
   clearSettingsPageError();
   const form = byId('settingsForm');
   if (form) form.hidden = true;
-  showSettingsLoadState('Loading settings', 'Requesting the current runtime settings from ContextKeeper.', false);
+  showSettingsLoadState('Loading settings', 'Requesting current runtime and persisted settings from ContextKeeper.', false);
   setSettingsStatus('Loading settings...', '');
   updateSettingsActions();
   try {{
     const snapshot = await requestSettingsSnapshot();
     const hasSettings = acceptSettingsSnapshot(snapshot);
-    setSettingsStatus(hasSettings ? 'Settings loaded. No unsaved changes.' : 'No settings are currently available.', hasSettings ? 'success' : 'warning');
+    const persistedDifferences = changedPersistableSettings().length;
+    if (!hasSettings) setSettingsStatus('No settings are currently available.', 'warning');
+    else if (persistedDifferences) setSettingsStatus('Settings loaded. ' + persistedDifferences + ' runtime value' + (persistedDifferences === 1 ? '' : 's') + ' can be saved to configuration.', 'warning');
+    else setSettingsStatus('Settings loaded. Runtime and saved configuration values are aligned.', 'success');
   }} catch (error) {{
     settingsPageState.loaded = false;
     settingsPageState.confirmedSnapshot = null;
     settingsPageState.draftSnapshot = null;
+    settingsPageState.confirmedSettingsById = new Map();
     settingsPageState.draftSettingsById = new Map();
     settingsPageState.controlsById = new Map();
     settingsPageState.errorElementsById = new Map();
+    settingsPageState.differenceElementsById = new Map();
     settingsPageState.fieldErrors = new Map();
     const message = error instanceof Error && error.message
       ? error.message
@@ -2212,23 +2338,34 @@ function ensureSettingsLoaded() {{
   if (!settingsPageState.loaded && !settingsPageState.loading) void loadSettings();
 }}
 async function confirmSettingsAfterAcceptedUpdate() {{
-  if (!settingsPageState.confirmationRequired || settingsPageState.loading || settingsPageState.saving) return;
+  if (!settingsPageState.confirmationRequired || settingsPageState.loading || settingsPageState.saving || settingsPageState.persisting) return;
+  const confirmationAction = settingsPageState.confirmationAction;
+  const preservedDraftValues = confirmationAction === 'configuration'
+    ? captureSettingsDraftValues()
+    : capturePersistenceOnlyDraftValues();
   settingsPageState.loading = true;
   clearSettingsPageError();
-  showSettingsLoadState('Confirming current settings', 'Requesting the authoritative values after the accepted update.', false);
-  setSettingsStatus('Confirming current settings...', '');
+  if (confirmationAction === 'configuration') {{
+    showSettingsLoadState('Confirming saved configuration', 'Requesting authoritative runtime and persisted values after the accepted configuration write.', false);
+    setSettingsStatus('Confirming saved configuration...', '');
+  }} else {{
+    showSettingsLoadState('Confirming current settings', 'Requesting the authoritative values after the accepted update.', false);
+    setSettingsStatus('Confirming current settings...', '');
+  }}
   updateSettingsActions();
   try {{
     const snapshot = await requestSettingsSnapshot();
-    acceptSettingsSnapshot(snapshot);
-    setSettingsStatus('Current runtime settings confirmed. No unsaved changes.', 'success');
+    acceptSettingsSnapshot(snapshot, preservedDraftValues);
+    setSettingsStatus(confirmationAction === 'configuration' ? 'Saved configuration confirmed. Your draft is still available.' : 'Current runtime settings confirmed.', 'success');
   }} catch (error) {{
     const message = error instanceof Error && error.message
       ? error.message
-      : 'ContextKeeper could not confirm the current settings. Check the connection and try again.';
-    showSettingsLoadState('Current settings still need confirmation', message, true);
+      : confirmationAction === 'configuration'
+        ? 'ContextKeeper could not confirm the saved configuration. Check the connection and try again.'
+        : 'ContextKeeper could not confirm the current settings. Check the connection and try again.';
+    showSettingsLoadState(confirmationAction === 'configuration' ? 'Saved configuration still needs confirmation' : 'Current settings still need confirmation', message, true);
     showSettingsPageError(message, false);
-    setSettingsStatus('Current settings could not be confirmed. Retry is available.', 'warning');
+    setSettingsStatus(confirmationAction === 'configuration' ? 'Saved configuration could not be confirmed. Retry is available.' : 'Current settings could not be confirmed. Retry is available.', 'warning');
   }} finally {{
     settingsPageState.loading = false;
     updateSettingsActions();
@@ -2244,8 +2381,8 @@ function restoreSettingsDraft() {{
   updateSettingsActions();
 }}
 function discardSettingsDraft() {{
-  if (settingsPageState.loading || settingsPageState.saving || settingsPageState.confirmationRequired || !settingsPageState.confirmedSnapshot) return;
-  if (!changedRuntimeSettings().length) {{
+  if (settingsPageState.loading || settingsPageState.saving || settingsPageState.persisting || settingsPageState.confirmationRequired || !settingsPageState.confirmedSnapshot) return;
+  if (!changedDraftSettings().length) {{
     setSettingsStatus('No changes to discard.', '');
     return;
   }}
@@ -2259,8 +2396,20 @@ async function authoritativeSettingsSnapshot(patchPayload) {{
     return await requestSettingsSnapshot();
   }}
 }}
+async function authoritativePersistenceResult(responsePayload) {{
+  try {{
+    return validateSettingsPersistenceResponse(responsePayload);
+  }} catch (error) {{
+    return {{
+      status:'saved',
+      persisted_setting_ids:[],
+      configuration_created:false,
+      settings:await requestSettingsSnapshot()
+    }};
+  }}
+}}
 async function saveSettings() {{
-  if (settingsPageState.saving || settingsPageState.loading || settingsPageState.confirmationRequired || !settingsPageState.loaded) return;
+  if (settingsPageState.saving || settingsPageState.persisting || settingsPageState.loading || settingsPageState.confirmationRequired || !settingsPageState.loaded) return;
   const changes = changedRuntimeSettings();
   if (!changes.length) {{
     setSettingsStatus('No changes to save.', '');
@@ -2282,6 +2431,7 @@ async function saveSettings() {{
     return;
   }}
 
+  const preservedPersistenceOnlyDraftValues = capturePersistenceOnlyDraftValues();
   settingsPageState.saving = true;
   clearSettingsPageError();
   clearSettingsFieldErrors();
@@ -2306,12 +2456,13 @@ async function saveSettings() {{
     }}
     patchAccepted = true;
     const snapshot = await authoritativeSettingsSnapshot(responsePayload);
-    acceptSettingsSnapshot(snapshot);
+    acceptSettingsSnapshot(snapshot, preservedPersistenceOnlyDraftValues);
     setSettingsStatus('Settings saved for the current runtime.', 'success');
     requestDashboardRefresh();
   }} catch (error) {{
     if (patchAccepted) {{
       settingsPageState.confirmationRequired = true;
+      settingsPageState.confirmationAction = 'runtime';
       showSettingsLoadState('Confirm current settings', 'ContextKeeper accepted the update, but the current values could not be confirmed. Retry the authoritative settings load before making another change.', true);
       showSettingsPageError('ContextKeeper accepted the update, but the current values could not be confirmed. Your draft remains visible while editing and Save are paused.', false);
       setSettingsStatus('The accepted settings update requires confirmation.', 'warning');
@@ -2325,6 +2476,75 @@ async function saveSettings() {{
     if (focusAfterSave && settingsPageIsActive()) focusAfterSave.focus();
   }}
 }}
+async function persistSettings() {{
+  if (settingsPageState.persisting || settingsPageState.saving || settingsPageState.loading || settingsPageState.confirmationRequired || !settingsPageState.loaded) return;
+  const changes = changedPersistableSettings();
+  if (!changes.length) {{
+    setSettingsStatus('No configuration changes to save.', '');
+    return;
+  }}
+  if (!settingsDraftIsValid()) {{
+    const firstInvalid = Array.from(settingsPageState.controlsById.values()).find(control => !control.checkValidity());
+    showSettingsPageError('Correct the invalid setting values before saving to configuration.', false);
+    setSettingsStatus('Configuration was not saved.', 'warning');
+    if (firstInvalid) firstInvalid.focus();
+    return;
+  }}
+  let payload;
+  try {{
+    payload = buildSettingsConfigPayload();
+  }} catch (error) {{
+    showSettingsPageError('The configuration changes could not be prepared safely. Reload the page and try again.', true);
+    setSettingsStatus('Configuration was not saved.', 'warning');
+    return;
+  }}
+
+  const preservedDraftValues = captureSettingsDraftValues();
+  settingsPageState.persisting = true;
+  clearSettingsPageError();
+  clearSettingsFieldErrors();
+  setSettingsStatus('Saving draft values to configuration...', '');
+  updateSettingsActions();
+  let persistenceAccepted = false;
+  let focusAfterPersistence = null;
+  try {{
+    const response = await fetch(SETTINGS_CONFIG_ENDPOINT, {{
+      method:'PUT',
+      headers:{{'Accept':'application/json','Content-Type':'application/json'}},
+      body:JSON.stringify(payload)
+    }});
+    const responsePayload = await readSettingsResponse(response);
+    if (!response.ok) {{
+      const firstInvalid = applySettingsValidationErrors(responsePayload);
+      const message = settingsErrorMessage(responsePayload, response.status, 'save configuration');
+      showSettingsPageError(message, !firstInvalid);
+      setSettingsStatus(response.status === 400 || response.status === 422 ? 'Configuration validation failed. Your draft is still available to correct.' : 'Configuration was not saved. Your draft is still available.', 'warning');
+      focusAfterPersistence = firstInvalid;
+      return;
+    }}
+    persistenceAccepted = true;
+    const result = await authoritativePersistenceResult(responsePayload);
+    acceptSettingsSnapshot(result.settings, preservedDraftValues);
+    const savedCount = result.persisted_setting_ids.length || changes.length;
+    const createdMessage = result.configuration_created ? ' A new configuration file was created.' : '';
+    setSettingsStatus(savedCount + ' setting' + (savedCount === 1 ? '' : 's') + ' saved to configuration. Runtime values were not changed.' + createdMessage, 'success');
+  }} catch (error) {{
+    if (persistenceAccepted) {{
+      settingsPageState.confirmationRequired = true;
+      settingsPageState.confirmationAction = 'configuration';
+      showSettingsLoadState('Confirm saved configuration', 'ContextKeeper accepted the configuration write, but the refreshed persisted values could not be confirmed. Retry before making another change.', true);
+      showSettingsPageError('ContextKeeper accepted the configuration write, but the persisted values could not be confirmed. Your draft remains visible while editing and Save actions are paused.', false);
+      setSettingsStatus('The accepted configuration write requires confirmation.', 'warning');
+    }} else {{
+      showSettingsPageError('ContextKeeper could not confirm whether configuration was saved. Your draft was not discarded; check the connection and retry.', false);
+      setSettingsStatus('Configuration save could not be confirmed. Your draft is still available.', 'warning');
+    }}
+  }} finally {{
+    settingsPageState.persisting = false;
+    updateSettingsActions();
+    if (focusAfterPersistence && settingsPageIsActive()) focusAfterPersistence.focus();
+  }}
+}}
 function initializeSettingsPage() {{
   const form = byId('settingsForm');
   if (form) {{
@@ -2336,6 +2556,8 @@ function initializeSettingsPage() {{
   }}
   const discard = byId('settingsDiscardButton');
   if (discard) discard.addEventListener('click', discardSettingsDraft);
+  const persist = byId('settingsPersistButton');
+  if (persist) persist.addEventListener('click', () => void persistSettings());
   const retry = byId('settingsRetryButton');
   if (retry) retry.addEventListener('click', () => {{
     if (settingsPageState.confirmationRequired) void confirmSettingsAfterAcceptedUpdate();

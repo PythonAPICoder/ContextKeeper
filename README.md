@@ -2,7 +2,7 @@
 
 ContextKeeper is a local, Ollama-compatible middleware layer for long-running AI conversations. Clients point to ContextKeeper instead of Ollama; ContextKeeper preserves the Ollama API surface while adding diagnostics, context-window awareness, automatic compression, and a live operations dashboard.
 
-The current implementation is an active local product foundation, not a planning stub. It is still pre-1.0, but the transparent proxy, dashboard, context engine, compression engine, automatic model context discovery, Windows executable foundation, installer foundation, Conversation Inspector, runtime Settings API, and dashboard Settings page foundation are implemented.
+The current implementation is an active local product foundation, not a planning stub. It is still pre-1.0, but the transparent proxy, dashboard, context engine, compression engine, automatic model context discovery, Windows executable foundation, installer foundation, Conversation Inspector, runtime Settings API, explicit configuration persistence, and dashboard Settings page are implemented.
 
 ## Architecture summary
 
@@ -33,13 +33,13 @@ Operations Visualization
 Dashboard Settings Page
   |
   v
-Runtime Settings API
-  |
-  v
-In-Memory Settings
+Settings Management API
+  |-- GET snapshot --> Runtime + persisted metadata
+  |-- PATCH --------> In-memory runtime settings
+  `-- PUT /config --> Active contextkeeper.yaml
 ```
 
-Runtime processing and Operations visualization are deliberately separate. The proxy path handles client requests, diagnostics, context tracking, context-window enforcement, compression, and Ollama forwarding. Operations surfaces remain read-only observers built from bounded runtime snapshots. The Settings page is a separate, explicit client of the runtime Settings API and changes the shared in-memory settings only after server validation succeeds.
+Runtime processing and Operations visualization are deliberately separate. The proxy path handles client requests, diagnostics, context tracking, context-window enforcement, compression, and Ollama forwarding. Operations surfaces remain read-only observers built from bounded runtime snapshots. The Settings page is an explicit client of the dashboard management API: runtime Save changes shared in-memory settings through PATCH, while Save to configuration writes approved values through a separate PUT without mutating runtime state or restarting ContextKeeper.
 
 ## Key features
 
@@ -53,23 +53,23 @@ Runtime processing and Operations visualization are deliberately separate. The p
 - Compression engine support for rolling summaries, recent-message preservation, and confirmed compression metadata.
 - Browser Operations dashboard with health, recommendations, Request Traffic, Connection Flow, Context Trend, instrument gauges, Active Conversation, Live Conversation Timeline, and Conversation Inspector.
 - Conversation Inspector drawer with Overview metadata and deterministic Intelligence based on context/compression state.
-- Dashboard Settings API for approved Context, Compression, and Dashboard settings, including read snapshots and validated in-memory runtime updates.
-- Interactive Settings page inside the existing dashboard shell, with metadata-driven controls, unsaved-change tracking, atomic Save, and Discard.
+- Dashboard Settings API for approved Context, Compression, and Dashboard settings, including runtime-versus-persisted snapshots, validated in-memory runtime updates, and explicit atomic YAML persistence.
+- Interactive Settings page inside the existing dashboard shell, with metadata-driven controls, typed draft state, separate runtime and configuration Save actions, persistence-difference guidance, and Discard.
 - First-run configuration wizard, PyInstaller executable foundation, Windows service host foundation, Inno Setup installer foundation, and release build script.
 
 ## Current implementation status
 
-The current working-tree implementation includes Phase 6.5F-B6.3; Product Owner review is pending:
+The current working-tree implementation includes Phase 6.5F-B6.4; Product Owner and architect review are pending:
 
 - Transparent proxy, diagnostics, context monitoring, compression, dashboard modernization, live request visualization, animated Connection Flow, Live Conversation Timeline, and Conversation Inspector Overview & Intelligence are implemented.
 - Phase 6.5F-B5.6 synchronized documentation through the B5.5.2 implementation.
 - Phase 6.5F-B6.1 added the backend Settings Snapshot and read API foundation.
 - Phase 6.5F-B6.2 added a validated `PATCH /api/dashboard/settings` update API for temporary in-memory runtime settings changes.
-- Phase 6.5F-B6.3 adds a dedicated Settings page that loads API metadata dynamically, keeps confirmed and draft state separate, and provides changed-fields-only Save and local Discard actions.
+- Phase 6.5F-B6.3 added a dedicated Settings page that loads API metadata dynamically, keeps confirmed and draft state separate, and provides changed-fields-only runtime Save and local Discard actions.
+- Phase 6.5F-B6.4 adds schema-v2 persisted-state metadata, `PUT /api/dashboard/settings/config`, atomic configuration-file writes, and an explicit Save to configuration action that remains separate from runtime Save.
 
 Still planned:
 
-- Configuration-file persistence for dashboard Settings changes.
 - Broader dashboard customization and preferences.
 - Release polish and final UX review.
 - Durable historical memory retrieval after compression.
@@ -135,14 +135,27 @@ Important defaults:
 
 See [docs/CONFIGURATION.md](docs/CONFIGURATION.md) for the complete source-verified configuration reference.
 
-The dashboard now includes a Settings page that loads categories, values, constraints, types, and runtime editability from `GET /api/dashboard/settings`. The browser keeps the last confirmed server snapshot separate from the editable draft. Save sends one `PATCH /api/dashboard/settings` request containing only changed runtime-editable fields, while Discard restores the latest confirmed values without a request. Validation and server failures preserve the draft so it can be corrected or retried.
+The dashboard Settings page loads categories, runtime values, persisted values, defaults, constraints, types, runtime editability, persistence eligibility, and restart guidance from `GET /api/dashboard/settings`. Schema version 2 distinguishes `value` from `persisted_value` and reports `differs_from_persisted`. The browser keeps the last confirmed server snapshot separate from the editable draft.
 
-Runtime updates are validated atomically, immediately visible through the read API, and in-memory only. They reset when ContextKeeper restarts and do not modify `contextkeeper.yaml`:
+Save runtime changes sends one `PATCH /api/dashboard/settings` containing only changed runtime-editable fields. Runtime updates are validated atomically, immediately visible through GET, and in-memory only. PATCH never writes YAML, and those changes reset when ContextKeeper restarts:
 
 ```powershell
 $body = @{ context = @{ warning_threshold_percent = 70 } } | ConvertTo-Json -Depth 4
 Invoke-RestMethod -Method Patch -Uri http://localhost:11500/api/dashboard/settings -ContentType "application/json" -Body $body
 ```
+
+Save to configuration is a separate, explicit action. It sends only eligible draft values to `PUT /api/dashboard/settings/config`; it does not change the current runtime or restart ContextKeeper:
+
+```powershell
+$body = @{
+    context = @{ warning_threshold_percent = 75 }
+    compression = @{ enabled = $true }
+} | ConvertTo-Json -Depth 4
+
+Invoke-RestMethod -Method Put -Uri http://localhost:11500/api/dashboard/settings/config -ContentType "application/json" -Body $body
+```
+
+A successful PUT returns `status: "saved"`, the sorted `persisted_setting_ids`, whether `configuration_created`, and a refreshed schema-v2 snapshot in `settings`. ContextKeeper re-reads the active file, validates the complete candidate, writes and verifies a UTF-8 temporary file beside the destination, checks that the source fingerprint has not changed, and atomically replaces the destination. Unrelated categories and model-specific entries are retained. PyYAML does not preserve comments or exact formatting, so a successful write may normalize the complete YAML document.
 
 ## Testing
 
@@ -159,6 +172,7 @@ Focused dashboard coverage lives primarily in:
 - `tests/test_dashboard_inspector.py`
 - `tests/test_dashboard_settings.py`
 - `tests/test_dashboard_settings_ui.py`
+- `tests/test_config_persistence.py`
 
 See [docs/TEST_PLAN.md](docs/TEST_PLAN.md) for manual and automated validation coverage, including the Settings page, Conversation Timeline, Conversation Inspector, Request Traffic, Connection Flow, responsive layouts, reduced motion, Windows packaging, and regression checks.
 
@@ -221,7 +235,9 @@ Long-term v2+ ideas are tracked in [docs/FUTURE_IDEAS.md](docs/FUTURE_IDEAS.md).
 - Compression condenses active context but does not yet provide durable original-message retrieval.
 - Conversation Inspector does not yet expose transcripts, message expansion, search, export, context-composition views, or compression-event details.
 - Dashboard telemetry is live and bounded; long-duration trends across restarts are not implemented.
-- Runtime settings updates are in-memory only, reset when ContextKeeper restarts, and do not modify `contextkeeper.yaml`.
+- Runtime PATCH updates remain in-memory only and reset when ContextKeeper restarts. Persistence requires the separate explicit PUT action; no save action restarts ContextKeeper automatically.
+- Configuration persistence serializes writes only within one ContextKeeper process. It does not provide a distributed or multi-process file lock, configuration history, or automatic rollback UI.
+- PyYAML persistence preserves configuration data but not YAML comments or exact source formatting.
 - Authentication, multi-user permissions, cloud model providers, routing, plugins, and multi-server orchestration are future ideas, not current Version 1 behavior.
 - Windows service installation hooks are still placeholders.
 

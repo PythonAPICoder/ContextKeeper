@@ -1,6 +1,6 @@
 # ContextKeeper UI Component Guide
 
-Status: Current through the Phase 6.5F-B6.3 working-tree implementation; Product Owner review is pending.
+Status: Current through the Phase 6.5F-B6.4 working-tree implementation; Product Owner and architect review are pending.
 
 ## Purpose
 
@@ -199,37 +199,41 @@ Rules:
 
 ## Settings Page Controls
 
-The Settings page renders categories and controls from `GET /api/dashboard/settings` metadata. It does not maintain a browser-side list of setting identities.
+The Settings page renders categories and controls from schema-v2 `GET /api/dashboard/settings` metadata. It does not maintain a browser-side list of setting identities or persistence rules.
 
 Components:
 
-- visible runtime-only notice;
+- visible runtime-versus-saved configuration notice;
 - category cards with API-provided names and descriptions;
 - setting labels and descriptions;
-- default and minimum/maximum metadata where supplied;
-- runtime read-only and restart-required badges;
+- runtime, saved configuration, default, and minimum/maximum metadata where supplied;
+- dynamic draft/runtime/saved difference text;
+- runtime read-only, not-persistable, runtime-differs-from-saved, and restart-required badges;
 - boolean checkbox, integer number input, and string text input renderers;
 - polite status region and assertive error summary;
 - loading, retry, empty, and error states;
-- unsaved-change summary;
-- Discard and Save actions.
+- typed runtime/persistence change summary;
+- Discard, Save to configuration, and Save runtime changes actions.
 
 Rules:
 
-- Use API metadata as the authority for setting identity, display text, value, type, constraint, editability, and restart guidance.
+- Use API metadata as the authority for setting identity, display text, runtime/persisted/default values, type, constraint, runtime editability, persistence eligibility, difference state, and restart guidance.
 - Associate every control with a visible label and descriptive metadata.
 - Render API text with safe DOM text operations rather than HTML injection.
-- Disable non-runtime-editable controls and explain why they cannot be changed during the current runtime.
+- Keep a control editable when its setting is runtime-editable or persistable; disable it only when neither action is allowed, and explain partial availability explicitly.
 - Preserve boolean, numeric, and string values in the draft without type conversion artifacts.
 - Keep confirmed server state separate from editable draft state.
-- Enable Save only for a valid changed draft; enable Discard only while unsaved changes exist.
-- Save sends one atomic PATCH containing only changed runtime-editable values.
-- Discard restores the latest confirmed snapshot and performs no network request.
-- Preserve the draft and dirty state after validation, network, or server failure.
-- Disable editing and duplicate submissions while Save is pending.
-- Keep the runtime-only notice visible: changes reset when ContextKeeper restarts and do not modify `contextkeeper.yaml`.
+- Calculate runtime changes against confirmed `value` and persistence changes against confirmed `persisted_value`, using strict typed equality.
+- Enable Save runtime changes only for a valid changed runtime-editable draft; it sends one atomic PATCH containing only those values.
+- Enable Save to configuration only for valid persistable draft values that differ from saved configuration; it sends one explicit PUT to `/api/dashboard/settings/config` containing only those values.
+- Never persist from an input/change event, runtime form submit, page switch, refresh timer, or initial load.
+- On PUT success, accept refreshed metadata and restore the user's draft values so disk-only changes are not silently applied to runtime.
+- Discard restores the latest confirmed runtime draft and performs no network request.
+- Preserve the draft and relevant dirty state after validation, storage, network, server, or malformed-response failure.
+- Disable editing and both save actions while either request is pending; change the persistence button label to communicate in-progress state.
+- Keep the separation notice visible: runtime Save resets at restart unless separately persisted; configuration Save does not mutate runtime; neither action restarts ContextKeeper.
 - Use visible focus indicators, live feedback, explicit state text, and native keyboard-operable controls.
-- Stack setting rows and action controls cleanly at narrow widths.
+- Stack setting rows and all three action controls cleanly at narrow widths.
 - Respect reduced-motion preferences without removing status information.
 
 ## Empty, Error, and Loading States

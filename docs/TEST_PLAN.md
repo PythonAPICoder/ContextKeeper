@@ -1,6 +1,6 @@
 # ContextKeeper Test Plan
 
-Status: Current through Phase 6.5F-B6.3.
+Status: Current through the Phase 6.5F-B6.4 working-tree implementation; Product Owner and architect review are pending.
 
 This document defines automated and manual validation expectations for ContextKeeper. The automated suite is the default regression gate; manual Visual QA remains required for dashboard layout, motion, responsive behavior, and Product Owner acceptance.
 
@@ -17,6 +17,7 @@ Focused dashboard and inspector tests currently live in:
 - `tests/test_dashboard_inspector.py`
 - `tests/test_dashboard_settings.py`
 - `tests/test_dashboard_settings_ui.py`
+- `tests/test_config_persistence.py`
 
 Other focused modules include:
 
@@ -125,10 +126,9 @@ Validate:
 
 Validate:
 
-- `GET /api/dashboard/settings` returns a settings snapshot.
-- Snapshot schema version is present.
+- `GET /api/dashboard/settings` returns a read-only schema-v2 settings snapshot without changing runtime or disk state.
 - Categories are ordered as Context, Compression, and Dashboard.
-- Each setting includes stable id, category, display name, description, value, default value, minimum, maximum, runtime-editable flag, restart-required flag, and data type.
+- Each setting includes stable id, category, display name, description, runtime `value`, `persisted_value`, `default_value`, `differs_from_persisted`, minimum, maximum, `runtime_editable`, `persistable`, `restart_required`, and data type.
 - Approved settings are exposed:
   - `context.enabled`
   - `context.warning_threshold_percent`
@@ -138,8 +138,8 @@ Validate:
   - `compression.summarizer_model`
   - `compression.max_summary_tokens`
   - `dashboard.refresh_interval_ms`
-- Current effective values come from the runtime `Settings` instance.
-- Built-in defaults are present for future UI comparison.
+- Current effective values come from the runtime `Settings` instance; persisted values come from a fresh active-file read; built-in defaults remain available for comparison.
+- Runtime/persisted divergence and equality produce the correct `differs_from_persisted` value without type coercion.
 - Validation metadata includes integer minimum/maximum values where applicable.
 - Output is sanitized and does not include environment variables, config file paths, secrets, server bind details, Ollama base URL, logging paths, metrics settings, or model override maps.
 - `PATCH /api/dashboard/settings` supports valid partial updates and returns the complete canonical snapshot.
@@ -151,25 +151,68 @@ Validate:
 - Threshold relationships are validated on the merged proposed state, including partial updates that conflict with retained current threshold values.
 - Atomic rejection is verified: a request containing one valid setting and one invalid setting changes neither value.
 - Empty JSON update bodies are deliberately rejected.
-- `POST`, `PUT`, and `DELETE` on `/api/dashboard/settings` return `405`.
+- PATCH does not write configuration automatically, and a runtime update can differ from persisted metadata until an explicit PUT.
+- Malformed or inaccessible persisted state causes PATCH to fail before runtime mutation rather than returning fabricated persisted metadata.
+- Settings GET/PATCH disk reads are registered as synchronous FastAPI handlers so slow file I/O or lock waits use the worker pool rather than blocking unrelated async proxy work.
+- `POST`, `PUT`, and `DELETE` on `/api/dashboard/settings` itself return `405`; persistence uses the separate config resource.
+
+Persistence service coverage should confirm:
+
+- one setting, multiple settings in one category, and settings across multiple categories persist successfully;
+- only explicitly requested values change;
+- unrelated configuration categories/values and model-specific configuration entries remain present;
+- the service resolves the same active path rules as startup and creates a missing file/parent directory deliberately;
+- a missing file starts from validated defaults and reports `configuration_created: true`;
+- the active file is freshly re-read under the process-global lock for every operation;
+- unknown categories, unknown setting ids, non-persistable settings, requests with no supplied values, malformed category payloads, nulls, strict boolean/integer violations, blank strings, range violations, and cross-field conflicts are rejected, while an empty approved category may accompany another valid populated category;
+- malformed YAML, invalid UTF-8, non-mapping YAML, and invalid existing configuration fail clearly without replacing the file;
+- read, directory, permission/read-only, serialization, temporary-write, temporary-verification, and atomic-replace failures return safe testable errors;
+- a same-directory UTF-8 temporary candidate is flushed, `fsync`ed, read back, byte-verified, parsed, and validated before replacement;
+- failed candidate preparation or replacement leaves the original destination unchanged and removes the temporary file when cleanup succeeds;
+- cleanup failure is logged safely and does not expose the path or overwrite the primary failure;
+- a changed fingerprint returns a stale-write conflict and retains both the external edit and request safety;
+- two concurrent in-process writes serialize and do not interleave replacement work;
+- persistence does not mutate the shared runtime settings instance or restart ContextKeeper;
+- successful persistence refreshes metadata, including restart-required persisted/runtime divergence when metadata is configured for that generic case.
+
+Persistence API coverage should confirm:
+
+- `PUT /api/dashboard/settings/config` accepts the documented category-grouped request and returns `200` with `status`, sorted `persisted_setting_ids`, `configuration_created`, and a complete schema-v2 `settings` snapshot;
+- empty requests return `400`, request validation errors return `422`, invalid/stale existing configuration returns `409`, and safe storage failures return `500`;
+- missing and malformed request bodies follow FastAPI validation behavior without stack traces;
+- success changes disk metadata only and leaves the runtime value unchanged;
+- existing GET and PATCH behavior remains valid after the new route is registered;
+- unsupported methods remain `405` and dashboard management routes never fall through to Ollama proxying.
+
+Settings UI coverage should confirm:
+
 - Settings navigation is an interactive keyboard-operable page target inside the existing dashboard shell, and Operations remains available.
 - Opening Settings performs a guarded first `GET /api/dashboard/settings`; repeated page switching does not duplicate listeners, loads, or polling timers.
 - Categories and controls are generated from API metadata rather than a hard-coded setting list.
 - Boolean, integer, and string rendering paths preserve value types; supplied minimum/maximum constraints are represented.
-- Labels, descriptions, status/live regions, runtime-read-only explanations, and restart-required indicators have accessible markup.
+- Labels, descriptions, saved values, runtime/persisted difference text, status/live regions, runtime-read-only/non-persistable explanations, and restart-required indicators have accessible markup.
 - Confirmed and draft snapshots are separate clones, and confirmed state is protected from draft mutation.
-- Dirty calculation uses typed value equality, excludes non-runtime-editable fields, removes manually restored values from the change set, and drives clean/dirty Save and Discard states.
-- Save guards duplicate submission and sends one nested atomic PATCH containing only changed runtime-editable fields.
-- Successful save accepts the canonical response, refreshes confirmed/draft state, clears dirty state, and provides success feedback.
+- Runtime dirty calculation compares draft with runtime `value`; persistence dirty calculation compares draft with `persisted_value`; both use typed equality and metadata eligibility.
+- Save runtime changes guards duplicate submission and sends one nested PATCH containing only intended changed runtime-editable fields.
+- Save to configuration renders as a separate button, is disabled with no eligible persisted difference, never runs on input/edit or runtime form submission, and sends one nested PUT containing only intended changed persistable fields.
+- Either loading state locks controls and both save actions to prevent duplicate/conflicting submissions.
+- Successful PATCH accepts the canonical response and clears applied runtime dirty state.
+- Successful PUT accepts refreshed runtime/persisted metadata while restoring the user's draft, so persisted values can remain pending runtime application.
 - Validation failures map exact API error locations to controls when possible, provide a page-level alert, preserve all draft values, preserve dirty state, and allow correction/retry.
-- Network, server, and malformed-response paths fail safely, render response data as text, preserve the draft, and allow retry.
-- Discard restores the latest confirmed snapshot, clears field errors and dirty state, and performs no network request.
-- The visible Settings notice states that changes are runtime-only, reset on ContextKeeper restart, and do not modify `contextkeeper.yaml`.
-- No persistence, YAML writing, browser storage, reset-to-defaults workflow, or per-setting autosave is added.
-- Manual observation should confirm runtime changes reset after process restart.
+- PATCH and PUT network, server, and malformed-response paths fail safely, render response data as text, preserve the draft, and allow retry.
+- Discard restores the latest confirmed runtime draft, clears field errors/dirty state, and performs no GET, PATCH, or PUT.
+- The visible notice distinguishes runtime Save from Save to configuration and states that neither action restarts ContextKeeper automatically.
+- No browser storage, reset-to-defaults workflow, automatic persistence, per-setting autosave, or restart orchestration is added.
+- Manual observation should confirm runtime-only changes reset after process restart, persisted changes survive restart, and restart-required guidance remains explicit where applicable.
 - Existing `/dashboard/data`, proxy/streaming behavior, Conversation Inspector, Connection Flow, Request Traffic, Context Trend, instrument panel, reduced-motion, context-engine, and compression tests remain green.
 
-Phase B6.3 Product Owner QA should exercise keyboard navigation between Operations and Settings; manual reversal, Save, retry after a validation failure, and Discard; visible runtime-only messaging; live dashboard behavior during repeated view switching; and layout at the supported desktop and narrow widths. Approval remains a manual checkpoint after automated regression passes.
+Focused B6.4 command:
+
+```powershell
+python -m pytest -q tests/test_config_persistence.py tests/test_dashboard_settings.py tests/test_dashboard_settings_ui.py
+```
+
+Phase B6.4 Product Owner QA should exercise keyboard navigation between Operations and Settings; manual reversal, runtime Save, Save to configuration, retry after validation/storage failure, and Discard; runtime-versus-persisted messaging; restart-required guidance; live dashboard behavior during repeated view switching; and layout at supported desktop and narrow widths. Approval remains a manual checkpoint after automated regression passes.
 
 ## Request Traffic
 
@@ -283,8 +326,8 @@ Manual dashboard review should include:
 - Operations lower row: Traffic, Active Conversation, Live Conversation Timeline.
 - Conversation Inspector desktop drawer and narrow full-width/backdrop behavior.
 - Settings categories and fields at desktop, tablet/narrow desktop, and mobile widths.
-- Settings labels, descriptions, constraints, badges, feedback, and sticky Save/Discard action bar wrap without horizontal overflow.
-- Settings loading, empty, retry, success, validation-error, and network-error states remain readable without color alone.
+- Settings labels, runtime/saved difference text, constraints, badges, feedback, and the sticky Discard/runtime Save/configuration Save action bar wrap without horizontal overflow.
+- Settings loading, empty, retry, runtime-save success, configuration-save success, validation-error, storage-error, and network-error states remain readable without color alone.
 
 ## Reduced motion
 
@@ -343,7 +386,8 @@ Every release candidate should confirm:
 - Live Conversation Timeline updates.
 - Conversation Inspector opens, updates, and closes.
 - Settings navigation opens the metadata-driven form and returns to Operations without a page reload.
-- Settings Save sends one changed-fields-only update; Discard sends none; failed Save preserves the draft.
-- Runtime settings reset after ContextKeeper restarts and `contextkeeper.yaml` remains unchanged.
+- Settings runtime Save sends one changed-fields-only PATCH; Save to configuration sends one changed-fields-only PUT only after explicit action; Discard sends none; failed saves preserve the draft.
+- Runtime-only settings reset after ContextKeeper restarts, persisted values survive restart, and no action restarts ContextKeeper automatically.
+- Configuration writes retain unrelated/model-specific data, fail atomically, leave no temporary file after ordinary failure cleanup, and do not expose filesystem paths or configuration contents.
 - Reduced-motion behavior is respected.
 - No prompt/response/summary content appears in routine dashboard surfaces.

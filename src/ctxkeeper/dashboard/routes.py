@@ -9,7 +9,7 @@ from threading import Lock
 from typing import Any
 
 import httpx
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Body, HTTPException, Request
 from fastapi.responses import HTMLResponse
 
 from ..config import Settings
@@ -20,6 +20,10 @@ from ..context.conversation_store import Conversation, conversation_store
 from ..diagnostics.activity import activity_manager
 from ..diagnostics.metrics import metrics_store
 from ..model_context import ContextWindowResolution, active_context_window_overrides, resolve_context_window
+from .config_persistence import (
+    ConfigurationPersistenceError,
+    ConfigurationPersistenceService,
+)
 from .insights import build_dashboard_insights
 from .inspector import build_conversation_inspector_snapshot
 from .intelligence import DashboardMetrics, HealthAssessment, HealthEngine, HealthStatus
@@ -1625,8 +1629,27 @@ def build_dashboard_status(
     }
 
 
-def create_dashboard_router(settings: Settings) -> APIRouter:
+def create_dashboard_router(
+    settings: Settings,
+    *,
+    configuration_persistence: ConfigurationPersistenceService | None = None,
+) -> APIRouter:
     router = APIRouter()
+    persistence = configuration_persistence or ConfigurationPersistenceService()
+
+    def persisted_settings_for_snapshot() -> Settings:
+        try:
+            return persistence.read_persisted_settings()
+        except ConfigurationPersistenceError as exc:
+            logger.warning(
+                "Configuration settings read failed code=%s status_code=%s",
+                exc.code,
+                exc.status_code,
+            )
+            raise HTTPException(
+                status_code=exc.status_code,
+                detail=exc.detail,
+            ) from exc
 
     @router.get("/health")
     async def health(request: Request) -> dict[str, object]:
@@ -1679,15 +1702,69 @@ def create_dashboard_router(settings: Settings) -> APIRouter:
         )
 
     @router.get("/api/dashboard/settings")
-    async def dashboard_settings() -> dict[str, object]:
-        return build_dashboard_settings_snapshot(settings).to_dict()
+    def dashboard_settings() -> dict[str, object]:
+        persisted_settings = persisted_settings_for_snapshot()
+        return build_dashboard_settings_snapshot(settings, persisted_settings).to_dict()
 
     @router.patch("/api/dashboard/settings")
-    async def update_dashboard_settings(payload: RuntimeSettingsUpdate) -> dict[str, object]:
+    def update_dashboard_settings(payload: RuntimeSettingsUpdate) -> dict[str, object]:
         try:
-            return update_runtime_settings(settings, payload).to_dict()
+            persisted_settings = persisted_settings_for_snapshot()
+            return update_runtime_settings(
+                settings,
+                payload,
+                persisted_settings=persisted_settings,
+            ).to_dict()
         except RuntimeSettingsUpdateError as exc:
             raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+
+    @router.put("/api/dashboard/settings/config")
+    def persist_dashboard_settings(
+        payload: dict[str, object] = Body(...),
+    ) -> dict[str, object]:
+        try:
+            result = persistence.persist(payload)
+        except ConfigurationPersistenceError as exc:
+            logger.warning(
+                "Configuration persistence failed code=%s status_code=%s",
+                exc.code,
+                exc.status_code,
+            )
+            raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+        except Exception as exc:
+            logger.exception("Unexpected configuration persistence failure")
+            raise HTTPException(
+                status_code=500,
+                detail="The configuration could not be saved safely.",
+            ) from exc
+
+        logger.info(
+            "Configuration persistence succeeded setting_count=%s configuration_created=%s",
+            len(result.persisted_setting_ids),
+            result.configuration_created,
+        )
+        snapshot = build_dashboard_settings_snapshot(
+            settings,
+            result.persisted_settings,
+        )
+        return {
+            "status": "saved",
+            "persisted_setting_ids": list(result.persisted_setting_ids),
+            "configuration_created": result.configuration_created,
+            "settings": snapshot.to_dict(),
+        }
+
+    @router.api_route(
+        "/api/dashboard/settings/config",
+        methods=["GET", "POST", "PATCH", "DELETE", "HEAD", "OPTIONS"],
+        include_in_schema=False,
+    )
+    async def dashboard_configuration_persistence_method_not_allowed() -> None:
+        raise HTTPException(
+            status_code=405,
+            detail="Method Not Allowed",
+            headers={"Allow": "PUT"},
+        )
 
     @router.api_route("/api/dashboard/settings", methods=["POST", "PUT", "DELETE"])
     async def dashboard_settings_read_only() -> None:

@@ -1,6 +1,6 @@
 # ContextKeeper API Compatibility
 
-Status: Current through Phase 6.5F-B5.5.2.
+Status: Current through the Phase 6.5F-B6.4 working-tree implementation; Product Owner and architect review are pending.
 
 ContextKeeper must behave like an Ollama-compatible API server so existing clients can point to ContextKeeper instead of Ollama without code changes.
 
@@ -74,6 +74,22 @@ Privacy boundary:
 ContextKeeper may inspect conversation messages for Context Usage estimation and context/compression decisions. The current compression subsystem supports rolling-summary condensation and confirmed compression metadata, but durable historical original-message retrieval is planned for a later phase.
 
 Any context/compression behavior must preserve client-facing Ollama API compatibility.
+
+## Dashboard management API boundary
+
+The dashboard management routes share the `/api/` prefix but are owned by ContextKeeper and are never forwarded to Ollama:
+
+| Method and path | Responsibility |
+| --- | --- |
+| `GET /api/dashboard/settings` | Read the sanitized schema-v2 runtime and persisted settings snapshot. |
+| `PATCH /api/dashboard/settings` | Validate and update approved in-memory runtime settings only. |
+| `PUT /api/dashboard/settings/config` | Validate and atomically persist explicitly supplied approved settings only. |
+
+The PATCH and PUT operations are intentionally separate. PATCH does not write YAML. PUT does not mutate the running `Settings` instance, invoke PATCH, restart ContextKeeper, or alter an in-flight proxied request. Unsupported methods retain FastAPI/ContextKeeper `405 Method Not Allowed` behavior rather than falling through to the transparent `/api/{path:path}` proxy.
+
+The management API exposes no Ollama credentials, request bodies, prompt/response text, configuration paths, model override maps, or full configuration contents. Persistence errors use safe local-management details and do not use the upstream `502` proxy error contract.
+
+Phase 6.5F-B6.4 therefore adds a local management surface without changing the forwarded method, request-body, response, or streaming behavior of Ollama-compatible `/api/*` and `/v1/*` clients.
 
 ## Error behavior
 

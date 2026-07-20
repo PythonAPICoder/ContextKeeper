@@ -2,7 +2,7 @@
 
 Status: Historical origin plan. This document is retained for project-history context. Current implementation status lives in `PROJECT_HISTORY.md`, active sequencing lives in `ROADMAP.md`, and source behavior remains authoritative.
 
-Current implementation through Phase 6.5F-B5.5.2 includes the transparent proxy, diagnostics, Context Usage tracking, compression subsystem support, Automatic Model Context Discovery, the live Operations dashboard, Request Traffic, Connection Flow, Live Conversation Timeline, Conversation Inspector foundation, and Conversation Inspector Overview & Intelligence.
+The current implementation through the Phase 6.5F-B6.4 working tree includes the transparent proxy, diagnostics, context/compression systems, Automatic Model Context Discovery, live Operations and Conversation Inspector surfaces, Settings read/runtime-update APIs, a metadata-driven Settings page, and an explicit atomic configuration-persistence foundation. Product Owner and architect review of B6.4 are pending.
 
 ## Vision
 

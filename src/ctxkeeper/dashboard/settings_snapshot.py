@@ -32,6 +32,14 @@ class RuntimeSettingsUpdateError(ValueError):
         self.detail = detail
 
 
+class DashboardSettingsValidationError(ValueError):
+    """Shared dashboard settings business-rule validation failure."""
+
+    def __init__(self, detail: ValidationDetail) -> None:
+        super().__init__(str(detail))
+        self.detail = detail
+
+
 class _RuntimeSettingsUpdateModel(BaseModel):
     """Strict base model for partial runtime settings updates."""
 
@@ -112,11 +120,13 @@ class DashboardSetting:
     display_name: str
     description: str
     value: SettingValue
+    persisted_value: SettingValue
     default_value: SettingValue
     data_type: SettingDataType
     minimum: int | None = None
     maximum: int | None = None
     runtime_editable: bool = True
+    persistable: bool = True
     restart_required: bool = False
 
     def to_dict(self) -> dict[str, object]:
@@ -126,10 +136,16 @@ class DashboardSetting:
             "display_name": self.display_name,
             "description": self.description,
             "value": self.value,
+            "persisted_value": self.persisted_value,
             "default_value": self.default_value,
+            "differs_from_persisted": (
+                type(self.value) is not type(self.persisted_value)
+                or self.value != self.persisted_value
+            ),
             "minimum": self.minimum,
             "maximum": self.maximum,
             "runtime_editable": self.runtime_editable,
+            "persistable": self.persistable,
             "restart_required": self.restart_required,
             "data_type": self.data_type,
         }
@@ -167,13 +183,23 @@ class DashboardSettingsSnapshot:
         }
 
 
-def build_dashboard_settings_snapshot(settings: Settings) -> DashboardSettingsSnapshot:
-    """Build the sanitized settings snapshot from effective runtime settings."""
+def build_dashboard_settings_snapshot(
+    settings: Settings,
+    persisted_settings: Settings | None = None,
+) -> DashboardSettingsSnapshot:
+    """Build a sanitized snapshot from runtime and persisted settings state.
+
+    Callers that do not provide a persisted settings object retain the B6.1/B6.2
+    behavior of describing the supplied settings as the confirmed state. API
+    routes provide a freshly read persisted settings object so disk differences
+    are represented explicitly.
+    """
 
     defaults = Settings()
+    persisted = persisted_settings or settings
     with _RUNTIME_SETTINGS_LOCK:
         return DashboardSettingsSnapshot(
-            schema_version=1,
+            schema_version=2,
             categories=[
                 DashboardSettingsCategory(
                     id="context",
@@ -186,6 +212,7 @@ def build_dashboard_settings_snapshot(settings: Settings) -> DashboardSettingsSn
                             display_name="Context tracking",
                             description="Enable ContextKeeper's conversation context tracking and usage estimates.",
                             value=settings.context.enabled,
+                            persisted_value=persisted.context.enabled,
                             default_value=defaults.context.enabled,
                             data_type="boolean",
                         ),
@@ -195,6 +222,7 @@ def build_dashboard_settings_snapshot(settings: Settings) -> DashboardSettingsSn
                             display_name="Warning threshold",
                             description="Context Usage percentage where the dashboard reports approaching context pressure.",
                             value=settings.context.warning_threshold_percent,
+                            persisted_value=persisted.context.warning_threshold_percent,
                             default_value=defaults.context.warning_threshold_percent,
                             data_type="integer",
                             minimum=0,
@@ -206,6 +234,7 @@ def build_dashboard_settings_snapshot(settings: Settings) -> DashboardSettingsSn
                             display_name="Compression threshold",
                             description="Context Usage percentage where conversations become compression candidates.",
                             value=settings.context.compression_threshold_percent,
+                            persisted_value=persisted.context.compression_threshold_percent,
                             default_value=defaults.context.compression_threshold_percent,
                             data_type="integer",
                             minimum=0,
@@ -217,6 +246,7 @@ def build_dashboard_settings_snapshot(settings: Settings) -> DashboardSettingsSn
                             display_name="Recent messages retained",
                             description="Number of recent messages preserved in active context during compression planning.",
                             value=settings.context.keep_recent_messages,
+                            persisted_value=persisted.context.keep_recent_messages,
                             default_value=defaults.context.keep_recent_messages,
                             data_type="integer",
                             minimum=1,
@@ -234,6 +264,7 @@ def build_dashboard_settings_snapshot(settings: Settings) -> DashboardSettingsSn
                             display_name="Compression",
                             description="Enable rolling-summary compression support for conversations under context pressure.",
                             value=settings.compression.enabled,
+                            persisted_value=persisted.compression.enabled,
                             default_value=defaults.compression.enabled,
                             data_type="boolean",
                         ),
@@ -243,6 +274,7 @@ def build_dashboard_settings_snapshot(settings: Settings) -> DashboardSettingsSn
                             display_name="Summarizer model",
                             description="Model name used by the compression summarizer when summaries are generated.",
                             value=settings.compression.summarizer_model,
+                            persisted_value=persisted.compression.summarizer_model,
                             default_value=defaults.compression.summarizer_model,
                             data_type="string",
                         ),
@@ -252,6 +284,7 @@ def build_dashboard_settings_snapshot(settings: Settings) -> DashboardSettingsSn
                             display_name="Maximum summary tokens",
                             description="Maximum token budget requested for rolling-summary output.",
                             value=settings.compression.max_summary_tokens,
+                            persisted_value=persisted.compression.max_summary_tokens,
                             default_value=defaults.compression.max_summary_tokens,
                             data_type="integer",
                             minimum=1,
@@ -269,6 +302,7 @@ def build_dashboard_settings_snapshot(settings: Settings) -> DashboardSettingsSn
                             display_name="Refresh interval",
                             description="Dashboard polling interval in milliseconds.",
                             value=settings.dashboard.refresh_interval_ms,
+                            persisted_value=persisted.dashboard.refresh_interval_ms,
                             default_value=defaults.dashboard.refresh_interval_ms,
                             data_type="integer",
                             minimum=1,
@@ -279,9 +313,23 @@ def build_dashboard_settings_snapshot(settings: Settings) -> DashboardSettingsSn
         )
 
 
+def dashboard_setting_metadata_by_id() -> dict[str, DashboardSetting]:
+    """Return the authoritative dashboard setting metadata indexed by id."""
+
+    defaults = Settings()
+    snapshot = build_dashboard_settings_snapshot(defaults, defaults)
+    return {
+        setting.id: setting
+        for category in snapshot.categories
+        for setting in category.settings
+    }
+
+
 def update_runtime_settings(
     settings: Settings,
     update: RuntimeSettingsUpdate,
+    *,
+    persisted_settings: Settings | None = None,
 ) -> DashboardSettingsSnapshot:
     """Atomically validate and apply a partial runtime settings update."""
 
@@ -302,23 +350,30 @@ def update_runtime_settings(
         except ValidationError as exc:
             raise RuntimeSettingsUpdateError(
                 status_code=422,
-                detail=_validation_error_detail(exc),
+                detail=validation_error_detail(exc),
             ) from exc
 
-        _validate_runtime_threshold_order(proposed)
+        try:
+            validate_dashboard_settings_business_rules(proposed)
+        except DashboardSettingsValidationError as exc:
+            raise RuntimeSettingsUpdateError(
+                status_code=422,
+                detail=exc.detail,
+            ) from exc
 
         settings.context = proposed.context
         settings.compression = proposed.compression
         settings.dashboard = proposed.dashboard
 
-        return build_dashboard_settings_snapshot(settings)
+        return build_dashboard_settings_snapshot(settings, persisted_settings)
 
 
-def _validate_runtime_threshold_order(settings: Settings) -> None:
+def validate_dashboard_settings_business_rules(settings: Settings) -> None:
+    """Validate cross-field rules shared by runtime and persistence updates."""
+
     if settings.context.warning_threshold_percent >= settings.context.compression_threshold_percent:
-        raise RuntimeSettingsUpdateError(
-            status_code=422,
-            detail=[
+        raise DashboardSettingsValidationError(
+            [
                 {
                     "loc": ["body", "context", "warning_threshold_percent"],
                     "msg": "context.warning_threshold_percent must be less than compression_threshold_percent.",
@@ -328,7 +383,7 @@ def _validate_runtime_threshold_order(settings: Settings) -> None:
         )
 
 
-def _validation_error_detail(exc: ValidationError) -> list[dict[str, object]]:
+def validation_error_detail(exc: ValidationError) -> list[dict[str, object]]:
     details: list[dict[str, object]] = []
     for error in exc.errors():
         detail: dict[str, object] = {

@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+from html import escape
+
 from ..config import Settings
 
 
 def render_dashboard_html(settings: Settings) -> str:
+    ollama_base_url_html = escape(settings.ollama.base_url)
     return f"""
 <!doctype html>
 <html lang="en">
@@ -259,6 +262,23 @@ a.badge:focus-visible {{ outline:2px solid rgba(56,189,248,.72); outline-offset:
 .settings-status.success {{ border-color:rgba(34,197,94,.22); background:rgba(34,197,94,.08); color:#bbf7d0; }}
 .settings-status.warning {{ border-color:rgba(245,158,11,.24); background:rgba(245,158,11,.08); color:#fde68a; }}
 .settings-feedback-error {{ border-color:rgba(239,68,68,.28); background:rgba(239,68,68,.1); color:#fecaca; }}
+.settings-connection-test {{ min-width:0; display:grid; gap:9px; padding:11px; border:1px solid rgba(56,189,248,.16); border-radius:9px; background:rgba(2,6,23,.34); box-shadow:var(--surface-inset-highlight); }}
+.settings-connection-test-header {{ min-width:0; display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }}
+.settings-connection-test-heading {{ min-width:0; }}
+.settings-connection-test-title {{ margin:0; color:var(--soft); font-size:13px; line-height:1.3; font-weight:850; }}
+.settings-connection-test-copy {{ margin:3px 0 0; color:var(--muted); font-size:11px; line-height:1.4; overflow-wrap:anywhere; }}
+.settings-connection-result {{ min-width:0; display:grid; gap:7px; padding:10px; border:1px solid rgba(148,163,184,.2); border-radius:8px; background:rgba(15,23,42,.52); }}
+.settings-connection-result.testing {{ border-color:rgba(56,189,248,.25); color:#bae6fd; }}
+.settings-connection-result.success {{ border-color:rgba(34,197,94,.26); background:rgba(34,197,94,.07); }}
+.settings-connection-result.failure {{ border-color:rgba(239,68,68,.28); background:rgba(239,68,68,.08); }}
+.settings-connection-result-title {{ color:var(--soft); font-size:12px; line-height:1.35; font-weight:850; }}
+.settings-connection-result.success .settings-connection-result-title {{ color:#bbf7d0; }}
+.settings-connection-result.failure .settings-connection-result-title {{ color:#fecaca; }}
+.settings-connection-result-message,.settings-connection-result-note {{ color:var(--soft); font-size:11px; line-height:1.4; overflow-wrap:anywhere; }}
+.settings-connection-result-note {{ color:var(--muted); }}
+.settings-connection-result-details {{ display:grid; grid-template-columns:minmax(100px,max-content) minmax(0,1fr); gap:4px 10px; margin:0; font-size:10px; line-height:1.35; }}
+.settings-connection-result-details dt {{ color:var(--muted); font-weight:800; }}
+.settings-connection-result-details dd {{ min-width:0; margin:0; color:var(--soft); overflow-wrap:anywhere; }}
 .settings-state {{ min-height:150px; display:grid; place-items:center; align-content:center; gap:10px; padding:24px; border:1px dashed rgba(148,163,184,.28); border-radius:10px; background:rgba(15,23,42,.38); text-align:center; }}
 .settings-state-title {{ color:var(--soft); font-size:15px; font-weight:800; }}
 .settings-state-detail {{ max-width:620px; color:var(--muted); font-size:12px; line-height:1.45; }}
@@ -270,13 +290,15 @@ a.badge:focus-visible {{ outline:2px solid rgba(56,189,248,.72); outline-offset:
 .settings-category-title {{ margin:0; color:#f8fafc; font-size:16px; line-height:1.25; }}
 .settings-category-description {{ margin:4px 0 0; color:var(--muted); font-size:12px; line-height:1.4; overflow-wrap:anywhere; }}
 .settings-list {{ display:grid; gap:10px; min-width:0; }}
+.settings-list-connection {{ container-name:settings-connection; container-type:inline-size; }}
 .settings-item {{ min-width:0; display:grid; grid-template-columns:minmax(0,1fr) minmax(180px,260px); gap:14px; align-items:start; padding:11px; border:1px solid rgba(203,213,225,.1); border-radius:9px; background:rgba(15,23,42,.42); box-shadow:var(--surface-inset-highlight); }}
 .settings-item:focus-within {{ border-color:rgba(56,189,248,.3); box-shadow:var(--surface-inset-highlight),0 0 0 2px rgba(56,189,248,.08); }}
 .settings-item-meta,.settings-control-panel {{ min-width:0; }}
 .settings-label-row {{ display:flex; flex-wrap:wrap; align-items:center; gap:6px; }}
 .settings-label {{ color:var(--text); font-size:13px; line-height:1.3; font-weight:800; cursor:pointer; overflow-wrap:anywhere; }}
 .settings-item-description {{ margin:4px 0 0; color:var(--muted); font-size:11px; line-height:1.4; overflow-wrap:anywhere; }}
-.settings-metadata {{ display:flex; flex-wrap:wrap; gap:6px 10px; margin-top:7px; color:#aebbd0; font-size:10px; line-height:1.35; }}
+.settings-metadata {{ min-width:0; display:flex; flex-wrap:wrap; gap:6px 10px; margin-top:7px; color:#aebbd0; font-size:10px; line-height:1.35; }}
+.settings-metadata > span {{ min-width:0; overflow-wrap:anywhere; }}
 .settings-control-panel {{ display:grid; gap:6px; align-content:start; }}
 .settings-reset-setting {{ justify-self:start; min-height:30px; padding:5px 9px; font-size:11px; }}
 .settings-input {{ width:100%; min-width:0; height:38px; padding:7px 9px; border:1px solid rgba(148,163,184,.28); border-radius:8px; outline:none; background:rgba(2,6,23,.52); color:var(--text); font:inherit; font-size:13px; transition:border-color .18s ease,background .18s ease,box-shadow .18s ease; }}
@@ -306,7 +328,8 @@ a.badge:focus-visible {{ outline:2px solid rgba(56,189,248,.72); outline-offset:
 .settings-button:disabled {{ cursor:not-allowed; opacity:.5; box-shadow:none; transform:none; }}
 .settings-button:focus-visible {{ outline:2px solid rgba(56,189,248,.72); outline-offset:2px; }}
 @media (prefers-reduced-motion: reduce) {{ .settings-button,.settings-input {{ transition:none; }} .settings-button:hover:not(:disabled) {{ transform:none; }} }}
-@media (max-width: 700px) {{ .settings-runtime-notice {{ grid-template-columns:1fr; }} .settings-runtime-icon {{ display:none; }} .settings-category {{ padding:11px; }} .settings-category-header {{ align-items:stretch; flex-direction:column; }} .settings-category-header .settings-button {{ align-self:flex-start; }} .settings-item {{ grid-template-columns:1fr; gap:9px; }} .settings-action-bar {{ align-items:stretch; flex-direction:column; }} .settings-actions {{ width:100%; }} .settings-button {{ flex:1 1 130px; }} .settings-reset-setting,.settings-button.compact {{ flex:0 0 auto; }} }}
+@container settings-connection (max-width: 480px) {{ .settings-item {{ grid-template-columns:1fr; gap:9px; }} }}
+@media (max-width: 700px) {{ .settings-runtime-notice {{ grid-template-columns:1fr; }} .settings-runtime-icon {{ display:none; }} .settings-category {{ padding:11px; }} .settings-category-header,.settings-connection-test-header {{ align-items:stretch; flex-direction:column; }} .settings-category-header .settings-button,.settings-connection-test-header .settings-button {{ align-self:flex-start; }} .settings-item {{ grid-template-columns:1fr; gap:9px; }} .settings-connection-result-details {{ grid-template-columns:1fr; gap:2px; }} .settings-connection-result-details dd + dt {{ margin-top:4px; }} .settings-action-bar {{ align-items:stretch; flex-direction:column; }} .settings-actions {{ width:100%; }} .settings-button {{ flex:1 1 130px; }} .settings-reset-setting,.settings-button.compact {{ flex:0 0 auto; }} }}
 .bar {{ height:12px; border-radius:999px; background:#334155; overflow:hidden; margin:10px 0; }}
 .fill {{ height:100%; background:var(--accent); width:0%; transition:width .25s ease; }}
 table {{ width:100%; border-collapse:collapse; font-size:13px; table-layout:fixed; }}
@@ -789,7 +812,7 @@ body.conversation-inspector-open .conversation-inspector-drawer {{ transform:tra
   </div>
   <div class="topbar-actions">
     <span class="topbar-pill">Proxy port {settings.server.port}</span>
-    <span class="topbar-pill">{settings.ollama.base_url}</span>
+    <span class="topbar-pill">{ollama_base_url_html}</span>
   </div>
 </header>
 <main class="dashboard-main">
@@ -966,7 +989,7 @@ body.conversation-inspector-open .conversation-inspector-drawer {{ transform:tra
       <div class="pipe" data-flow-link="proxy-ollama"></div>
       <div class="node flow-node signal-node" data-flow-node="ollama">
         <div class="flow-node-head"><div class="flow-node-title"><span id="ollamaDot" class="dot waiting"></span>Ollama Status</div><div class="flow-node-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 2v4"></path><path d="M12 18v4"></path><path d="M4.9 4.9 7.8 7.8"></path><path d="m16.2 16.2 2.9 2.9"></path><path d="M2 12h4"></path><path d="M18 12h4"></path><circle cx="12" cy="12" r="4"></circle></svg></div></div>
-        <div class="flow-node-main"><div id="ollamaText" class="value">Checking</div><div id="ollamaSub" class="small">{settings.ollama.base_url}</div></div>
+        <div class="flow-node-main"><div id="ollamaText" class="value">Checking</div><div id="ollamaSub" class="small">{ollama_base_url_html}</div></div>
         <div class="flow-node-foot"><span class="flow-endpoint">Upstream runtime</span><span id="ollamaStatusBadge" class="badge waiting flow-status">Checking</span></div>
       </div>
       <div class="pipe" data-flow-link="ollama-model"></div>
@@ -1044,7 +1067,7 @@ body.conversation-inspector-open .conversation-inspector-drawer {{ transform:tra
   <div class="page-header"><div><h2 class="page-title">Context</h2><div class="page-sub">Context pressure, compression history, and token estimates.</div></div></div>
   <div class="grid">
     <div class="card signal-card compact-card"><h2><span class="icon-label"><span class="icon-mark">%</span>Context Usage</span></h2><div class="signal-body"><div class="signal-stack"><div id="contextUsage" class="value">--%</div><div id="contextUsageText" class="muted">Context window usage will appear here.</div><div class="bar"><div id="contextUsageBar" class="fill"></div></div></div><svg class="gauge" viewBox="0 0 120 120" aria-hidden="true"><circle class="gauge-track" cx="60" cy="60" r="48" pathLength="100"></circle><circle id="contextGaugeArc" class="gauge-progress" cx="60" cy="60" r="48" pathLength="100"></circle></svg></div></div>
-    <div class="card"><h2>Status</h2><div class="value ok">Running</div><div class="muted">Proxy -> {settings.ollama.base_url}</div></div>
+    <div class="card"><h2>Status</h2><div class="value ok">Running</div><div class="muted">Proxy -> {ollama_base_url_html}</div></div>
     <div class="card"><h2>Compression History</h2><div class="value">Tracked</div><div class="muted">Compression activity is summarized in the Operations hero statistics row.</div></div>
   </div>
 </section>
@@ -1064,13 +1087,13 @@ body.conversation-inspector-open .conversation-inspector-drawer {{ transform:tra
 
 <section id="settings" class="page settings-page" data-page="settings" aria-labelledby="settingsPageTitle">
   <div class="page-header">
-    <div><h2 id="settingsPageTitle" class="page-title">Settings</h2><div class="page-sub">Review runtime, saved, and built-in values, then stage or recover managed settings safely.</div></div>
+    <div><h2 id="settingsPageTitle" class="page-title">Settings</h2><div class="page-sub">Review active runtime, saved configuration, built-in defaults, and draft candidates, then manage approved settings safely.</div></div>
   </div>
   <aside class="settings-runtime-notice" role="note" aria-labelledby="settingsRuntimeNoticeTitle">
     <div class="settings-runtime-icon" aria-hidden="true">!</div>
     <div>
       <h3 id="settingsRuntimeNoticeTitle" class="settings-runtime-title">Runtime and saved configuration are separate</h3>
-      <p class="settings-runtime-copy">Save runtime changes and Reset actions apply eligible values to the current ContextKeeper process only. Reset uses built-in defaults supplied by ContextKeeper and never writes YAML. Save to configuration explicitly writes eligible values to contextkeeper.yaml without changing the current runtime or restarting ContextKeeper.</p>
+      <p class="settings-runtime-copy">Save runtime changes applies only runtime-editable drafts to the current ContextKeeper process. Reset stages built-in defaults: runtime-editable defaults are applied to the current process, while restart-required defaults remain browser drafts until saved. Save to configuration writes eligible drafts to contextkeeper.yaml without changing runtime or restarting ContextKeeper. Higher-priority environment or command-line overrides may still take precedence after restart.</p>
     </div>
   </aside>
   <div id="settingsStatus" class="settings-status" role="status" aria-live="polite" aria-atomic="true" tabindex="-1">Settings load when this page is opened.</div>
@@ -1086,7 +1109,7 @@ body.conversation-inspector-open .conversation-inspector-drawer {{ transform:tra
       <div id="settingsDirtySummary" class="settings-dirty-summary">No unsaved changes.</div>
       <div class="settings-actions">
         <button id="settingsResetAllButton" class="settings-button recovery" type="button" disabled>Reset managed settings to defaults</button>
-        <button id="settingsDiscardButton" class="settings-button" type="button" disabled>Discard runtime changes</button>
+        <button id="settingsDiscardButton" class="settings-button" type="button" disabled>Discard changes</button>
         <button id="settingsPersistButton" class="settings-button" type="button" disabled>Save to configuration</button>
         <button id="settingsSaveButton" class="settings-button primary" type="submit" disabled>Save runtime changes</button>
       </div>
@@ -1147,6 +1170,11 @@ body.conversation-inspector-open .conversation-inspector-drawer {{ transform:tra
 const DASHBOARD_REFRESH_INTERVAL_MS = {settings.dashboard.refresh_interval_ms or 1000};
 const SETTINGS_ENDPOINT = '/api/dashboard/settings';
 const SETTINGS_CONFIG_ENDPOINT = '/api/dashboard/settings/config';
+const SETTINGS_CONNECTION_TEST_ENDPOINT = '/api/dashboard/settings/connection/test';
+const CONNECTION_SETTINGS_CATEGORY_ID = 'ollama';
+const CONNECTION_ENDPOINT_SETTING_ID = 'ollama.base_url';
+const CONNECTION_TIMEOUT_SETTING_ID = 'ollama.timeout_seconds';
+const CONNECTION_SETTING_IDS = [CONNECTION_ENDPOINT_SETTING_ID, CONNECTION_TIMEOUT_SETTING_ID];
 const TOPOLOGY_OUTBOUND_DURATION_MS = 1300;
 const TOPOLOGY_INBOUND_DURATION_MS = 1200;
 const REQUEST_TRAFFIC_BUCKETS = 24;
@@ -1190,6 +1218,8 @@ const settingsPageState = {{
   persisting:false,
   resetting:false,
   discarding:false,
+  testingConnection:false,
+  connectionTestResult:null,
   confirmationRequired:false,
   confirmationAction:null,
   confirmationPreservedDraftValues:null
@@ -1812,7 +1842,7 @@ function validateSettingsSnapshot(snapshot) {{
           (setting.value < setting.minimum || setting.persisted_value < setting.minimum || setting.default_value < setting.minimum)) invalid();
       if (setting.data_type === 'integer' && setting.maximum !== null &&
           (setting.value > setting.maximum || setting.persisted_value > setting.maximum || setting.default_value > setting.maximum)) invalid();
-      if (setting.reset_eligible && !setting.runtime_editable) invalid();
+      if (setting.reset_eligible && !setting.runtime_editable && !setting.persistable) invalid();
       if (setting.differs_from_persisted !== !settingsValuesEqual(setting.value, setting.persisted_value)) invalid();
       settingIds.add(setting.id);
     }});
@@ -1906,7 +1936,12 @@ function createSettingsControl(setting, controlId) {{
     if (setting.minimum !== null) control.min = String(setting.minimum);
     if (setting.maximum !== null) control.max = String(setting.maximum);
   }} else {{
-    control.type = 'text';
+    control.type = setting.id === CONNECTION_ENDPOINT_SETTING_ID ? 'url' : 'text';
+    if (setting.id === CONNECTION_ENDPOINT_SETTING_ID) {{
+      control.required = true;
+      control.inputMode = 'url';
+      control.spellcheck = false;
+    }}
     control.autocomplete = 'off';
     control.autocapitalize = 'none';
   }}
@@ -1922,7 +1957,8 @@ function configureSettingsControl(controlRoot, setting, controlId) {{
   control.dataset.settingType = setting.data_type;
   control.setAttribute('aria-describedby', settingsDescriptionIds(controlId, setting));
   control.disabled = (!setting.runtime_editable && !setting.persistable) || settingsPageState.loading || settingsPageState.saving ||
-    settingsPageState.persisting || settingsPageState.resetting || settingsPageState.discarding;
+    settingsPageState.persisting || settingsPageState.resetting || settingsPageState.discarding ||
+    settingsPageState.testingConnection;
   if (control.disabled) control.setAttribute('aria-disabled', 'true');
   else control.removeAttribute('aria-disabled');
   settingsPageState.controlsById.set(setting.id, control);
@@ -1978,7 +2014,7 @@ function createSettingsItem(setting, itemNumber) {{
     controlPanel.append(availability);
   }}
   if (setting.restart_required) {{
-    const restart = createSettingsElement('div', 'settings-field-note', 'Saved changes require a ContextKeeper restart before they become active. ContextKeeper is not restarted automatically.');
+    const restart = createSettingsElement('div', 'settings-field-note', 'Saved changes are read at startup and require a manual ContextKeeper restart. ContextKeeper is not restarted automatically. Higher-priority environment or command-line overrides may still take precedence.');
     restart.id = controlId + '-restart';
     controlPanel.append(restart);
   }}
@@ -1993,6 +2029,36 @@ function createSettingsItem(setting, itemNumber) {{
   settingsPageState.errorElementsById.set(setting.id, error);
   item.append(metadata, controlPanel);
   return item;
+}}
+function createConnectionTestPanel() {{
+  const panel = createSettingsElement('section', 'settings-connection-test');
+  panel.setAttribute('aria-labelledby', 'settingsConnectionTestTitle');
+  const header = createSettingsElement('div', 'settings-connection-test-header');
+  const headingGroup = createSettingsElement('div', 'settings-connection-test-heading');
+  const heading = createSettingsElement('h4', 'settings-connection-test-title', 'Test draft connection');
+  heading.id = 'settingsConnectionTestTitle';
+  const copy = createSettingsElement(
+    'p',
+    'settings-connection-test-copy',
+    'Probe the endpoint and timeout currently entered above once. The temporary test does not save configuration, replace the active Ollama client, or update active health state.'
+  );
+  copy.id = 'settingsConnectionTestDescription';
+  headingGroup.append(heading, copy);
+  const button = createSettingsElement('button', 'settings-button', 'Test connection');
+  button.id = 'settingsConnectionTestButton';
+  button.type = 'button';
+  button.setAttribute('aria-controls', 'settingsConnectionTestResult');
+  button.setAttribute('aria-describedby', 'settingsConnectionTestDescription');
+  button.addEventListener('click', () => void testDraftConnection());
+  header.append(headingGroup, button);
+  const result = createSettingsElement('div', 'settings-connection-result');
+  result.id = 'settingsConnectionTestResult';
+  result.setAttribute('role', 'status');
+  result.setAttribute('aria-live', 'polite');
+  result.setAttribute('aria-atomic', 'true');
+  result.hidden = true;
+  panel.append(header, result);
+  return panel;
 }}
 function renderSettingsCategories() {{
   const container = byId('settingsCategories');
@@ -2022,6 +2088,7 @@ function renderSettingsCategories() {{
     settingsPageState.categoryResetButtonsById.set(category.id, resetCategory);
     header.append(headingGroup, resetCategory);
     const list = createSettingsElement('div', 'settings-list');
+    if (category.id === CONNECTION_SETTINGS_CATEGORY_ID) list.classList.add('settings-list-connection');
     if (category.settings.length) {{
       category.settings.forEach(setting => {{
         itemNumber += 1;
@@ -2031,17 +2098,33 @@ function renderSettingsCategories() {{
       list.append(createSettingsElement('div', 'settings-field-note', 'No settings are exposed in this category.'));
     }}
     section.append(header, list);
+    if (category.id === CONNECTION_SETTINGS_CATEGORY_ID) section.append(createConnectionTestPanel());
     fragment.append(section);
   }});
   container.replaceChildren(fragment);
   settingsPageState.differenceElementsById.forEach((element, settingId) => refreshSettingsDifference(settingId));
+  settingsPageState.errorElementsById.forEach((element, settingId) => refreshSettingsFieldError(settingId));
+  renderConnectionTestResult();
   return itemNumber > 0;
 }}
 function settingsValuesEqual(confirmedValue, draftValue) {{
   return typeof confirmedValue === typeof draftValue && confirmedValue === draftValue;
 }}
+function settingsDraftBaselineValue(setting) {{
+  return !setting.runtime_editable && setting.persistable ? setting.persisted_value : setting.value;
+}}
+function createSettingsDraftSnapshot(confirmedSnapshot) {{
+  const draft = cloneSettingsSnapshot(confirmedSnapshot);
+  draft.categories.forEach(category => category.settings.forEach(setting => {{
+    setting.value = settingsDraftBaselineValue(setting);
+  }}));
+  return draft;
+}}
+function isConnectionSettingId(settingId) {{
+  return CONNECTION_SETTING_IDS.includes(settingId);
+}}
 function settingCanReset(setting) {{
-  return Boolean(setting && setting.reset_eligible && setting.runtime_editable &&
+  return Boolean(setting && setting.reset_eligible && (setting.runtime_editable || setting.persistable) &&
     settingValueMatchesDataType(setting.data_type, setting.default_value));
 }}
 function resettableSettings(options) {{
@@ -2053,11 +2136,22 @@ function resettableSettings(options) {{
     category.settings.forEach(setting => {{
       if (selection.settingId && setting.id !== selection.settingId) return;
       if (!settingCanReset(setting)) return;
-      if (!selection.includeAlreadyDefault && settingsValuesEqual(setting.value, setting.default_value)) return;
+      const draftSetting = settingsPageState.draftSettingsById.get(setting.id);
+      if (!draftSetting) return;
+      if (!selection.includeAlreadyDefault && settingsValuesEqual(draftSetting.value, setting.default_value)) return;
       changes.push({{ setting:setting, value:setting.default_value }});
     }});
   }});
   return changes;
+}}
+function settingsDifferentFromPersisted() {{
+  if (!settingsPageState.confirmedSnapshot) return [];
+  const differences = [];
+  settingsPageState.confirmedSnapshot.categories.forEach(category => category.settings.forEach(setting => {{
+    if (settingsValuesEqual(setting.value, setting.persisted_value)) return;
+    differences.push(setting);
+  }}));
+  return differences;
 }}
 function runtimeSettingsDifferentFromPersisted() {{
   if (!settingsPageState.confirmedSnapshot) return [];
@@ -2074,7 +2168,8 @@ function changedDraftSettings() {{
   settingsPageState.confirmedSnapshot.categories.forEach(category => category.settings.forEach(confirmedSetting => {{
     if (!confirmedSetting.runtime_editable && !confirmedSetting.persistable) return;
     const draftSetting = settingsPageState.draftSettingsById.get(confirmedSetting.id);
-    if (draftSetting && !settingsValuesEqual(confirmedSetting.value, draftSetting.value)) {{
+    const baselineValue = settingsDraftBaselineValue(confirmedSetting);
+    if (draftSetting && !settingsValuesEqual(baselineValue, draftSetting.value)) {{
       changes.push({{ setting:confirmedSetting, value:draftSetting.value }});
     }}
   }}));
@@ -2113,8 +2208,110 @@ function refreshSettingsDifference(settingId) {{
   element.className = 'settings-difference' + (difference.state ? ' ' + difference.state : '');
   element.textContent = difference.message;
 }}
+function connectionDraftValues() {{
+  const endpoint = settingsPageState.draftSettingsById.get(CONNECTION_ENDPOINT_SETTING_ID);
+  const timeout = settingsPageState.draftSettingsById.get(CONNECTION_TIMEOUT_SETTING_ID);
+  if (!endpoint || !timeout || typeof endpoint.value !== 'string' || !Number.isSafeInteger(timeout.value)) {{
+    throw new Error('The draft connection settings are unavailable.');
+  }}
+  return {{ base_url:endpoint.value, timeout_seconds:timeout.value }};
+}}
+function connectionTestFailure(testedEndpoint, failureCategory, message) {{
+  return {{
+    connected:false,
+    tested_endpoint:typeof testedEndpoint === 'string' && testedEndpoint ? testedEndpoint : null,
+    latency_ms:null,
+    ollama_version:null,
+    failure_category:failureCategory,
+    message:message
+  }};
+}}
+function validateConnectionTestResponse(payload) {{
+  const invalid = () => {{ throw new Error('The connection test response format is not supported.'); }};
+  if (!payload || typeof payload !== 'object' || typeof payload.connected !== 'boolean' ||
+      typeof payload.message !== 'string' || !payload.message.trim()) invalid();
+  if (payload.tested_endpoint !== null && typeof payload.tested_endpoint !== 'string') invalid();
+  if (payload.latency_ms !== null &&
+      (typeof payload.latency_ms !== 'number' || !Number.isFinite(payload.latency_ms) || payload.latency_ms < 0)) invalid();
+  if (payload.ollama_version !== null && typeof payload.ollama_version !== 'string') invalid();
+  if (payload.failure_category !== null && typeof payload.failure_category !== 'string') invalid();
+  if (payload.connected && (!payload.tested_endpoint || payload.latency_ms === null ||
+      !payload.ollama_version || !payload.ollama_version.trim())) invalid();
+  return {{
+    connected:payload.connected,
+    tested_endpoint:payload.tested_endpoint,
+    latency_ms:payload.latency_ms,
+    ollama_version:payload.ollama_version,
+    failure_category:payload.failure_category,
+    message:payload.message.trim()
+  }};
+}}
+function appendConnectionResultDetail(details, label, value) {{
+  if (value === null || value === undefined || value === '') return;
+  details.append(
+    createSettingsElement('dt', '', label),
+    createSettingsElement('dd', '', value)
+  );
+}}
+function formatConnectionLatency(latencyMs) {{
+  return Number.isInteger(latencyMs) ? String(latencyMs) : String(Number(latencyMs.toFixed(1)));
+}}
+function formatConnectionFailureCategory(category) {{
+  return typeof category === 'string' && category
+    ? titleCase(category.replaceAll('_', ' ').replaceAll('-', ' '))
+    : '';
+}}
+function renderConnectionTestResult() {{
+  const region = byId('settingsConnectionTestResult');
+  if (!region) return;
+  region.replaceChildren();
+  if (settingsPageState.testingConnection) {{
+    region.hidden = false;
+    region.className = 'settings-connection-result testing';
+    region.append(
+      createSettingsElement('div', 'settings-connection-result-title', 'Testing draft connection'),
+      createSettingsElement('div', 'settings-connection-result-message', 'ContextKeeper is performing one bounded probe with the endpoint and timeout currently entered.'),
+      createSettingsElement('div', 'settings-connection-result-note', 'The active runtime connection and saved configuration remain unchanged.')
+    );
+    return;
+  }}
+  const result = settingsPageState.connectionTestResult;
+  if (!result) {{
+    region.hidden = true;
+    region.className = 'settings-connection-result';
+    return;
+  }}
+  region.hidden = false;
+  region.className = 'settings-connection-result ' + (result.connected ? 'success' : 'failure');
+  const title = createSettingsElement(
+    'div',
+    'settings-connection-result-title',
+    result.connected ? 'Connection successful' : 'Connection failed'
+  );
+  const message = createSettingsElement('div', 'settings-connection-result-message', result.message);
+  const details = createSettingsElement('dl', 'settings-connection-result-details');
+  appendConnectionResultDetail(details, 'Tested endpoint', result.tested_endpoint);
+  if (result.latency_ms !== null) appendConnectionResultDetail(details, 'Round-trip latency', formatConnectionLatency(result.latency_ms) + ' ms');
+  appendConnectionResultDetail(details, 'Ollama version', result.ollama_version);
+  appendConnectionResultDetail(details, 'Failure category', formatConnectionFailureCategory(result.failure_category));
+  const note = createSettingsElement(
+    'div',
+    'settings-connection-result-note',
+    result.connected
+      ? 'This tested the draft candidate only; it was not saved or activated. Save to configuration and restart ContextKeeper to make the saved endpoint eligible to become active. Higher-priority overrides may still take precedence.'
+      : 'Runtime and saved configuration were not changed.'
+  );
+  region.append(title, message);
+  if (details.childNodes.length) region.append(details);
+  region.append(note);
+}}
+function clearConnectionTestResult() {{
+  settingsPageState.connectionTestResult = null;
+  renderConnectionTestResult();
+}}
 function settingsDraftValueIsValid(setting, value) {{
   if (!settingValueMatchesDataType(setting.data_type, value)) return false;
+  if (setting.id === CONNECTION_ENDPOINT_SETTING_ID) return !settingsValidationMessage(setting, value);
   if (setting.data_type !== 'integer') return true;
   if (setting.minimum !== null && value < setting.minimum) return false;
   if (setting.maximum !== null && value > setting.maximum) return false;
@@ -2131,6 +2328,20 @@ function settingsDraftIsValid() {{
   return true;
 }}
 function settingsValidationMessage(setting, value) {{
+  if (setting.id === CONNECTION_ENDPOINT_SETTING_ID) {{
+    if (typeof value !== 'string' || !value.trim()) return 'Enter a complete AI Server Endpoint URL.';
+    let endpoint;
+    try {{
+      endpoint = new URL(value);
+    }} catch (error) {{
+      return 'Enter a valid absolute AI Server Endpoint URL.';
+    }}
+    if (!['http:','https:'].includes(endpoint.protocol)) return 'Use an http:// or https:// AI Server Endpoint URL.';
+    if (!endpoint.hostname) return 'Enter an AI Server Endpoint URL with a valid hostname or IP address.';
+    if (endpoint.username || endpoint.password) return 'AI Server Endpoint credentials are not supported.';
+    if (endpoint.search) return 'AI Server Endpoint query strings are not supported.';
+    if (endpoint.hash) return 'AI Server Endpoint fragments are not supported.';
+  }}
   if (setting.data_type === 'integer') {{
     if (value === null || value === undefined || Number.isNaN(value)) return 'Enter a whole number.';
     if (!Number.isSafeInteger(value)) return 'Enter a whole number within the supported safe range.';
@@ -2171,15 +2382,17 @@ function updateSettingsActions() {{
   const draftChanges = changedDraftSettings();
   const runtimeChanges = changedRuntimeSettings();
   const runtimeRecoveryChanges = runtimeSettingsDifferentFromPersisted();
+  const confirmedDifferences = settingsDifferentFromPersisted();
   const persistenceChanges = changedPersistableSettings();
   const draftValid = settingsDraftIsValid();
   const busy = settingsPageState.loading || settingsPageState.saving || settingsPageState.persisting ||
-    settingsPageState.resetting || settingsPageState.discarding;
+    settingsPageState.resetting || settingsPageState.discarding || settingsPageState.testingConnection;
   const locked = busy || settingsPageState.confirmationRequired;
   const save = byId('settingsSaveButton');
   const persist = byId('settingsPersistButton');
   const discard = byId('settingsDiscardButton');
   const resetAll = byId('settingsResetAllButton');
+  const connectionTest = byId('settingsConnectionTestButton');
   if (save) save.disabled = locked || !settingsPageState.loaded || !runtimeChanges.length || !draftValid;
   if (persist) {{
     persist.disabled = locked || !settingsPageState.loaded || !persistenceChanges.length || !draftValid;
@@ -2187,7 +2400,13 @@ function updateSettingsActions() {{
   }}
   if (discard) {{
     setSettingsButtonDisabled(discard, locked || !settingsPageState.loaded || (!draftChanges.length && !runtimeRecoveryChanges.length));
-    discard.textContent = settingsPageState.discarding ? 'Restoring runtime...' : 'Discard runtime changes';
+    discard.textContent = settingsPageState.discarding ? 'Discarding changes...' : 'Discard changes';
+  }}
+  if (connectionTest) {{
+    const connectionSettingsAvailable = CONNECTION_SETTING_IDS.every(settingId =>
+      settingsPageState.draftSettingsById.has(settingId));
+    setSettingsButtonDisabled(connectionTest, locked || !settingsPageState.loaded || !connectionSettingsAvailable);
+    connectionTest.textContent = settingsPageState.testingConnection ? 'Testing connection...' : 'Test connection';
   }}
   settingsPageState.resetButtonsById.forEach((button, settingId) => {{
     setSettingsButtonDisabled(button, locked || !settingsPageState.loaded || !resettableSettings({{ settingId:settingId }}).length);
@@ -2210,7 +2429,11 @@ function updateSettingsActions() {{
   const summary = byId('settingsDirtySummary');
   if (summary) {{
     if (settingsPageState.confirmationRequired) summary.textContent = 'Confirm the current server values before making another change.';
-    else if (!draftChanges.length && !persistenceChanges.length && !runtimeRecoveryChanges.length) summary.textContent = 'Runtime and saved configuration values are aligned. No unsaved changes.';
+    else if (!draftChanges.length && !persistenceChanges.length && !runtimeRecoveryChanges.length) {{
+      summary.textContent = confirmedDifferences.length
+        ? 'No unsaved draft changes. ' + confirmedDifferences.length + ' active runtime value' + (confirmedDifferences.length === 1 ? '' : 's') + ' differs from saved configuration; a pending restart or higher-priority override may explain the difference.'
+        : 'Runtime and saved configuration values are aligned. No unsaved changes.';
+    }}
     else if (!draftValid) summary.textContent = 'Correct invalid draft values before saving.';
     else {{
       const pendingRuntimeIds = new Set(runtimeRecoveryChanges.map(change => change.setting.id));
@@ -2218,7 +2441,11 @@ function updateSettingsActions() {{
       const runtimeCount = pendingRuntimeIds.size;
       const runtimeLabel = runtimeCount + ' runtime change' + (runtimeCount === 1 ? '' : 's');
       const configurationLabel = persistenceChanges.length + ' configuration change' + (persistenceChanges.length === 1 ? '' : 's');
-      summary.textContent = runtimeLabel + '; ' + configurationLabel + ' eligible to save.';
+      const restartOnlyDifferenceCount = confirmedDifferences.filter(setting => !setting.runtime_editable).length;
+      const activeDifferenceLabel = restartOnlyDifferenceCount
+        ? '; ' + restartOnlyDifferenceCount + ' restart-only active value' + (restartOnlyDifferenceCount === 1 ? '' : 's') + ' differs from saved configuration'
+        : '';
+      summary.textContent = runtimeLabel + '; ' + configurationLabel + ' eligible to save' + activeDifferenceLabel + '.';
     }}
   }}
 }}
@@ -2254,7 +2481,7 @@ function capturePersistenceOnlyDraftValues() {{
 function acceptSettingsSnapshot(snapshot, preservedDraftValues) {{
   validateSettingsSnapshot(snapshot);
   const confirmed = freezeSettingsSnapshot(cloneSettingsSnapshot(snapshot));
-  const draft = cloneSettingsSnapshot(confirmed);
+  const draft = createSettingsDraftSnapshot(confirmed);
   const confirmedIndex = settingsIndex(confirmed);
   const draftIndex = settingsIndex(draft);
   if (preservedDraftValues instanceof Map) {{
@@ -2294,11 +2521,13 @@ function valueFromSettingsControl(control, setting) {{
 function handleSettingsInput(event) {{
   const control = event.target.closest ? event.target.closest('.settings-input,.settings-checkbox') : null;
   if (!control || settingsPageState.loading || settingsPageState.saving || settingsPageState.persisting ||
-      settingsPageState.resetting || settingsPageState.discarding || settingsPageState.confirmationRequired) return;
+      settingsPageState.resetting || settingsPageState.discarding || settingsPageState.testingConnection ||
+      settingsPageState.confirmationRequired) return;
   const settingId = control.dataset.settingId;
   const setting = settingsPageState.draftSettingsById.get(settingId);
   if (!setting || (!setting.runtime_editable && !setting.persistable)) return;
   setting.value = valueFromSettingsControl(control, setting);
+  if (isConnectionSettingId(settingId)) clearConnectionTestResult();
   if (setting.data_type === 'boolean') {{
     const state = byId(control.id + '-boolean-state');
     if (state) state.textContent = setting.value ? 'Enabled' : 'Disabled';
@@ -2372,23 +2601,137 @@ function settingsErrorMessage(payload, statusCode, action) {{
 function settingIdFromErrorLocation(location) {{
   if (!Array.isArray(location)) return null;
   const parts = location[0] === 'body' ? location.slice(1) : location.slice();
-  if (parts.length !== 2 || parts.some(part => typeof part !== 'string')) return null;
-  const settingId = parts.join('.');
+  if (parts.some(part => typeof part !== 'string')) return null;
+  let settingId = parts.length === 2 ? parts.join('.') : null;
+  if (parts.length === 1 && ['base_url','timeout_seconds'].includes(parts[0])) settingId = 'ollama.' + parts[0];
+  if (!settingId) return null;
   return settingsPageState.draftSettingsById.has(settingId) ? settingId : null;
 }}
-function applySettingsValidationErrors(payload) {{
-  clearSettingsFieldErrors();
+function clearSettingsFieldErrorsFor(settingIds) {{
+  settingIds.forEach(settingId => {{
+    settingsPageState.fieldErrors.delete(settingId);
+    refreshSettingsFieldError(settingId);
+  }});
+}}
+function applySettingsValidationErrors(payload, allowedSettingIds) {{
+  const allowed = Array.isArray(allowedSettingIds) ? new Set(allowedSettingIds) : null;
+  if (allowed) clearSettingsFieldErrorsFor(allowedSettingIds);
+  else clearSettingsFieldErrors();
   if (!payload || !Array.isArray(payload.detail)) return null;
   let firstInvalidControl = null;
   payload.detail.forEach(detail => {{
     if (!detail || typeof detail !== 'object' || typeof detail.msg !== 'string') return;
     const settingId = settingIdFromErrorLocation(detail.loc);
-    if (!settingId) return;
+    if (!settingId || (allowed && !allowed.has(settingId))) return;
     settingsPageState.fieldErrors.set(settingId, detail.msg);
     refreshSettingsFieldError(settingId);
     if (!firstInvalidControl) firstInvalidControl = settingsPageState.controlsById.get(settingId) || null;
   }});
   return firstInvalidControl;
+}}
+function validateConnectionDraft() {{
+  clearSettingsFieldErrorsFor(CONNECTION_SETTING_IDS);
+  let firstInvalidControl = null;
+  CONNECTION_SETTING_IDS.forEach(settingId => {{
+    const setting = settingsPageState.draftSettingsById.get(settingId);
+    const control = settingsPageState.controlsById.get(settingId);
+    let message = setting ? settingsValidationMessage(setting, setting.value) : 'This connection setting is unavailable.';
+    if (!message && control && typeof control.checkValidity === 'function' && !control.checkValidity()) {{
+      message = settingId === CONNECTION_ENDPOINT_SETTING_ID
+        ? 'Enter a valid absolute AI Server Endpoint URL.'
+        : 'Enter a valid Request Timeout.';
+    }}
+    if (!message) return;
+    settingsPageState.fieldErrors.set(settingId, message);
+    refreshSettingsFieldError(settingId);
+    if (!firstInvalidControl) firstInvalidControl = control || null;
+  }});
+  refreshSettingsPageErrorFromFields();
+  return firstInvalidControl;
+}}
+async function testDraftConnection() {{
+  if (settingsPageState.testingConnection || settingsPageState.loading || settingsPageState.saving ||
+      settingsPageState.persisting || settingsPageState.resetting || settingsPageState.discarding ||
+      settingsPageState.confirmationRequired || !settingsPageState.loaded) return;
+  const invalidControl = validateConnectionDraft();
+  if (invalidControl) {{
+    settingsPageState.connectionTestResult = connectionTestFailure(
+      null,
+      'invalid_request',
+      'Connection test could not start because the draft connection values are invalid.'
+    );
+    renderConnectionTestResult();
+    setSettingsStatus('Correct the invalid connection values before testing. No settings were changed.', 'warning');
+    if (settingsPageIsActive()) invalidControl.focus();
+    return;
+  }}
+  let payload;
+  try {{
+    payload = connectionDraftValues();
+  }} catch (error) {{
+    settingsPageState.connectionTestResult = connectionTestFailure(
+      null,
+      'invalid_request',
+      'Connection test could not start because the draft connection values are unavailable.'
+    );
+    renderConnectionTestResult();
+    setSettingsStatus('Connection test could not start. Runtime and saved configuration were not changed.', 'warning');
+    return;
+  }}
+
+  settingsPageState.testingConnection = true;
+  settingsPageState.connectionTestResult = null;
+  clearSettingsPageError();
+  setSettingsStatus('Testing the draft connection once...', '');
+  updateSettingsActions();
+  renderConnectionTestResult();
+  let focusAfterTest = null;
+  try {{
+    const response = await fetch(SETTINGS_CONNECTION_TEST_ENDPOINT, {{
+      method:'POST',
+      headers:{{'Accept':'application/json','Content-Type':'application/json'}},
+      body:JSON.stringify({{
+        base_url:payload.base_url,
+        timeout_seconds:payload.timeout_seconds
+      }})
+    }});
+    const responsePayload = await readSettingsResponse(response);
+    if (!response.ok) {{
+      focusAfterTest = applySettingsValidationErrors(responsePayload, CONNECTION_SETTING_IDS);
+      refreshSettingsPageErrorFromFields();
+    }}
+    try {{
+      settingsPageState.connectionTestResult = validateConnectionTestResponse(responsePayload);
+    }} catch (error) {{
+      settingsPageState.connectionTestResult = connectionTestFailure(
+        payload.base_url,
+        'invalid_response',
+        response.ok
+          ? 'ContextKeeper returned an unsupported connection test response.'
+          : settingsErrorMessage(responsePayload, response.status, 'test the connection')
+      );
+    }}
+    if (!response.ok) {{
+      showSettingsPageError(settingsPageState.connectionTestResult.message, !focusAfterTest);
+      setSettingsStatus('Connection validation failed. Runtime and saved configuration were not changed.', 'warning');
+    }} else if (settingsPageState.connectionTestResult.connected) {{
+      setSettingsStatus('Draft connection test succeeded. No settings were saved or activated.', 'success');
+    }} else {{
+      setSettingsStatus('Draft connection test failed. Runtime and saved configuration were not changed.', 'warning');
+    }}
+  }} catch (error) {{
+    settingsPageState.connectionTestResult = connectionTestFailure(
+      payload.base_url,
+      'dashboard_unreachable',
+      'ContextKeeper could not complete the connection test request. Check the dashboard connection and try again.'
+    );
+    setSettingsStatus('Connection test could not be completed. Runtime and saved configuration were not changed.', 'warning');
+  }} finally {{
+    settingsPageState.testingConnection = false;
+    updateSettingsActions();
+    renderConnectionTestResult();
+    if (focusAfterTest && settingsPageIsActive()) focusAfterTest.focus();
+  }}
 }}
 async function requestSettingsSnapshot() {{
   let response;
@@ -2405,7 +2748,8 @@ async function requestSettingsSnapshot() {{
   return validateSettingsSnapshot(payload);
 }}
 async function loadSettings() {{
-  if (settingsPageState.loading || settingsPageState.saving || settingsPageState.persisting || settingsPageState.resetting || settingsPageState.discarding) return;
+  if (settingsPageState.loading || settingsPageState.saving || settingsPageState.persisting ||
+      settingsPageState.resetting || settingsPageState.discarding || settingsPageState.testingConnection) return;
   settingsPageState.loading = true;
   clearSettingsPageError();
   const form = byId('settingsForm');
@@ -2416,9 +2760,9 @@ async function loadSettings() {{
   try {{
     const snapshot = await requestSettingsSnapshot();
     const hasSettings = acceptSettingsSnapshot(snapshot);
-    const persistedDifferences = changedPersistableSettings().length;
+    const persistedDifferences = settingsDifferentFromPersisted().length;
     if (!hasSettings) setSettingsStatus('No settings are currently available.', 'warning');
-    else if (persistedDifferences) setSettingsStatus('Settings loaded. ' + persistedDifferences + ' runtime value' + (persistedDifferences === 1 ? '' : 's') + ' can be saved to configuration.', 'warning');
+    else if (persistedDifferences) setSettingsStatus('Settings loaded. ' + persistedDifferences + ' active runtime value' + (persistedDifferences === 1 ? '' : 's') + ' differs from saved configuration; a pending restart or higher-priority override may explain the difference.', 'warning');
     else setSettingsStatus('Settings loaded. Runtime and saved configuration values are aligned.', 'success');
   }} catch (error) {{
     settingsPageState.loaded = false;
@@ -2448,7 +2792,7 @@ function ensureSettingsLoaded() {{
 }}
 async function confirmSettingsAfterAcceptedUpdate() {{
   if (!settingsPageState.confirmationRequired || settingsPageState.loading || settingsPageState.saving || settingsPageState.persisting ||
-      settingsPageState.resetting || settingsPageState.discarding) return;
+      settingsPageState.resetting || settingsPageState.discarding || settingsPageState.testingConnection) return;
   const confirmationAction = settingsPageState.confirmationAction;
   const preservedDraftValues = confirmationAction === 'configuration'
     ? captureSettingsDraftValues()
@@ -2469,6 +2813,7 @@ async function confirmSettingsAfterAcceptedUpdate() {{
   updateSettingsActions();
   try {{
     const snapshot = await requestSettingsSnapshot();
+    if (confirmationAction === 'discard') settingsPageState.connectionTestResult = null;
     acceptSettingsSnapshot(snapshot, preservedDraftValues);
     setSettingsStatus(confirmationAction === 'configuration' ? 'Saved configuration confirmed. Your draft is still available.' : 'Current runtime settings confirmed.', 'success');
   }} catch (error) {{
@@ -2485,17 +2830,68 @@ async function confirmSettingsAfterAcceptedUpdate() {{
     updateSettingsActions();
   }}
 }}
+function stageSettingsDraftChanges(changes) {{
+  changes.forEach(change => {{
+    const draftSetting = settingsPageState.draftSettingsById.get(change.setting.id);
+    if (draftSetting) draftSetting.value = change.value;
+  }});
+  settingsPageState.fieldErrors = new Map();
+  if (changes.some(change => isConnectionSettingId(change.setting.id))) settingsPageState.connectionTestResult = null;
+  renderSettingsCategories();
+  clearSettingsPageError();
+  updateSettingsActions();
+}}
+function announceSettingsReset(changes, runtimeResetChanges, selection) {{
+  const scopeLabel = selection.settingId
+    ? selection.label + ' default'
+    : selection.categoryId
+      ? selection.label + ' defaults'
+      : 'Managed settings defaults';
+  const unsavedResetCount = changes.filter(change => {{
+    const confirmed = settingsPageState.confirmedSettingsById.get(change.setting.id);
+    const draft = settingsPageState.draftSettingsById.get(change.setting.id);
+    return confirmed && draft && confirmed.persistable &&
+      !settingsValuesEqual(draft.value, confirmed.persisted_value);
+  }}).length;
+  const configurationOnlyCount = changes.filter(change => !change.setting.runtime_editable).length;
+  const runtimeMessage = runtimeResetChanges.length
+    ? ' ' + runtimeResetChanges.length + ' runtime setting' + (runtimeResetChanges.length === 1 ? '' : 's') + ' applied to the current process.'
+    : ' Runtime was not changed.';
+  const draftOnlyMessage = configurationOnlyCount
+    ? ' ' + configurationOnlyCount + ' restart-only setting' + (configurationOnlyCount === 1 ? '' : 's') + ' staged as a browser draft.'
+    : '';
+  const configurationMessage = unsavedResetCount
+    ? ' Configuration has not been saved. Use Save to configuration for restart persistence.'
+    : ' Configuration was not changed by this reset; persisted values already match. No configuration save is needed.';
+  const restartCount = changes.filter(change => {{
+    const confirmed = settingsPageState.confirmedSettingsById.get(change.setting.id);
+    const draft = settingsPageState.draftSettingsById.get(change.setting.id);
+    return change.setting.restart_required && confirmed && draft &&
+      !settingsValuesEqual(draft.value, confirmed.persisted_value);
+  }}).length;
+  const restartMessage = restartCount
+    ? ' ' + restartCount + ' saved setting' + (restartCount === 1 ? '' : 's') + ' will require a manual restart after saving; higher-priority overrides may still take precedence.'
+    : '';
+  setSettingsStatus(
+    scopeLabel + ' staged for ' + changes.length + ' managed setting' + (changes.length === 1 ? '' : 's') + '.' +
+      runtimeMessage + draftOnlyMessage + configurationMessage + restartMessage,
+    'success'
+  );
+  focusSettingsStatus();
+}}
 async function resetSettingsToDefaults(options) {{
   if (settingsPageState.loading || settingsPageState.saving || settingsPageState.persisting || settingsPageState.resetting ||
-      settingsPageState.discarding || settingsPageState.confirmationRequired || !settingsPageState.loaded) return;
+      settingsPageState.discarding || settingsPageState.testingConnection ||
+      settingsPageState.confirmationRequired || !settingsPageState.loaded) return;
   const selection = options || {{}};
   const resetSelection = {{ ...selection, includeAlreadyDefault:Boolean(selection.confirmation) }};
   const changes = resettableSettings(resetSelection);
   if (!changes.length) {{
-    setSettingsStatus('The selected runtime settings already use their built-in defaults.', 'success');
+    setSettingsStatus('The selected managed settings already use their built-in defaults.', 'success');
     return;
   }}
-  const runtimeResetChanges = changes.filter(change =>
+  const runtimePayloadChanges = changes.filter(change => change.setting.runtime_editable);
+  const runtimeResetChanges = runtimePayloadChanges.filter(change =>
     !settingsValuesEqual(change.setting.value, change.value));
   const resetSettingIds = new Set(changes.map(change => change.setting.id));
   const firstUnrelatedInvalid = firstInvalidSettingsControlOutside(resetSettingIds);
@@ -2507,16 +2903,21 @@ async function resetSettingsToDefaults(options) {{
   }}
   if (selection.confirmation) {{
     const confirmationMessage = selection.categoryId
-      ? 'Reset the ' + selection.label + ' category to built-in defaults? ' + changes.length + ' runtime setting' + (changes.length === 1 ? '' : 's') + ' will be staged. Configuration will not be saved.'
-      : 'Reset all dashboard-managed settings to built-in defaults? ' + changes.length + ' runtime setting' + (changes.length === 1 ? '' : 's') + ' will be staged. Configuration will not be saved.';
+      ? 'Reset the ' + selection.label + ' category to built-in defaults? ' + changes.length + ' managed setting' + (changes.length === 1 ? '' : 's') + ' will be staged. Only runtime-editable settings will be applied now. Configuration will not be saved.'
+      : 'Reset all dashboard-managed settings to built-in defaults? ' + changes.length + ' managed setting' + (changes.length === 1 ? '' : 's') + ' will be staged. Only runtime-editable settings will be applied now. Configuration will not be saved.';
     if (!window.confirm(confirmationMessage)) {{
       setSettingsStatus('Reset was cancelled. No settings were changed.', '');
       return;
     }}
   }}
+  if (!runtimePayloadChanges.length) {{
+    stageSettingsDraftChanges(changes);
+    announceSettingsReset(changes, runtimeResetChanges, selection);
+    return;
+  }}
   let payload;
   try {{
-    payload = buildSettingsPayload(changes);
+    payload = buildSettingsPayload(runtimePayloadChanges);
   }} catch (error) {{
     showSettingsPageError('The reset could not be prepared safely. Reload the page and try again.', true);
     setSettingsStatus('Defaults were not staged. No settings were changed.', 'warning');
@@ -2524,10 +2925,11 @@ async function resetSettingsToDefaults(options) {{
   }}
 
   const preservedDraftValues = captureSettingsDraftValuesExcept(resetSettingIds);
+  changes.forEach(change => preservedDraftValues.set(change.setting.id, change.value));
   settingsPageState.resetting = true;
   clearSettingsPageError();
   clearSettingsFieldErrors();
-  setSettingsStatus('Staging built-in defaults for the current runtime...', '');
+  setSettingsStatus('Applying runtime-editable defaults and staging restart-only drafts...', '');
   updateSettingsActions();
   let patchAccepted = false;
   let focusAfterReset = null;
@@ -2549,36 +2951,19 @@ async function resetSettingsToDefaults(options) {{
       return;
     }}
     patchAccepted = true;
+    if (changes.some(change => isConnectionSettingId(change.setting.id))) settingsPageState.connectionTestResult = null;
     const snapshot = await authoritativeSettingsSnapshot(responsePayload);
     acceptSettingsSnapshot(snapshot, preservedDraftValues);
-    const scopeLabel = selection.settingId
-      ? selection.label + ' default'
-      : selection.categoryId
-        ? selection.label + ' defaults'
-        : 'Managed settings defaults';
-    const unsavedResetCount = changes.filter(change => {{
-      const confirmed = settingsPageState.confirmedSettingsById.get(change.setting.id);
-      return confirmed && confirmed.persistable && !settingsValuesEqual(confirmed.value, confirmed.persisted_value);
-    }}).length;
-    const configurationMessage = unsavedResetCount
-      ? ' Configuration has not been saved. Use Save to configuration for restart persistence.'
-      : ' Configuration was not changed by this reset; persisted values already match. No configuration save is needed.';
-    const restartCount = runtimeResetChanges.filter(change => change.setting.restart_required).length;
-    const restartMessage = restartCount
-      ? ' ' + restartCount + ' restart-required setting' + (restartCount === 1 ? '' : 's') +
-        (unsavedResetCount ? ' will still require a manual restart after saving.' : ' may still require a manual restart.')
-      : '';
-    setSettingsStatus(scopeLabel + ' staged for ' + changes.length + ' setting' + (changes.length === 1 ? '' : 's') + '.' + configurationMessage + restartMessage, 'success');
-    focusSettingsStatus();
+    announceSettingsReset(changes, runtimeResetChanges, selection);
     requestDashboardRefresh();
   }} catch (error) {{
     if (patchAccepted) {{
       settingsPageState.confirmationRequired = true;
       settingsPageState.confirmationAction = 'reset';
       settingsPageState.confirmationPreservedDraftValues = preservedDraftValues;
-      showSettingsLoadState('Confirm staged defaults', 'ContextKeeper accepted the reset, but the current runtime values could not be confirmed. Retry before making another change.', true);
-      showSettingsPageError('ContextKeeper accepted the reset, but the current runtime values could not be confirmed. Editing and Save actions are paused.', false);
-      setSettingsStatus('The accepted reset requires confirmation.', 'warning');
+      showSettingsLoadState('Confirm staged defaults', 'ContextKeeper accepted the runtime reset, but the current runtime values could not be confirmed. Retry before making another change.', true);
+      showSettingsPageError('ContextKeeper accepted the runtime reset, but the current values could not be confirmed. Editing and Save actions are paused.', false);
+      setSettingsStatus('The accepted runtime reset requires confirmation.', 'warning');
     }} else {{
       showSettingsPageError('ContextKeeper could not confirm whether defaults were staged. No configuration was saved; check the connection and retry.', false);
       setSettingsStatus('Reset could not be confirmed. Configuration was not saved.', 'warning');
@@ -2591,20 +2976,22 @@ async function resetSettingsToDefaults(options) {{
 }}
 function restoreSettingsDraft() {{
   if (!settingsPageState.confirmedSnapshot) return;
-  settingsPageState.draftSnapshot = cloneSettingsSnapshot(settingsPageState.confirmedSnapshot);
+  settingsPageState.draftSnapshot = createSettingsDraftSnapshot(settingsPageState.confirmedSnapshot);
   settingsPageState.draftSettingsById = settingsIndex(settingsPageState.draftSnapshot);
   settingsPageState.fieldErrors = new Map();
+  settingsPageState.connectionTestResult = null;
   renderSettingsCategories();
   clearSettingsPageError();
   updateSettingsActions();
 }}
 async function discardSettingsDraft() {{
   if (settingsPageState.loading || settingsPageState.saving || settingsPageState.persisting || settingsPageState.resetting ||
-      settingsPageState.discarding || settingsPageState.confirmationRequired || !settingsPageState.confirmedSnapshot) return;
+      settingsPageState.discarding || settingsPageState.testingConnection ||
+      settingsPageState.confirmationRequired || !settingsPageState.confirmedSnapshot) return;
   const draftChanges = changedDraftSettings();
   const runtimeChanges = runtimeSettingsDifferentFromPersisted();
   if (!draftChanges.length && !runtimeChanges.length) {{
-    setSettingsStatus('No runtime changes to discard.', '');
+    setSettingsStatus('No draft or runtime changes to discard.', '');
     return;
   }}
   if (!runtimeChanges.length) {{
@@ -2647,6 +3034,7 @@ async function discardSettingsDraft() {{
     }}
     patchAccepted = true;
     const snapshot = await authoritativeSettingsSnapshot(responsePayload);
+    settingsPageState.connectionTestResult = null;
     acceptSettingsSnapshot(snapshot);
     const remainingRuntimeDifferences = runtimeSettingsDifferentFromPersisted();
     requestDashboardRefresh();
@@ -2697,14 +3085,15 @@ async function authoritativePersistenceResult(responsePayload) {{
 }}
 async function saveSettings() {{
   if (settingsPageState.saving || settingsPageState.persisting || settingsPageState.loading || settingsPageState.resetting ||
-      settingsPageState.discarding || settingsPageState.confirmationRequired || !settingsPageState.loaded) return;
+      settingsPageState.discarding || settingsPageState.testingConnection ||
+      settingsPageState.confirmationRequired || !settingsPageState.loaded) return;
   const changes = changedRuntimeSettings();
   if (!changes.length) {{
     setSettingsStatus('No changes to save.', '');
     return;
   }}
   if (!settingsDraftIsValid()) {{
-    const firstInvalid = Array.from(settingsPageState.controlsById.values()).find(control => !control.checkValidity());
+    const firstInvalid = firstInvalidSettingsControlOutside(new Set());
     showSettingsPageError('Correct the invalid setting values before saving.', false);
     setSettingsStatus('Settings were not saved.', 'warning');
     if (firstInvalid) firstInvalid.focus();
@@ -2766,14 +3155,15 @@ async function saveSettings() {{
 }}
 async function persistSettings() {{
   if (settingsPageState.persisting || settingsPageState.saving || settingsPageState.loading || settingsPageState.resetting ||
-      settingsPageState.discarding || settingsPageState.confirmationRequired || !settingsPageState.loaded) return;
+      settingsPageState.discarding || settingsPageState.testingConnection ||
+      settingsPageState.confirmationRequired || !settingsPageState.loaded) return;
   const changes = changedPersistableSettings();
   if (!changes.length) {{
     setSettingsStatus('No configuration changes to save.', '');
     return;
   }}
   if (!settingsDraftIsValid()) {{
-    const firstInvalid = Array.from(settingsPageState.controlsById.values()).find(control => !control.checkValidity());
+    const firstInvalid = firstInvalidSettingsControlOutside(new Set());
     showSettingsPageError('Correct the invalid setting values before saving to configuration.', false);
     setSettingsStatus('Configuration was not saved.', 'warning');
     if (firstInvalid) firstInvalid.focus();
@@ -2813,6 +3203,12 @@ async function persistSettings() {{
     }}
     persistenceAccepted = true;
     const result = await authoritativePersistenceResult(responsePayload);
+    const authoritativeSettings = settingsIndex(result.settings);
+    changes.forEach(change => {{
+      const authoritative = authoritativeSettings.get(change.setting.id);
+      if (authoritative) preservedDraftValues.set(change.setting.id, authoritative.persisted_value);
+    }});
+    if (changes.some(change => isConnectionSettingId(change.setting.id))) settingsPageState.connectionTestResult = null;
     acceptSettingsSnapshot(result.settings, preservedDraftValues);
     const savedCount = result.persisted_setting_ids.length || changes.length;
     const createdMessage = result.configuration_created ? ' A new configuration file was created.' : '';
@@ -2823,7 +3219,7 @@ async function persistSettings() {{
       : savedCount + ' setting' + (savedCount === 1 ? '' : 's') + ' saved to configuration.';
     const restartCount = changes.filter(change => change.setting.restart_required).length;
     const restartMessage = restartCount
-      ? ' ' + restartCount + ' saved setting' + (restartCount === 1 ? '' : 's') + ' still requires a manual ContextKeeper restart.'
+      ? ' ' + restartCount + ' saved setting' + (restartCount === 1 ? '' : 's') + ' requires a manual ContextKeeper restart before the saved value can become active; higher-priority overrides may still take precedence.'
       : '';
     setSettingsStatus(savedMessage + ' Runtime values were not changed.' + restartMessage + createdMessage, 'success');
   }} catch (error) {{

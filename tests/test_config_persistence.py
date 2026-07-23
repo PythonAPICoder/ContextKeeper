@@ -12,6 +12,7 @@ from typing import Any
 import pytest
 import yaml
 
+from ctxkeeper.config import load_config
 from ctxkeeper.dashboard import config_persistence, settings_snapshot
 from ctxkeeper.dashboard.config_persistence import (
     ConfigurationPersistenceError,
@@ -81,6 +82,105 @@ def test_persist_multiple_settings_in_one_category(tmp_path: Path) -> None:
     assert data["context"]["enabled"] is False
     assert data["context"]["keep_recent_messages"] == 14
     assert data["context"]["warning_threshold_percent"] == 60
+
+
+def test_persist_one_connection_endpoint_normalizes_only_requested_value(
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / "contextkeeper.yaml"
+    _write_yaml(
+        config_path,
+        {
+            "ollama": {
+                "base_url": "http://old-ollama.internal:11434",
+                "timeout_seconds": 240,
+                "future_connection_option": "preserve",
+            },
+            "server": {"host": "127.0.0.1", "port": 11600},
+            "custom_future_category": {"preserve": True},
+        },
+    )
+
+    result = ConfigurationPersistenceService(config_path).persist(
+        {"ollama": {"base_url": "https://new-ollama.internal/ollama///"}}
+    )
+
+    assert result.persisted_setting_ids == ("ollama.base_url",)
+    assert (
+        result.persisted_settings.ollama.base_url
+        == "https://new-ollama.internal/ollama"
+    )
+    data = _read_yaml(config_path)
+    assert data["ollama"] == {
+        "base_url": "https://new-ollama.internal/ollama",
+        "timeout_seconds": 240,
+        "future_connection_option": "preserve",
+    }
+    assert data["server"] == {"host": "127.0.0.1", "port": 11600}
+    assert data["custom_future_category"] == {"preserve": True}
+
+
+def test_persist_both_connection_settings_and_reload_uses_saved_values(
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / "contextkeeper.yaml"
+    _write_yaml(
+        config_path,
+        {
+            "ollama": {
+                "base_url": "http://old-ollama.internal:11434",
+                "timeout_seconds": 120,
+            }
+        },
+    )
+
+    result = ConfigurationPersistenceService(config_path).persist(
+        {
+            "ollama": {
+                "base_url": "http://192.168.1.50:11434/",
+                "timeout_seconds": 30,
+            }
+        }
+    )
+
+    assert result.persisted_setting_ids == (
+        "ollama.base_url",
+        "ollama.timeout_seconds",
+    )
+    assert _read_yaml(config_path)["ollama"] == {
+        "base_url": "http://192.168.1.50:11434",
+        "timeout_seconds": 30,
+    }
+    restarted = load_config(config_path)
+    assert restarted.ollama.base_url == "http://192.168.1.50:11434"
+    assert restarted.ollama.timeout_seconds == 30
+
+
+def test_persist_connection_timeout_updates_only_timeout(tmp_path: Path) -> None:
+    config_path = tmp_path / "contextkeeper.yaml"
+    _write_yaml(
+        config_path,
+        {
+            "ollama": {
+                "base_url": "http://ollama.internal:11434",
+                "timeout_seconds": 120,
+            },
+            "logging": {"level": "DEBUG"},
+        },
+    )
+
+    result = ConfigurationPersistenceService(config_path).persist(
+        {"ollama": {"timeout_seconds": 45}}
+    )
+
+    assert result.persisted_setting_ids == ("ollama.timeout_seconds",)
+    assert _read_yaml(config_path) == {
+        "ollama": {
+            "base_url": "http://ollama.internal:11434",
+            "timeout_seconds": 45,
+        },
+        "logging": {"level": "DEBUG"},
+    }
 
 
 def test_persist_settings_across_multiple_categories(tmp_path: Path) -> None:
@@ -167,6 +267,148 @@ def test_persistence_rejects_unknown_or_unexposed_fields(
     assert caught.value.status_code == 422
     assert config_path.read_bytes() == original
     assert _temporary_candidates(config_path) == []
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"ollama": {"base_url": ""}},
+        {"ollama": {"base_url": "ollama.internal:11434"}},
+        {"ollama": {"base_url": "ftp://ollama.internal:11434"}},
+        {"ollama": {"base_url": "http://user:secret@ollama.internal:11434"}},
+        {"ollama": {"base_url": "http://ollama.internal:99999"}},
+        {"ollama": {"base_url": "http://ollama.internal:11434?query=yes"}},
+        {"ollama": {"base_url": "http://ollama.internal:11434#fragment"}},
+        {"ollama": {"timeout_seconds": 0}},
+        {"ollama": {"timeout_seconds": -1}},
+        {"ollama": {"timeout_seconds": True}},
+        {"ollama": {"timeout_seconds": 30.0}},
+        {"ollama": {"timeout_seconds": "30"}},
+    ],
+)
+def test_persistence_rejects_invalid_connection_candidate_without_writing(
+    tmp_path: Path,
+    payload: object,
+) -> None:
+    config_path = tmp_path / "contextkeeper.yaml"
+    original = _write_yaml(
+        config_path,
+        {
+            "server": {"host": "0.0.0.0", "port": 11500},
+            "ollama": {
+                "base_url": "http://ollama.internal:11434",
+                "timeout_seconds": 120,
+            },
+            "custom_future_category": {"preserve": True},
+        },
+    )
+
+    with pytest.raises(ConfigurationPersistenceError) as caught:
+        ConfigurationPersistenceService(config_path).persist(payload)
+
+    assert caught.value.status_code == 422
+    assert caught.value.code == "validation_failed"
+    assert config_path.read_bytes() == original
+    assert _temporary_candidates(config_path) == []
+
+
+def test_persistence_rejects_obvious_connection_self_loop_without_writing(
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / "contextkeeper.yaml"
+    original = _write_yaml(
+        config_path,
+        {
+            "server": {"host": "0.0.0.0", "port": 11500},
+            "ollama": {
+                "base_url": "http://ollama.internal:11434",
+                "timeout_seconds": 120,
+            },
+        },
+    )
+
+    with pytest.raises(ConfigurationPersistenceError) as caught:
+        ConfigurationPersistenceService(config_path).persist(
+            {"ollama": {"base_url": "http://localhost:11500"}}
+        )
+
+    assert caught.value.status_code == 422
+    assert caught.value.code == "validation_failed"
+    assert config_path.read_bytes() == original
+    assert _temporary_candidates(config_path) == []
+
+
+def test_persistence_uses_active_listener_for_self_loop_validation(
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / "contextkeeper.yaml"
+    original = _write_yaml(
+        config_path,
+        {
+            "server": {"host": "127.0.0.1", "port": 11500},
+            "ollama": {
+                "base_url": "http://ollama.internal:11434",
+                "timeout_seconds": 120,
+            },
+        },
+    )
+    service = ConfigurationPersistenceService(
+        config_path,
+        listener_host="0.0.0.0",
+        listener_port=11600,
+    )
+
+    with pytest.raises(ConfigurationPersistenceError) as caught:
+        service.persist({"ollama": {"base_url": "http://localhost:11600"}})
+
+    assert caught.value.status_code == 422
+    assert caught.value.code == "validation_failed"
+    assert config_path.read_bytes() == original
+
+
+def test_persistence_rejects_ipv4_mapped_ipv6_active_listener_loop(
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / "contextkeeper.yaml"
+    original = _write_yaml(
+        config_path,
+        {
+            "server": {"host": "127.0.0.1", "port": 11600},
+            "ollama": {"base_url": "http://active-ollama.internal:11434"},
+        },
+    )
+    service = ConfigurationPersistenceService(
+        config_path,
+        listener_host="0.0.0.0",
+        listener_port=11500,
+    )
+
+    with pytest.raises(ConfigurationPersistenceError) as exc_info:
+        service.persist(
+            {
+                "ollama": {
+                    "base_url": "http://[::ffff:127.0.0.1]:11500/api",
+                }
+            }
+        )
+
+    assert exc_info.value.status_code == 422
+    assert exc_info.value.code == "validation_failed"
+    assert config_path.read_bytes() == original
+    assert _temporary_candidates(config_path) == []
+
+
+def test_persistence_rejects_unapproved_ollama_fields(tmp_path: Path) -> None:
+    config_path = tmp_path / "contextkeeper.yaml"
+    original = _write_yaml(config_path, {})
+
+    with pytest.raises(ConfigurationPersistenceError) as caught:
+        ConfigurationPersistenceService(config_path).persist(
+            {"ollama": {"retry_count": 3}}
+        )
+
+    assert caught.value.status_code == 422
+    assert config_path.read_bytes() == original
 
 
 def test_persistence_rejects_authoritative_non_persistable_setting(

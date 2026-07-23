@@ -14,7 +14,11 @@ from pydantic import (
     field_validator,
 )
 
-from ..config import Settings
+from ..config import (
+    Settings,
+    normalize_ollama_base_url,
+    validate_ollama_timeout_seconds,
+)
 
 SettingDataType = Literal["boolean", "integer", "string"]
 SettingValue = bool | int | str
@@ -40,8 +44,8 @@ class DashboardSettingsValidationError(ValueError):
         self.detail = detail
 
 
-class _RuntimeSettingsUpdateModel(BaseModel):
-    """Strict base model for partial runtime settings updates."""
+class _StrictSettingsUpdateModel(BaseModel):
+    """Strict base model for partial dashboard settings updates."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -49,49 +53,8 @@ class _RuntimeSettingsUpdateModel(BaseModel):
     @classmethod
     def _reject_null_values(cls, value: object) -> object:
         if value is None:
-            raise ValueError("Runtime settings values may not be null.")
+            raise ValueError("Settings values may not be null.")
         return value
-
-
-class RuntimeContextSettingsUpdate(_RuntimeSettingsUpdateModel):
-    """Partial update payload for context runtime settings."""
-
-    enabled: StrictBool | None = None
-    warning_threshold_percent: StrictInt | None = None
-    compression_threshold_percent: StrictInt | None = None
-    keep_recent_messages: StrictInt | None = None
-
-
-class RuntimeCompressionSettingsUpdate(_RuntimeSettingsUpdateModel):
-    """Partial update payload for compression runtime settings."""
-
-    enabled: StrictBool | None = None
-    summarizer_model: StrictStr | None = None
-    max_summary_tokens: StrictInt | None = None
-
-    @field_validator("summarizer_model")
-    @classmethod
-    def _validate_summarizer_model(cls, value: str | None) -> str | None:
-        if value is None:
-            return value
-        normalized = value.strip()
-        if not normalized:
-            raise ValueError("compression.summarizer_model must not be blank.")
-        return normalized
-
-
-class RuntimeDashboardSettingsUpdate(_RuntimeSettingsUpdateModel):
-    """Partial update payload for dashboard runtime settings."""
-
-    refresh_interval_ms: StrictInt | None = None
-
-
-class RuntimeSettingsUpdate(_RuntimeSettingsUpdateModel):
-    """Partial update payload for all runtime-editable dashboard settings."""
-
-    context: RuntimeContextSettingsUpdate | None = None
-    compression: RuntimeCompressionSettingsUpdate | None = None
-    dashboard: RuntimeDashboardSettingsUpdate | None = None
 
     def update_values(self) -> dict[str, dict[str, SettingValue]]:
         """Return explicitly supplied setting values, omitting empty sections."""
@@ -111,9 +74,76 @@ class RuntimeSettingsUpdate(_RuntimeSettingsUpdateModel):
         return updates
 
 
+class RuntimeContextSettingsUpdate(_StrictSettingsUpdateModel):
+    """Partial update payload for context runtime settings."""
+
+    enabled: StrictBool | None = None
+    warning_threshold_percent: StrictInt | None = None
+    compression_threshold_percent: StrictInt | None = None
+    keep_recent_messages: StrictInt | None = None
+
+
+class RuntimeCompressionSettingsUpdate(_StrictSettingsUpdateModel):
+    """Partial update payload for compression runtime settings."""
+
+    enabled: StrictBool | None = None
+    summarizer_model: StrictStr | None = None
+    max_summary_tokens: StrictInt | None = None
+
+    @field_validator("summarizer_model")
+    @classmethod
+    def _validate_summarizer_model(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("compression.summarizer_model must not be blank.")
+        return normalized
+
+
+class RuntimeDashboardSettingsUpdate(_StrictSettingsUpdateModel):
+    """Partial update payload for dashboard runtime settings."""
+
+    refresh_interval_ms: StrictInt | None = None
+
+
+class RuntimeSettingsUpdate(_StrictSettingsUpdateModel):
+    """Partial update payload for all runtime-editable dashboard settings."""
+
+    context: RuntimeContextSettingsUpdate | None = None
+    compression: RuntimeCompressionSettingsUpdate | None = None
+    dashboard: RuntimeDashboardSettingsUpdate | None = None
+
+
+class PersistedOllamaSettingsUpdate(_StrictSettingsUpdateModel):
+    """Partial persisted-only update payload for Ollama connection settings."""
+
+    base_url: StrictStr | None = None
+    timeout_seconds: StrictInt | None = None
+
+    @field_validator("base_url")
+    @classmethod
+    def _validate_base_url(cls, value: str | None) -> str | None:
+        return None if value is None else normalize_ollama_base_url(value)
+
+    @field_validator("timeout_seconds")
+    @classmethod
+    def _validate_timeout_seconds(cls, value: int | None) -> int | None:
+        return None if value is None else validate_ollama_timeout_seconds(value)
+
+
+class PersistedSettingsUpdate(_StrictSettingsUpdateModel):
+    """Partial update payload for all dashboard-persistable settings."""
+
+    context: RuntimeContextSettingsUpdate | None = None
+    compression: RuntimeCompressionSettingsUpdate | None = None
+    dashboard: RuntimeDashboardSettingsUpdate | None = None
+    ollama: PersistedOllamaSettingsUpdate | None = None
+
+
 @dataclass(frozen=True)
 class DashboardSetting:
-    """One runtime setting exposed to dashboard consumers."""
+    """One approved setting exposed to dashboard consumers."""
 
     id: str
     category: str
@@ -148,7 +178,7 @@ class DashboardSetting:
             "runtime_editable": self.runtime_editable,
             "persistable": self.persistable,
             "restart_required": self.restart_required,
-            "reset_eligible": self.reset_eligible and self.runtime_editable,
+            "reset_eligible": self.reset_eligible,
             "data_type": self.data_type,
         }
 
@@ -203,6 +233,42 @@ def build_dashboard_settings_snapshot(
         return DashboardSettingsSnapshot(
             schema_version=2,
             categories=[
+                DashboardSettingsCategory(
+                    id="ollama",
+                    display_name="Connection",
+                    description="Configures the Ollama backend used after the next ContextKeeper restart.",
+                    settings=[
+                        DashboardSetting(
+                            id="ollama.base_url",
+                            category="ollama",
+                            display_name="AI Server Endpoint",
+                            description="Complete HTTP or HTTPS URL for the single Ollama backend.",
+                            value=settings.ollama.base_url,
+                            persisted_value=persisted.ollama.base_url,
+                            default_value=defaults.ollama.base_url,
+                            data_type="string",
+                            runtime_editable=False,
+                            persistable=True,
+                            restart_required=True,
+                            reset_eligible=True,
+                        ),
+                        DashboardSetting(
+                            id="ollama.timeout_seconds",
+                            category="ollama",
+                            display_name="Request Timeout",
+                            description="Maximum request duration in seconds for Ollama operations.",
+                            value=settings.ollama.timeout_seconds,
+                            persisted_value=persisted.ollama.timeout_seconds,
+                            default_value=defaults.ollama.timeout_seconds,
+                            data_type="integer",
+                            minimum=1,
+                            runtime_editable=False,
+                            persistable=True,
+                            restart_required=True,
+                            reset_eligible=True,
+                        ),
+                    ],
+                ),
                 DashboardSettingsCategory(
                     id="context",
                     display_name="Context",

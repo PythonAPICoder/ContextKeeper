@@ -57,6 +57,7 @@ def _default_reset_payload(
     *,
     category_id: str | None = None,
     setting_id: str | None = None,
+    runtime_only: bool = False,
 ) -> dict[str, dict[str, object]]:
     payload: dict[str, dict[str, object]] = {}
     for category in snapshot["categories"]:
@@ -67,13 +68,13 @@ def _default_reset_payload(
             assert isinstance(setting, dict)
             if not setting["reset_eligible"]:
                 continue
+            if runtime_only and not setting["runtime_editable"]:
+                continue
             if setting_id is not None and setting["id"] != setting_id:
                 continue
-            prefix = f"{category['id']}."
-            assert str(setting["id"]).startswith(prefix)
-            field_name = str(setting["id"])[len(prefix) :]
-            assert field_name and "." not in field_name
-            payload.setdefault(str(category["id"]), {})[field_name] = setting[
+            payload_category, field_name = str(setting["id"]).split(".", maxsplit=1)
+            assert payload_category and field_name and "." not in field_name
+            payload.setdefault(payload_category, {})[field_name] = setting[
                 "default_value"
             ]
     return payload
@@ -100,8 +101,19 @@ def test_dashboard_settings_snapshot_schema_and_categories() -> None:
     assert snapshot["schema_version"] == 2
     categories = snapshot["categories"]
     assert isinstance(categories, list)
-    assert [category["id"] for category in categories] == ["context", "compression", "dashboard"]
-    assert [category["display_name"] for category in categories] == ["Context", "Compression", "Dashboard"]
+    assert [category["id"] for category in categories] == [
+        "ollama",
+        "context",
+        "compression",
+        "dashboard",
+    ]
+    assert [category["display_name"] for category in categories] == [
+        "Connection",
+        "Context",
+        "Compression",
+        "Dashboard",
+    ]
+    assert [category["display_name"] for category in categories].count("Connection") == 1
 
     for category in categories:
         assert set(category) == {"id", "display_name", "description", "settings"}
@@ -110,17 +122,25 @@ def test_dashboard_settings_snapshot_schema_and_categories() -> None:
         for setting in category["settings"]:
             assert set(setting) == SETTING_KEYS
             assert setting["category"] == category["id"]
-            assert setting["runtime_editable"] is True
             assert setting["persistable"] is True
-            assert setting["restart_required"] is False
             assert setting["reset_eligible"] is True
             assert setting["persisted_value"] == setting["value"]
             assert setting["differs_from_persisted"] is False
             assert setting["data_type"] in {"boolean", "integer", "string"}
+            if category["id"] == "ollama":
+                assert setting["runtime_editable"] is False
+                assert setting["restart_required"] is True
+            else:
+                assert setting["runtime_editable"] is True
+                assert setting["restart_required"] is False
 
 
 def test_dashboard_settings_snapshot_values_defaults_and_validation_metadata() -> None:
     settings = Settings(
+        ollama={
+            "base_url": "https://ollama.example.internal/ollama",
+            "timeout_seconds": 45,
+        },
         context={
             "enabled": False,
             "warning_threshold_percent": 60,
@@ -137,6 +157,29 @@ def test_dashboard_settings_snapshot_values_defaults_and_validation_metadata() -
 
     snapshot = build_dashboard_settings_snapshot(settings).to_dict()
     by_id = _settings_by_id(snapshot)
+
+    assert (
+        by_id["ollama.base_url"]["value"]
+        == "https://ollama.example.internal/ollama"
+    )
+    assert by_id["ollama.base_url"]["default_value"] == "http://localhost:11434"
+    assert by_id["ollama.base_url"]["data_type"] == "string"
+    assert by_id["ollama.base_url"]["minimum"] is None
+    assert by_id["ollama.base_url"]["maximum"] is None
+    assert by_id["ollama.base_url"]["runtime_editable"] is False
+    assert by_id["ollama.base_url"]["persistable"] is True
+    assert by_id["ollama.base_url"]["restart_required"] is True
+    assert by_id["ollama.base_url"]["reset_eligible"] is True
+
+    assert by_id["ollama.timeout_seconds"]["value"] == 45
+    assert by_id["ollama.timeout_seconds"]["default_value"] == 120
+    assert by_id["ollama.timeout_seconds"]["data_type"] == "integer"
+    assert by_id["ollama.timeout_seconds"]["minimum"] == 1
+    assert by_id["ollama.timeout_seconds"]["maximum"] is None
+    assert by_id["ollama.timeout_seconds"]["runtime_editable"] is False
+    assert by_id["ollama.timeout_seconds"]["persistable"] is True
+    assert by_id["ollama.timeout_seconds"]["restart_required"] is True
+    assert by_id["ollama.timeout_seconds"]["reset_eligible"] is True
 
     assert by_id["context.enabled"]["value"] is False
     assert by_id["context.enabled"]["default_value"] is True
@@ -173,10 +216,18 @@ def test_dashboard_settings_snapshot_values_defaults_and_validation_metadata() -
 
 def test_dashboard_settings_snapshot_distinguishes_runtime_and_persisted_values() -> None:
     runtime = Settings(
+        ollama={
+            "base_url": "http://runtime-ollama.internal:11434",
+            "timeout_seconds": 120,
+        },
         context={"warning_threshold_percent": 60, "compression_threshold_percent": 90},
         compression={"enabled": False},
     )
     persisted = Settings(
+        ollama={
+            "base_url": "http://saved-ollama.internal:11434",
+            "timeout_seconds": 45,
+        },
         context={"warning_threshold_percent": 70, "compression_threshold_percent": 90},
         compression={"enabled": True},
     )
@@ -195,6 +246,16 @@ def test_dashboard_settings_snapshot_distinguishes_runtime_and_persisted_values(
     assert compression["persisted_value"] is True
     assert compression["differs_from_persisted"] is True
     assert by_id["dashboard.refresh_interval_ms"]["differs_from_persisted"] is False
+    endpoint = by_id["ollama.base_url"]
+    assert endpoint["value"] == "http://runtime-ollama.internal:11434"
+    assert endpoint["persisted_value"] == "http://saved-ollama.internal:11434"
+    assert endpoint["default_value"] == "http://localhost:11434"
+    assert endpoint["differs_from_persisted"] is True
+    timeout = by_id["ollama.timeout_seconds"]
+    assert timeout["value"] == 120
+    assert timeout["persisted_value"] == 45
+    assert timeout["default_value"] == 120
+    assert timeout["differs_from_persisted"] is True
 
 
 def test_dashboard_setting_supports_restart_required_persisted_runtime_divergence() -> None:
@@ -221,7 +282,7 @@ def test_dashboard_setting_supports_restart_required_persisted_runtime_divergenc
     assert data["runtime_editable"] is False
     assert data["persistable"] is True
     assert data["restart_required"] is True
-    assert data["reset_eligible"] is False
+    assert data["reset_eligible"] is True
 
 
 @pytest.mark.parametrize(
@@ -229,11 +290,11 @@ def test_dashboard_setting_supports_restart_required_persisted_runtime_divergenc
     [
         (True, True, True),
         (True, False, False),
-        (False, True, False),
+        (False, True, True),
         (False, False, False),
     ],
 )
-def test_dashboard_setting_reset_eligibility_requires_explicit_runtime_editability(
+def test_dashboard_setting_reset_eligibility_is_independent_of_runtime_editability(
     runtime_editable: bool,
     reset_eligible: bool,
     expected: bool,
@@ -269,6 +330,8 @@ def test_dashboard_settings_snapshot_exposes_only_approved_settings() -> None:
     by_id = _settings_by_id(snapshot)
 
     assert set(by_id) == {
+        "ollama.base_url",
+        "ollama.timeout_seconds",
         "context.enabled",
         "context.warning_threshold_percent",
         "context.compression_threshold_percent",
@@ -280,7 +343,7 @@ def test_dashboard_settings_snapshot_exposes_only_approved_settings() -> None:
     }
     assert "HiddenAppName" not in serialized
     assert "secret-host.local" not in serialized
-    assert "secret-ollama.local" not in serialized
+    assert by_id["ollama.base_url"]["value"] == "http://secret-ollama.local:11434"
     assert "secret-contextkeeper.log" not in serialized
     assert "secret-model" not in serialized
     assert "CONTEXTKEEPER_" not in serialized
@@ -300,7 +363,12 @@ def test_dashboard_settings_api_endpoint_returns_snapshot() -> None:
     assert response.status_code == 200
     data = response.json()
     assert data["schema_version"] == 2
-    assert [category["id"] for category in data["categories"]] == ["context", "compression", "dashboard"]
+    assert [category["id"] for category in data["categories"]] == [
+        "ollama",
+        "context",
+        "compression",
+        "dashboard",
+    ]
     by_id = _settings_by_id(data)
     assert by_id["context.warning_threshold_percent"]["value"] == 50
     assert by_id["context.warning_threshold_percent"]["default_value"] == 75
@@ -355,7 +423,12 @@ def test_dashboard_settings_patch_multi_field_update_returns_full_snapshot() -> 
     assert response.status_code == 200
     data = response.json()
     assert set(data) == {"schema_version", "categories"}
-    assert [category["id"] for category in data["categories"]] == ["context", "compression", "dashboard"]
+    assert [category["id"] for category in data["categories"]] == [
+        "ollama",
+        "context",
+        "compression",
+        "dashboard",
+    ]
     assert _setting_value(data, "context.enabled") is False
     assert _setting_value(data, "context.warning_threshold_percent") == 60
     assert _setting_value(data, "context.compression_threshold_percent") == 90
@@ -507,9 +580,22 @@ def test_dashboard_settings_patch_rejects_unknown_fields() -> None:
 
     top_level = client.patch("/api/dashboard/settings", json={"server": {"port": 1234}})
     nested = client.patch("/api/dashboard/settings", json={"context": {"unknown": 1}})
+    connection = client.patch(
+        "/api/dashboard/settings",
+        json={
+            "ollama": {
+                "base_url": "http://candidate-ollama.internal:11434",
+                "timeout_seconds": 30,
+            }
+        },
+    )
 
     assert top_level.status_code == 422
     assert nested.status_code == 422
+    assert connection.status_code == 422
+    snapshot = client.get("/api/dashboard/settings").json()
+    assert _setting_value(snapshot, "ollama.base_url") == "http://localhost:11434"
+    assert _setting_value(snapshot, "ollama.timeout_seconds") == 120
 
 
 def test_dashboard_settings_patch_rejects_read_only_or_unexposed_fields() -> None:
@@ -694,6 +780,117 @@ def test_dashboard_settings_config_put_does_not_mutate_runtime_state(tmp_path: P
     assert _setting_value(response.json()["settings"], "context.enabled") is True
     persisted = yaml.safe_load(config_path.read_text(encoding="utf-8"))
     assert persisted["context"]["enabled"] is False
+
+
+def test_dashboard_settings_config_put_persists_connection_without_activation(
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / "contextkeeper.yaml"
+    _write_config(
+        config_path,
+        {
+            "ollama": {
+                "base_url": "http://runtime-ollama.internal:11434",
+                "timeout_seconds": 120,
+            },
+            "custom_future_category": {"preserve": True},
+        },
+    )
+    runtime = Settings(
+        ollama={
+            "base_url": "http://runtime-ollama.internal:11434",
+            "timeout_seconds": 120,
+        }
+    )
+    app = create_app(runtime, config_path=config_path)
+    client = TestClient(app)
+
+    response = client.put(
+        "/api/dashboard/settings/config",
+        json={
+            "ollama": {
+                "base_url": "https://candidate-ollama.internal/ollama/",
+                "timeout_seconds": 45,
+            }
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["persisted_setting_ids"] == [
+        "ollama.base_url",
+        "ollama.timeout_seconds",
+    ]
+    assert app.state.settings is runtime
+    assert runtime.ollama.base_url == "http://runtime-ollama.internal:11434"
+    assert runtime.ollama.timeout_seconds == 120
+    by_id = _settings_by_id(response.json()["settings"])
+    assert by_id["ollama.base_url"]["value"] == (
+        "http://runtime-ollama.internal:11434"
+    )
+    assert by_id["ollama.base_url"]["persisted_value"] == (
+        "https://candidate-ollama.internal/ollama"
+    )
+    assert by_id["ollama.base_url"]["differs_from_persisted"] is True
+    assert by_id["ollama.timeout_seconds"]["value"] == 120
+    assert by_id["ollama.timeout_seconds"]["persisted_value"] == 45
+    assert by_id["ollama.timeout_seconds"]["differs_from_persisted"] is True
+    persisted = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    assert persisted["ollama"] == {
+        "base_url": "https://candidate-ollama.internal/ollama",
+        "timeout_seconds": 45,
+    }
+    assert persisted["custom_future_category"] == {"preserve": True}
+
+
+def test_saved_connection_preserves_environment_endpoint_precedence(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config_path = tmp_path / "contextkeeper.yaml"
+    _write_config(
+        config_path,
+        {
+            "ollama": {
+                "base_url": "http://yaml-ollama.internal:11434",
+                "timeout_seconds": 120,
+            }
+        },
+    )
+    environment_endpoint = "http://environment-ollama.internal:11434"
+    monkeypatch.setenv("CONTEXTKEEPER_OLLAMA_URL", environment_endpoint)
+    runtime = load_config(config_path)
+    app = create_app(runtime, config_path=config_path)
+    client = TestClient(app)
+
+    response = client.put(
+        "/api/dashboard/settings/config",
+        json={
+            "ollama": {
+                "base_url": "http://saved-ollama.internal:11434",
+                "timeout_seconds": 45,
+            }
+        },
+    )
+
+    assert response.status_code == 200
+    assert runtime.ollama.base_url == environment_endpoint
+    assert runtime.ollama.timeout_seconds == 120
+    by_id = _settings_by_id(response.json()["settings"])
+    assert by_id["ollama.base_url"]["value"] == environment_endpoint
+    assert (
+        by_id["ollama.base_url"]["persisted_value"]
+        == "http://saved-ollama.internal:11434"
+    )
+    assert by_id["ollama.base_url"]["differs_from_persisted"] is True
+    reloaded = load_config(config_path)
+    assert reloaded.ollama.base_url == environment_endpoint
+    assert reloaded.ollama.timeout_seconds == 45
+    persisted = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    assert (
+        persisted["ollama"]["base_url"]
+        == "http://saved-ollama.internal:11434"
+    )
+    assert persisted["ollama"]["timeout_seconds"] == 45
 
 
 def test_runtime_patch_remains_separate_and_does_not_write_configuration(tmp_path: Path) -> None:
@@ -917,12 +1114,127 @@ def test_category_default_reset_validation_failure_is_atomic(
     assert config_path.read_bytes() == original
 
 
+@pytest.mark.parametrize(
+    ("setting_id", "expected_payload", "expected_default"),
+    [
+        (
+            "ollama.base_url",
+            {"ollama": {"base_url": "http://localhost:11434"}},
+            "http://localhost:11434",
+        ),
+        (
+            "ollama.timeout_seconds",
+            {"ollama": {"timeout_seconds": 120}},
+            120,
+        ),
+    ],
+)
+def test_individual_connection_reset_default_is_persistence_only(
+    tmp_path: Path,
+    setting_id: str,
+    expected_payload: dict[str, dict[str, object]],
+    expected_default: object,
+) -> None:
+    config_path = tmp_path / "contextkeeper.yaml"
+    configuration = {
+        "server": {"host": "127.0.0.1", "port": 11605},
+        "ollama": {
+            "base_url": "http://custom-ollama.internal:11434",
+            "timeout_seconds": 45,
+        },
+    }
+    original = _write_config(config_path, configuration)
+    runtime = Settings.model_validate(configuration)
+    client = _settings_client(runtime, config_path=config_path)
+    initial_snapshot = client.get("/api/dashboard/settings").json()
+    reset_payload = _default_reset_payload(
+        initial_snapshot,
+        setting_id=setting_id,
+    )
+
+    assert reset_payload == expected_payload
+    patch_response = client.patch(
+        "/api/dashboard/settings",
+        json=reset_payload,
+    )
+    assert patch_response.status_code == 422
+    assert config_path.read_bytes() == original
+    assert runtime.ollama.base_url == "http://custom-ollama.internal:11434"
+    assert runtime.ollama.timeout_seconds == 45
+
+    save_response = client.put(
+        "/api/dashboard/settings/config",
+        json=reset_payload,
+    )
+
+    assert save_response.status_code == 200
+    by_id = _settings_by_id(save_response.json()["settings"])
+    assert by_id[setting_id]["persisted_value"] == expected_default
+    assert by_id[setting_id]["value"] != expected_default
+    assert by_id[setting_id]["differs_from_persisted"] is True
+    assert runtime.ollama.base_url == "http://custom-ollama.internal:11434"
+    assert runtime.ollama.timeout_seconds == 45
+
+
+def test_connection_category_reset_defaults_are_saved_without_runtime_patch(
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / "contextkeeper.yaml"
+    configuration = {
+        "server": {"host": "127.0.0.1", "port": 11605},
+        "ollama": {
+            "base_url": "http://custom-ollama.internal:11434",
+            "timeout_seconds": 45,
+        },
+    }
+    _write_config(config_path, configuration)
+    runtime = Settings.model_validate(configuration)
+    client = _settings_client(runtime, config_path=config_path)
+    initial_snapshot = client.get("/api/dashboard/settings").json()
+
+    reset_payload = _default_reset_payload(
+        initial_snapshot,
+        category_id="ollama",
+    )
+
+    assert reset_payload == {
+        "ollama": {
+            "base_url": "http://localhost:11434",
+            "timeout_seconds": 120,
+        }
+    }
+    save_response = client.put(
+        "/api/dashboard/settings/config",
+        json=reset_payload,
+    )
+
+    assert save_response.status_code == 200
+    assert save_response.json()["persisted_setting_ids"] == [
+        "ollama.base_url",
+        "ollama.timeout_seconds",
+    ]
+    by_id = _settings_by_id(save_response.json()["settings"])
+    for setting_id in ("ollama.base_url", "ollama.timeout_seconds"):
+        assert by_id[setting_id]["persisted_value"] == by_id[setting_id][
+            "default_value"
+        ]
+        assert by_id[setting_id]["value"] != by_id[setting_id]["default_value"]
+        assert by_id[setting_id]["differs_from_persisted"] is True
+    assert runtime.ollama.base_url == "http://custom-ollama.internal:11434"
+    assert runtime.ollama.timeout_seconds == 45
+
+
 def test_global_default_reset_and_put_touch_only_managed_eligible_settings(
     tmp_path: Path,
 ) -> None:
     config_path = tmp_path / "contextkeeper.yaml"
     configuration = {
         "server": {"host": "127.0.0.1", "port": 11605},
+        "ollama": {
+            "base_url": "http://custom-ollama.internal:11434",
+            "timeout_seconds": 45,
+            "future_connection_option": "preserve me",
+        },
         "context": {
             "enabled": False,
             "warning_threshold_percent": 60,
@@ -948,13 +1260,26 @@ def test_global_default_reset_and_put_touch_only_managed_eligible_settings(
     initial_snapshot = client.get("/api/dashboard/settings").json()
     initial_by_id = _settings_by_id(initial_snapshot)
     reset_payload = _default_reset_payload(initial_snapshot)
+    runtime_reset_payload = _default_reset_payload(
+        initial_snapshot,
+        runtime_only=True,
+    )
     reset_setting_ids = {
         f"{category}.{field_name}"
         for category, values in reset_payload.items()
         for field_name in values
     }
 
-    reset_response = client.patch("/api/dashboard/settings", json=reset_payload)
+    runtime_reset_setting_ids = {
+        f"{category}.{field_name}"
+        for category, values in runtime_reset_payload.items()
+        for field_name in values
+    }
+
+    reset_response = client.patch(
+        "/api/dashboard/settings",
+        json=runtime_reset_payload,
+    )
 
     assert reset_response.status_code == 200
     assert reset_setting_ids == {
@@ -962,12 +1287,18 @@ def test_global_default_reset_and_put_touch_only_managed_eligible_settings(
         for setting_id, setting in initial_by_id.items()
         if setting["reset_eligible"]
     }
-    assert len(reset_setting_ids) == 8
+    assert len(reset_setting_ids) == 10
+    assert len(runtime_reset_setting_ids) == 8
     reset_by_id = _settings_by_id(reset_response.json())
     for setting_id in reset_setting_ids:
-        assert reset_by_id[setting_id]["value"] == initial_by_id[setting_id][
-            "default_value"
-        ]
+        if setting_id in runtime_reset_setting_ids:
+            assert reset_by_id[setting_id]["value"] == initial_by_id[setting_id][
+                "default_value"
+            ]
+        else:
+            assert reset_by_id[setting_id]["value"] == initial_by_id[setting_id][
+                "value"
+            ]
     assert runtime.server.host == "127.0.0.1"
     assert runtime.server.port == 11605
     assert runtime.dashboard.title == "Custom dashboard"
@@ -983,16 +1314,23 @@ def test_global_default_reset_and_put_touch_only_managed_eligible_settings(
     assert save_response.json()["persisted_setting_ids"] == sorted(reset_setting_ids)
     saved_by_id = _settings_by_id(save_response.json()["settings"])
     for setting_id in reset_setting_ids:
-        assert saved_by_id[setting_id]["value"] == initial_by_id[setting_id][
-            "default_value"
-        ]
         assert saved_by_id[setting_id]["persisted_value"] == initial_by_id[
             setting_id
         ]["default_value"]
-        assert saved_by_id[setting_id]["differs_from_persisted"] is False
+        if setting_id in runtime_reset_setting_ids:
+            assert saved_by_id[setting_id]["value"] == initial_by_id[setting_id][
+                "default_value"
+            ]
+            assert saved_by_id[setting_id]["differs_from_persisted"] is False
+        else:
+            assert saved_by_id[setting_id]["value"] == initial_by_id[setting_id][
+                "value"
+            ]
+            assert saved_by_id[setting_id]["differs_from_persisted"] is True
 
     persisted = yaml.safe_load(config_path.read_text(encoding="utf-8"))
     assert persisted["server"] == configuration["server"]
+    assert persisted["ollama"]["future_connection_option"] == "preserve me"
     assert persisted["context"]["future_context_option"] == "preserve me"
     assert persisted["dashboard"]["title"] == "Custom dashboard"
     assert persisted["models"] == configuration["models"]
@@ -1016,6 +1354,12 @@ def test_global_default_reset_and_put_touch_only_managed_eligible_settings(
         ({}, 400),
         ({"context": {}}, 400),
         ({"server": {"port": 11600}}, 422),
+        ({"ollama": {"retry_count": 3}}, 422),
+        ({"ollama": {"base_url": "ollama.internal:11434"}}, 422),
+        ({"ollama": {"timeout_seconds": True}}, 422),
+        ({"ollama": {"timeout_seconds": 30.0}}, 422),
+        ({"ollama": {"timeout_seconds": "30"}}, 422),
+        ({"ollama": {"timeout_seconds": 0}}, 422),
         ({"context": {"unknown_setting": 1}}, 422),
         ({"context": {"enabled": "false"}}, 422),
         ({"context": {"warning_threshold_percent": "70"}}, 422),

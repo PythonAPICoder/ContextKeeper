@@ -2,7 +2,7 @@
 
 Status: Historical origin plan. This document is retained for project-history context. Current implementation status lives in `PROJECT_HISTORY.md`, active sequencing lives in `ROADMAP.md`, and source behavior remains authoritative.
 
-The current implementation through the Phase 6.5F-B6.5 working tree includes the transparent proxy, diagnostics, context/compression systems, Automatic Model Context Discovery, live Operations and Conversation Inspector surfaces, Settings read/runtime-update APIs, a metadata-driven Settings page, explicit atomic configuration persistence, and managed settings reset/recovery controls. Product Owner and architect review of B6.5 are pending.
+The current implementation through the Phase 6.5F-B6.6 working tree includes the transparent proxy, diagnostics, context/compression systems, Automatic Model Context Discovery, live Operations and Conversation Inspector surfaces, Settings read/runtime-update APIs, a metadata-driven Settings page, explicit atomic configuration persistence, managed settings reset/recovery controls, and restart-required Ollama Connection configuration with an isolated candidate test. Product Owner and architect review of B6.6 are pending.
 
 ## Vision
 

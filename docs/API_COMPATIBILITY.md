@@ -1,6 +1,6 @@
 # ContextKeeper API Compatibility
 
-Status: Current through the Phase 6.5F-B6.5 working-tree implementation; Product Owner and architect review are pending.
+Status: Current through the Phase 6.5F-B6.6 working-tree implementation; Product Owner and architect review are pending.
 
 ContextKeeper must behave like an Ollama-compatible API server so existing clients can point to ContextKeeper instead of Ollama without code changes.
 
@@ -84,12 +84,15 @@ The dashboard management routes share the `/api/` prefix but are owned by Contex
 | `GET /api/dashboard/settings` | Read the sanitized schema-v2 runtime, persisted, default, and reset-eligibility settings snapshot. |
 | `PATCH /api/dashboard/settings` | Validate and atomically update approved in-memory runtime settings, including reset and Discard recovery payloads. |
 | `PUT /api/dashboard/settings/config` | Validate and atomically persist explicitly supplied approved settings only. |
+| `POST /api/dashboard/settings/connection/test` | Validate and test draft Ollama Connection values with one isolated bounded version probe. |
 
-The PATCH and PUT operations are intentionally separate. Individual, category, and global managed-default reset plus persisted-value Discard recovery reuse the existing PATCH contract; B6.5 adds no reset endpoint. PATCH does not write YAML. PUT does not mutate the running `Settings` instance, invoke PATCH, restart ContextKeeper, or alter an in-flight proxied request. Unsupported methods retain FastAPI/ContextKeeper `405 Method Not Allowed` behavior rather than falling through to the transparent `/api/{path:path}` proxy.
+PATCH, PUT, and candidate testing are intentionally separate. Runtime-editable resets and persisted-value Discard recovery reuse PATCH; Connection-only reset/discard remains local to the browser, while a mixed global reset PATCHes only its runtime-editable subset. PATCH does not write YAML. PUT can persist `ollama.base_url` and `ollama.timeout_seconds` but does not mutate the running `Settings` instance, replace the active Ollama client, invoke PATCH, restart ContextKeeper, or alter an in-flight proxied request.
 
-The management API exposes no Ollama credentials, request bodies, prompt/response text, configuration paths, model override maps, or full configuration contents. Persistence errors use safe local-management details and do not use the upstream `502` proxy error contract.
+The Connection test accepts `{ "base_url": ..., "timeout_seconds": ... }`, validates the values, and performs one isolated `GET` to the normalized base-path-preserving `/api/version` URL. The temporary client uses `trust_env=False`, a timeout capped at `min(timeout_seconds, 10)`, no retries, and normal TLS verification. HTTP `200` carries every validated probe outcome, connected or failed; request validation returns `422` with field detail. GET, PUT, PATCH, DELETE, HEAD, and OPTIONS on the test resource return explicit `405` with `Allow: POST`.
 
-Phase 6.5F-B6.5: Settings Reset and Recovery Controls extends only the local management client and additive snapshot metadata. It does not change the forwarded method, request body, response, or streaming behavior of Ollama-compatible `/api/*` and `/v1/*` clients, clear application data, or introduce restart behavior.
+The management API exposes no Ollama credentials, request bodies, prompt/response text, configuration paths, model override maps, or full configuration contents. Candidate-test failures expose only a normalized endpoint when safe, latency when attempted, a bounded failure category, and a user-readable message. Persistence and candidate-test errors use safe local-management details and do not use the upstream `502` proxy error contract.
+
+Phase 6.5F-B6.6: Connection Configuration extends only the local management client, approved settings metadata, configuration validation/persistence allowlist, and isolated candidate probe. Testing or saving a candidate never changes the active endpoint/client, health/version metrics, diagnostics, model discovery, forwarded method, request body, response, or streaming behavior of Ollama-compatible `/api/*` and `/v1/*` clients. A manual restart is required to activate saved Connection values.
 
 ## Error behavior
 
@@ -100,6 +103,8 @@ When ContextKeeper cannot reach Ollama or proxy a request, it returns a `502` JS
 - `ollama_base_url`
 
 Failures are also recorded in request diagnostics where applicable.
+
+Candidate Test Connection failures are deliberately different: identifiable DNS, refusal, timeout, TLS/certificate, HTTP, malformed/non-Ollama, missing/invalid-version, and other network failures return a safe structured management result without being recorded as a proxied client request. They never overwrite the active dashboard Ollama health/version state.
 
 ## Success criteria
 
@@ -119,3 +124,4 @@ Failures are also recorded in request diagnostics where applicable.
 - Plugin APIs.
 - Historical memory retrieval after compression.
 - Full OpenAI API compatibility beyond proxied `/v1/*` passthrough behavior.
+- Runtime backend switching, active-client replacement, automatic restart, authentication/credentials, multiple AI servers, failover/load balancing, cloud providers, TLS trust management, retry settings, or background Connection monitoring.

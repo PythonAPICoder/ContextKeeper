@@ -16,12 +16,12 @@ from typing import Any
 from pydantic import ValidationError
 import yaml
 
-from ..config import Settings
+from ..config import Settings, validate_ollama_not_self_proxy
 from ..resources import DEFAULT_CONFIG_NAME, resolve_config_path
 from . import settings_snapshot
 from .settings_snapshot import (
     DashboardSettingsValidationError,
-    RuntimeSettingsUpdate,
+    PersistedSettingsUpdate,
     SettingValue,
     ValidationDetail,
     validate_dashboard_settings_business_rules,
@@ -71,8 +71,16 @@ class _ConfigurationFileState:
 class ConfigurationPersistenceService:
     """Persist approved dashboard settings to one resolved YAML file."""
 
-    def __init__(self, config_path: str | Path = DEFAULT_CONFIG_NAME) -> None:
+    def __init__(
+        self,
+        config_path: str | Path = DEFAULT_CONFIG_NAME,
+        *,
+        listener_host: str | None = None,
+        listener_port: int | None = None,
+    ) -> None:
         self._config_path = resolve_config_path(config_path)
+        self._listener_host = listener_host
+        self._listener_port = listener_port
 
     @property
     def config_path(self) -> Path:
@@ -146,7 +154,7 @@ class ConfigurationPersistenceService:
             )
 
         try:
-            update = RuntimeSettingsUpdate.model_validate(payload)
+            update = PersistedSettingsUpdate.model_validate(payload)
         except ValidationError as exc:
             raise ConfigurationPersistenceError(
                 status_code=422,
@@ -237,6 +245,26 @@ class ConfigurationPersistenceService:
                 code="validation_failed",
                 detail=validation_error_detail(exc),
             ) from exc
+
+        if self._listener_host is not None and self._listener_port is not None:
+            try:
+                validate_ollama_not_self_proxy(
+                    candidate_settings.ollama.base_url,
+                    listener_host=self._listener_host,
+                    listener_port=self._listener_port,
+                )
+            except ValueError as exc:
+                raise ConfigurationPersistenceError(
+                    status_code=422,
+                    code="validation_failed",
+                    detail=[
+                        {
+                            "loc": ["body", "ollama", "base_url"],
+                            "msg": str(exc),
+                            "type": "value_error",
+                        }
+                    ],
+                ) from exc
 
         try:
             validate_dashboard_settings_business_rules(candidate_settings)

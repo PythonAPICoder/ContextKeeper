@@ -10,7 +10,7 @@ from typing import Any
 
 import httpx
 from fastapi import APIRouter, Body, HTTPException, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 
 from ..config import Settings
 from ..context.compression_manager import ROLLING_SUMMARY_PREFIX
@@ -23,6 +23,11 @@ from ..model_context import ContextWindowResolution, active_context_window_overr
 from .config_persistence import (
     ConfigurationPersistenceError,
     ConfigurationPersistenceService,
+)
+from .connection_test import (
+    ConnectionTestValidationError,
+    test_ollama_connection as run_ollama_connection_test,
+    validate_connection_test_request,
 )
 from .insights import build_dashboard_insights
 from .inspector import build_conversation_inspector_snapshot
@@ -1753,6 +1758,39 @@ def create_dashboard_router(
             "configuration_created": result.configuration_created,
             "settings": snapshot.to_dict(),
         }
+
+    @router.post("/api/dashboard/settings/connection/test")
+    async def test_dashboard_connection(
+        request: Request,
+    ) -> JSONResponse:
+        try:
+            payload: object = await request.json()
+        except ValueError:
+            payload = None
+        try:
+            candidate = validate_connection_test_request(payload, settings)
+        except ConnectionTestValidationError as exc:
+            return JSONResponse(
+                status_code=422,
+                content={
+                    **exc.result.model_dump(),
+                    "detail": exc.detail,
+                },
+            )
+        result = await run_ollama_connection_test(candidate)
+        return JSONResponse(content=result.model_dump())
+
+    @router.api_route(
+        "/api/dashboard/settings/connection/test",
+        methods=["GET", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"],
+        include_in_schema=False,
+    )
+    async def dashboard_connection_test_method_not_allowed() -> None:
+        raise HTTPException(
+            status_code=405,
+            detail="Method Not Allowed",
+            headers={"Allow": "POST"},
+        )
 
     @router.api_route(
         "/api/dashboard/settings/config",

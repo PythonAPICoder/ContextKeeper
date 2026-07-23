@@ -1,14 +1,204 @@
 from __future__ import annotations
 
+from ipaddress import IPv6Address, ip_address
 import os
 from pathlib import Path
+import posixpath
+import re
 from typing import Any
+from urllib.parse import unquote, urlsplit, urlunsplit
 
 import yaml
-from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    Field,
+    StrictInt,
+    StrictStr,
+    ValidationError,
+    field_validator,
+    model_validator,
+)
 
 from .branding import PRODUCT_NAME
 from .resources import DEFAULT_CONFIG_NAME, resolve_config_path
+
+_HOST_LABEL_PATTERN = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$")
+_INVALID_PERCENT_ESCAPE_PATTERN = re.compile(r"%(?![0-9A-Fa-f]{2})")
+
+
+def normalize_ollama_base_url(value: str) -> str:
+    """Validate and normalize one absolute HTTP(S) Ollama base URL."""
+
+    normalized_input = value.strip()
+    if not normalized_input:
+        raise ValueError("ollama.base_url must not be empty.")
+    try:
+        normalized_input.encode("utf-8")
+    except UnicodeEncodeError as exc:
+        raise ValueError("ollama.base_url must contain valid Unicode characters.") from exc
+    if any(
+        character.isspace() or ord(character) < 32 or ord(character) == 127
+        for character in normalized_input
+    ):
+        raise ValueError("ollama.base_url must not contain whitespace or control characters.")
+    if "\\" in normalized_input:
+        raise ValueError("ollama.base_url must not contain backslashes.")
+    if _INVALID_PERCENT_ESCAPE_PATTERN.search(normalized_input):
+        raise ValueError("ollama.base_url contains an invalid percent escape.")
+
+    try:
+        parsed = urlsplit(normalized_input)
+    except ValueError as exc:
+        raise ValueError("ollama.base_url must be a valid absolute URL.") from exc
+
+    scheme = parsed.scheme.lower()
+    if scheme not in {"http", "https"}:
+        raise ValueError("ollama.base_url must use http:// or https://.")
+    if not parsed.netloc:
+        raise ValueError("ollama.base_url must include a hostname or IP address.")
+    if parsed.username is not None or parsed.password is not None or "@" in parsed.netloc:
+        raise ValueError("ollama.base_url must not include a username or password.")
+    if parsed.query or "?" in normalized_input:
+        raise ValueError("ollama.base_url must not include a query string.")
+    if parsed.fragment or "#" in normalized_input:
+        raise ValueError("ollama.base_url must not include a fragment.")
+
+    try:
+        hostname = parsed.hostname
+        port = parsed.port
+    except ValueError as exc:
+        raise ValueError("ollama.base_url must include a valid hostname and port.") from exc
+    if not hostname:
+        raise ValueError("ollama.base_url must include a hostname or IP address.")
+    if parsed.netloc.endswith(":"):
+        raise ValueError("ollama.base_url must include a valid port when a port separator is supplied.")
+    if port == 0:
+        raise ValueError("ollama.base_url port must be between 1 and 65535.")
+
+    normalized_host, is_ipv6 = _normalize_url_host(hostname)
+    if parsed.netloc.startswith("[") and not is_ipv6:
+        raise ValueError("ollama.base_url bracketed hosts must be valid IPv6 addresses.")
+    authority = f"[{normalized_host}]" if is_ipv6 else normalized_host
+    if port is not None:
+        authority = f"{authority}:{port}"
+
+    path = parsed.path.rstrip("/")
+    return urlunsplit((scheme, authority, path, "", ""))
+
+
+def validate_ollama_timeout_seconds(value: int) -> int:
+    """Validate the authoritative positive Ollama request timeout."""
+
+    if value <= 0:
+        raise ValueError("ollama.timeout_seconds must be greater than 0.")
+    return value
+
+
+def validate_ollama_not_self_proxy(
+    base_url: str,
+    *,
+    listener_host: str,
+    listener_port: int,
+) -> None:
+    """Reject deterministic direct loops back into ContextKeeper's proxy."""
+
+    parsed = urlsplit(base_url)
+    if parsed.scheme.lower() != "http":
+        return
+    decoded_path = unquote(parsed.path)
+    normalized_path = posixpath.normpath(decoded_path or "/")
+    reaches_proxy_route = (
+        normalized_path == "/"
+        or normalized_path == "/api"
+        or normalized_path.startswith("/api/")
+        or normalized_path == "/v1"
+        or normalized_path.startswith("/v1/")
+    )
+    if not reaches_proxy_route:
+        return
+    endpoint_host = _normalize_host_alias(parsed.hostname or "")
+    if not _endpoint_matches_listener_alias(endpoint_host, listener_host):
+        return
+    endpoint_port = parsed.port or (443 if parsed.scheme.lower() == "https" else 80)
+    if endpoint_port == listener_port:
+        raise ValueError(
+            "ollama.base_url must not point directly to ContextKeeper's own listener."
+        )
+
+
+def _normalize_url_host(hostname: str) -> tuple[str, bool]:
+    try:
+        address = ip_address(hostname)
+    except ValueError:
+        if ":" in hostname or ("." in hostname and hostname.replace(".", "").isdigit()):
+            raise ValueError("ollama.base_url must include a valid hostname or IP address.")
+        trailing_dot = hostname.endswith(".")
+        hostname_without_dot = hostname[:-1] if trailing_dot else hostname
+        try:
+            ascii_hostname = hostname_without_dot.encode("idna").decode("ascii")
+        except UnicodeError as exc:
+            raise ValueError("ollama.base_url must include a valid hostname or IP address.") from exc
+        if len(ascii_hostname) > 253:
+            raise ValueError("ollama.base_url hostname is too long.")
+        labels = ascii_hostname.split(".")
+        if not labels or any(not _HOST_LABEL_PATTERN.fullmatch(label) for label in labels):
+            raise ValueError("ollama.base_url must include a valid hostname or IP address.")
+        normalized = ascii_hostname.lower()
+        return (f"{normalized}." if trailing_dot else normalized), False
+    return str(address), isinstance(address, IPv6Address)
+
+
+def _normalize_host_alias(hostname: str) -> str:
+    normalized = hostname.strip().strip("[]").rstrip(".").lower()
+    try:
+        address = ip_address(normalized)
+    except ValueError:
+        try:
+            return normalized.encode("idna").decode("ascii")
+        except UnicodeError:
+            return normalized
+    if isinstance(address, IPv6Address):
+        scope_id = address.scope_id
+        unscoped_address = IPv6Address(int(address))
+        if unscoped_address.ipv4_mapped is not None:
+            return str(unscoped_address.ipv4_mapped)
+        if unscoped_address.is_loopback or unscoped_address.is_unspecified:
+            return str(unscoped_address)
+        if scope_id is not None:
+            return f"{unscoped_address}%{scope_id}"
+        return str(unscoped_address)
+    return str(address)
+
+
+def _listener_host_aliases(listener_host: str) -> set[str]:
+    normalized = _normalize_host_alias(listener_host)
+    aliases = {normalized}
+    if normalized == "0.0.0.0":
+        aliases.update({"127.0.0.1", "localhost"})
+    elif normalized == "::":
+        aliases.update({"::1", "localhost"})
+    elif normalized == "127.0.0.1":
+        aliases.add("localhost")
+    elif normalized == "::1":
+        aliases.add("localhost")
+    elif normalized == "localhost":
+        aliases.update({"127.0.0.1", "::1"})
+    return aliases
+
+
+def _endpoint_matches_listener_alias(
+    endpoint_host: str,
+    listener_host: str,
+) -> bool:
+    if endpoint_host in _listener_host_aliases(listener_host):
+        return True
+    if _normalize_host_alias(listener_host) != "0.0.0.0":
+        return False
+    try:
+        address = ip_address(endpoint_host)
+    except ValueError:
+        return False
+    return address.version == 4 and address.is_loopback
 
 
 class AppConfig(BaseModel):
@@ -29,24 +219,18 @@ class ServerConfig(BaseModel):
 
 
 class OllamaConfig(BaseModel):
-    base_url: str = "http://localhost:11434"
-    timeout_seconds: int = 120
+    base_url: StrictStr = "http://localhost:11434"
+    timeout_seconds: StrictInt = 120
 
     @field_validator("base_url")
     @classmethod
     def _validate_base_url(cls, value: str) -> str:
-        if not value.strip():
-            raise ValueError("ollama.base_url must not be empty.")
-        if not value.startswith(("http://", "https://")):
-            raise ValueError("ollama.base_url must start with http:// or https://.")
-        return value
+        return normalize_ollama_base_url(value)
 
     @field_validator("timeout_seconds")
     @classmethod
     def _validate_timeout(cls, value: int) -> int:
-        if value <= 0:
-            raise ValueError("ollama.timeout_seconds must be greater than 0.")
-        return value
+        return validate_ollama_timeout_seconds(value)
 
 
 class LoggingConfig(BaseModel):
@@ -149,6 +333,28 @@ class Settings(BaseModel):
     context: ContextConfig = Field(default_factory=ContextConfig)
     compression: CompressionConfig = Field(default_factory=CompressionConfig)
     models: dict[str, dict[str, int]] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def _validate_ollama_is_not_listener(self) -> Settings:
+        try:
+            validate_ollama_not_self_proxy(
+                self.ollama.base_url,
+                listener_host=self.server.host,
+                listener_port=self.server.port,
+            )
+        except ValueError as exc:
+            raise ValidationError.from_exception_data(
+                self.__class__.__name__,
+                [
+                    {
+                        "type": "value_error",
+                        "loc": ("ollama", "base_url"),
+                        "input": self.ollama.base_url,
+                        "ctx": {"error": exc},
+                    }
+                ],
+            ) from exc
+        return self
 
 
 class ConfigError(RuntimeError):

@@ -1,6 +1,6 @@
 # ContextKeeper Test Plan
 
-Status: Current through the Phase 6.5F-B6.5 working-tree implementation; Product Owner and architect review are pending.
+Status: Current through the Phase 6.5F-B6.6 working-tree implementation; Product Owner and architect review are pending.
 
 This document defines automated and manual validation expectations for ContextKeeper. The automated suite is the default regression gate; manual Visual QA remains required for dashboard layout, motion, responsive behavior, and Product Owner acceptance.
 
@@ -16,6 +16,7 @@ Focused dashboard and inspector tests currently live in:
 - `tests/test_dashboard_instrument_panel.py`
 - `tests/test_dashboard_inspector.py`
 - `tests/test_dashboard_settings.py`
+- `tests/test_dashboard_connection.py`
 - `tests/test_dashboard_settings_ui.py`
 - `tests/test_config_persistence.py`
 
@@ -127,9 +128,11 @@ Validate:
 Validate:
 
 - `GET /api/dashboard/settings` returns a read-only schema-v2 settings snapshot without changing runtime or disk state.
-- Categories are ordered as Context, Compression, and Dashboard.
+- Categories are ordered as Connection, Context, Compression, and Dashboard, and Connection appears exactly once.
 - Each setting includes stable id, category, display name, description, runtime `value`, `persisted_value`, `default_value`, `differs_from_persisted`, minimum, maximum, `runtime_editable`, `persistable`, `reset_eligible`, `restart_required`, and data type.
 - Approved settings are exposed:
+  - `ollama.base_url`
+  - `ollama.timeout_seconds`
   - `context.enabled`
   - `context.warning_threshold_percent`
   - `context.compression_threshold_percent`
@@ -138,12 +141,13 @@ Validate:
   - `compression.summarizer_model`
   - `compression.max_summary_tokens`
   - `dashboard.refresh_interval_ms`
-- Current effective values come from the runtime `Settings` instance; persisted values come from a fresh active-file read; built-in defaults remain available for comparison.
+- Current effective values come from the runtime `Settings` instance; persisted values come from a fresh active-file read; built-in defaults remain available for comparison. Connection metadata reports the correct active, saved, and default endpoint/timeout.
 - Reset eligibility is explicit authoritative metadata; read-only, unsupported, unmanaged, and reset-ineligible settings are excluded from reset payloads.
-- Current boolean, integer, and string settings retain correctly typed authoritative defaults. An already-default individual setting has a disabled reset action; an entirely-default category or global scope is also disabled.
+- Current boolean, integer, and string settings retain correctly typed authoritative defaults. Connection reports a string endpoint and strict integer timeout with minimum `1` and no maximum. Reset controls account for runtime-editable values versus persistence-only Connection drafts.
 - Runtime/persisted divergence and equality produce the correct `differs_from_persisted` value without type coercion.
 - Validation metadata includes integer minimum/maximum values where applicable.
-- Output is sanitized and does not include environment variables, config file paths, secrets, server bind details, Ollama base URL, logging paths, metrics settings, or model override maps.
+- Output is sanitized and does not include environment variables, configuration paths, secrets, server bind details, logging paths, metrics settings, or model override maps. Only the approved Ollama endpoint and timeout are exposed.
+- Both Connection settings are persistable, not runtime-editable, restart-required, and reset-eligible; the pre-existing eight settings retain their prior metadata.
 - `PATCH /api/dashboard/settings` supports valid partial updates and returns the complete canonical snapshot.
 - Omitted settings retain prior runtime values.
 - A subsequent `GET /api/dashboard/settings` returns the updated values.
@@ -159,28 +163,51 @@ Validate:
 - Settings GET/PATCH disk reads are registered as synchronous FastAPI handlers so slow file I/O or lock waits use the worker pool rather than blocking unrelated async proxy work.
 - `POST`, `PUT`, and `DELETE` on `/api/dashboard/settings` itself return `405`; persistence uses the separate config resource.
 
+Connection validation coverage should confirm:
+
+- Valid localhost, hostname, IPv4, and bracketed IPv6 endpoints; HTTP and HTTPS; explicit and omitted ports; root and non-root base paths; and safe trailing-slash normalization.
+- Empty and relative URLs; unsupported schemes; embedded username/password; embedded whitespace/control characters; malformed hosts/IPs; invalid, zero, and out-of-range ports; query strings; and fragments are rejected, while surrounding whitespace is normalized safely.
+- Obvious root, `/api`, and `/v1` references to ContextKeeper's configured listener are rejected for deterministic listener/localhost/loopback/wildcard aliases, including IPv4-mapped IPv6 and the IPv4 loopback range for an IPv4 wildcard listener, at matching effective ports without DNS lookup.
+- Remote hostnames are not resolved for loop detection, unrelated ports remain valid, and unrelated non-root base paths are not rejected as speculative loops.
+- Timeout accepts a strict positive integer including the minimum `1`, has no product-level maximum, and rejects below-minimum, zero, negative, boolean, float, numeric-string, and other invalid types consistently across startup, snapshot, persistence, and connection-test validation.
+
+Test Connection API coverage should confirm:
+
+- `POST /api/dashboard/settings/connection/test` uses exactly the submitted draft `{base_url, timeout_seconds}` and returns the normalized tested endpoint.
+- One isolated `httpx.AsyncClient` uses `trust_env=False`, no redirects, normal TLS verification, and a timeout of `min(timeout_seconds, 10)`.
+- The probe URL preserves a configured base path and safely appends `/api/version` without duplicate slashes.
+- Success returns HTTP `200`, `connected: true`, a nonnegative measured `latency_ms`, a valid `ollama_version`, no failure category, and save/restart guidance.
+- DNS resolution, connection refusal, timeout, TLS/certificate failure, non-success HTTP, malformed JSON, non-object/non-Ollama response, missing version, invalid version, and other network failures return HTTP `200` with `connected: false`, a safe category/message, no stack trace, and latency when attempted.
+- Invalid endpoint, timeout, or request shape returns HTTP `422` with the safe result fields and field-associated `detail`.
+- GET, PUT, PATCH, DELETE, HEAD, and OPTIONS return explicit `405` with `Allow: POST`; the route never falls through to transparent Ollama passthrough.
+- Exactly one request is attempted; existing model-discovery retry/backoff remains separate.
+- The temporary client closes after success and every failure path.
+- Runtime Settings values, saved YAML bytes, the active HTTP client reference, active endpoint, active dashboard Ollama health/version, metrics/diagnostics, and model-discovery state remain unchanged after validation, success, or failure.
+
 Settings reset and recovery coverage should confirm:
 
-- An individual reset updates only the selected reset-eligible setting, uses its authoritative `default_value`, marks runtime/persisted divergence correctly, and does not write YAML.
+- A runtime-editable individual reset updates only the selected reset-eligible setting through PATCH. A Connection individual reset stages only its authoritative `default_value` in the browser draft, marks persisted divergence correctly, sends no PATCH, and does not write YAML.
 - Individual reset still receives backend type, range, full-model, and cross-field validation; an invalid proposal does not mutate runtime.
-- A category reset requires confirmation, includes all and only reset-eligible settings in that category, including eligible values already at default, leaves unrelated categories unchanged, and sends one atomic PATCH.
+- A category reset requires confirmation, includes all and only reset-eligible settings in that category, including eligible values already at default, and leaves unrelated categories unchanged. Connection-category reset stages both defaults without PATCH; runtime-editable categories send one atomic PATCH.
 - A rejected category reset applies no partial runtime mutation and does not modify YAML.
-- The global control is labeled **Reset managed settings to defaults**, requires confirmation, and stages all and only reset-eligible dashboard-managed settings in one atomic PATCH.
+- The global control is labeled **Reset managed settings to defaults**, requires confirmation, and stages all and only reset-eligible dashboard-managed settings. It sends one atomic PATCH containing only the runtime-editable subset and preserves Connection defaults as persistence-only drafts.
 - Read-only, unsupported, reset-ineligible, and unmanaged settings remain unchanged; no logs, metrics, conversations, summaries, model files, or other application data are cleared; no restart is triggered.
 - Cancelling category or global confirmation sends no request, changes no setting, and reports cancellation without false success.
 - Successful reset feedback reports a staged count where practical, states that reset did not write configuration, and distinguishes Save-required persisted divergence from an already-matching configuration that needs no save.
 - Runtime, persisted, default, unsaved, and restart-required states remain distinguishable after individual, category, and global reset.
-- Discard restores browser-only drafts locally; when runtime-editable confirmed values differ from persisted state, it sends one atomic PATCH using each differing `persisted_value`, writes no YAML, and refreshes confirmed/draft metadata from the canonical response.
+- Discard restores browser-only drafts locally, with no PATCH for a Connection-only discard; when runtime-editable confirmed values differ from persisted state, it sends one atomic PATCH using each differing `persisted_value`, excludes Connection fields, writes no YAML, and refreshes confirmed/draft metadata from the canonical response.
 - Failed Discard recovery applies no partial update and does not falsely report that runtime was restored.
 - Reset alone never calls `PUT /api/dashboard/settings/config`, creates/replaces YAML, or changes its bytes.
 - Save after reset persists staged defaults through the existing PUT service, refreshes persisted state, retains unmanaged YAML keys/sections, and preserves restart-required guidance.
 - Save validation or storage failure retains the prior valid file and staged runtime/UI state and does not falsely report success.
 - Restart loading observes successfully persisted default values according to normal configuration precedence.
+- Connection reset values remain drafts until saved, and successfully saved Connection defaults remain inactive until restart.
 - No reset endpoint or unnecessary public API method is introduced; existing GET, PATCH, PUT, and unsupported-method responses remain compatible.
 
 Persistence service coverage should confirm:
 
 - one setting, multiple settings in one category, and settings across multiple categories persist successfully;
+- either Connection field and both Connection fields together persist successfully without changing active runtime values;
 - only explicitly requested values change;
 - unrelated configuration categories/values and model-specific configuration entries remain present;
 - the service resolves the same active path rules as startup and creates a missing file/parent directory deliberately;
@@ -195,8 +222,11 @@ Persistence service coverage should confirm:
 - a changed fingerprint returns a stale-write conflict and retains both the external edit and request safety;
 - two concurrent in-process writes serialize and do not interleave replacement work;
 - persistence does not mutate the shared runtime settings instance or restart ContextKeeper;
-- successful persistence refreshes metadata, including restart-required persisted/runtime divergence when metadata is configured for that generic case.
+- persistence does not replace the active Ollama client, endpoint, health/version, metrics, diagnostics, discovery state, active request, or stream;
+- successful Connection persistence refreshes real restart-required persisted/runtime divergence.
 - saving staged default values changes only allowlisted managed fields and retains unknown/unmanaged YAML content under the B6.4 persistence contract.
+- malformed Connection candidates leave YAML unchanged and retain existing stale-write, temporary-file, verification, cleanup, and atomic-replace protection;
+- a restart-oriented configuration load observes saved Connection values, while `CONTEXTKEEPER_OLLAMA_URL` continues to override saved `ollama.base_url`; the snapshot does not claim source provenance.
 
 Persistence API coverage should confirm:
 
@@ -212,11 +242,12 @@ Settings UI coverage should confirm:
 - Settings navigation is an interactive keyboard-operable page target inside the existing dashboard shell, and Operations remains available.
 - Opening Settings performs a guarded first `GET /api/dashboard/settings`; repeated page switching does not duplicate listeners, loads, or polling timers.
 - Categories and controls are generated from API metadata rather than a hard-coded setting list.
+- Connection navigation/card renders exactly once with AI Server Endpoint, Request Timeout, active/saved/default values, persistence-only/restart-required metadata, and Test Connection.
 - Boolean, integer, and string rendering paths preserve value types; supplied minimum/maximum constraints are represented.
 - Labels, descriptions, default/saved values, runtime/persisted difference text, status/live regions, runtime-read-only/non-persistable explanations, reset availability/disabled state, and restart-required indicators have accessible markup.
-- Each eligible setting has a native reset button with a setting-specific accessible name; it is semantically and visually disabled when runtime already equals the default or reset is unavailable.
+- Each eligible setting has a native reset button with a setting-specific accessible name. Runtime-editable controls compare active runtime with the default; persistence-only Connection controls compare the draft with the default. Disabled state is semantic and visual.
 - Reset values and inclusion are derived from `default_value` and `reset_eligible` metadata without hard-coded browser defaults or a parallel setting allowlist.
-- Individual reset sends one single-setting PATCH without confirmation; category and global reset use native keyboard-operable confirmation and send one multi-setting PATCH only after acceptance.
+- Runtime-editable individual reset sends one single-setting PATCH without confirmation; Connection individual/category reset stages locally without PATCH; mixed global reset sends one runtime-only multi-setting PATCH after acceptance and preserves Connection defaults.
 - Category reset selection is isolated to the requested category; category and global selection include all and only reset-eligible managed settings in scope, including eligible values already at default once an action is enabled.
 - Reset success accepts the canonical snapshot, preserves runtime/persisted/default distinctions, and announces staged-unsaved state and count where practical.
 - Reset cancellation changes no state and uses the existing feedback convention; reset failure preserves the current UI/runtime representation for retry.
@@ -224,27 +255,31 @@ Settings UI coverage should confirm:
 - Runtime dirty calculation compares draft with runtime `value`; persistence dirty calculation compares draft with `persisted_value`; both use typed equality and metadata eligibility.
 - Save runtime changes guards duplicate submission and sends one nested PATCH containing only intended changed runtime-editable fields.
 - Save to configuration renders as a separate button, is disabled with no eligible persisted difference, never runs on input/edit or runtime form submission, and sends one nested PUT containing only intended changed persistable fields.
+- Connection edits never enter a PATCH payload. Save to configuration can persist either or both Connection fields without requiring a successful test.
 - Either loading state locks controls and both save actions to prevent duplicate/conflicting submissions.
 - Successful PATCH accepts the canonical response and clears applied runtime dirty state.
 - Successful PUT accepts refreshed runtime/persisted metadata while restoring the user's draft, so persisted values can remain pending runtime application.
 - Validation failures map exact API error locations to controls when possible, provide a page-level alert, preserve all draft values, preserve dirty state, and allow correction/retry.
 - PATCH and PUT network, server, and malformed-response paths fail safely, render response data as text, preserve the draft, and allow retry.
-- Discard restores browser-only draft edits locally; when confirmed runtime differs from persisted state, it sends one atomic changed-fields-only PATCH using `persisted_value` for every runtime-editable differing setting, never PUT, and accepts the canonical response.
+- Discard restores browser-only draft edits locally, sends no PATCH for Connection-only edits, and when confirmed runtime differs from persisted state sends one atomic PATCH using `persisted_value` for every runtime-editable differing setting while excluding Connection fields.
 - Discard validation, network, server, and malformed-response failures preserve the current state and do not falsely report success.
 - The visible notice distinguishes Discard runtime changes, Reset to defaults, and Save to configuration, and states that none writes YAML except Save to configuration and none restarts ContextKeeper automatically.
+- Test Connection sends current typed draft values, prevents duplicate clicks while busy, displays success/failure status, normalized endpoint, latency, and version when available, associates `422` errors accessibly, and clears the result after endpoint or timeout edits.
+- Candidate results remain visually distinct from active Ollama health/version and say explicitly that testing neither saved nor activated the candidate.
+- Restart-required messaging remains visible after save, reset, discard, and successful testing; higher-priority environment override behavior is not misrepresented as editable provenance.
 - No browser storage, automatic persistence, per-setting autosave, reset endpoint, factory reset, restart orchestration, application-data clearing, self-diagnostics, or repair workflow is added.
-- Manual observation should confirm runtime-only changes reset after process restart, persisted changes survive restart, and restart-required guidance remains explicit where applicable.
+- Manual observation should confirm runtime-only changes reset after process restart, persisted changes survive restart, saved Connection values activate only after restart when not superseded by a higher-priority source, and restart-required guidance remains explicit.
 - Existing `/dashboard/data`, proxy/streaming behavior, Conversation Inspector, Connection Flow, Request Traffic, Context Trend, instrument panel, reduced-motion, context-engine, and compression tests remain green.
 
-Focused B6.5 command:
+Focused B6.6 command:
 
 ```powershell
-python -m pytest -q tests/test_config_persistence.py tests/test_dashboard_settings.py tests/test_dashboard_settings_ui.py
+python -m pytest -q tests/test_config.py tests/test_config_persistence.py tests/test_dashboard_settings.py tests/test_dashboard_connection.py tests/test_dashboard_settings_ui.py
 ```
 
-Latest B6.5 implementation evidence: the focused command passed 132 tests, and the complete `python -m pytest -q` suite passed 396 tests. Both runs reported only the two existing third-party deprecation warnings documented in Project History.
+Latest B6.6 implementation evidence: the focused command passes 300 tests with two existing third-party deprecation warnings, and the complete `python -m pytest -q` suite passes 552 tests with the same two warnings.
 
-Phase 6.5F-B6.5 Product Owner QA should exercise keyboard navigation between Operations and Settings; individual reset; category/global confirmation and cancellation; already-default disabled states; staged-count and unsaved feedback; Discard recovery to persisted values; Save to configuration after reset; retry after reset, validation, or storage failure; runtime-versus-persisted/default messaging; restart-required guidance; live dashboard behavior during repeated view switching; and layout at supported desktop and narrow widths. Approval remains a manual checkpoint after automated regression passes.
+Phase 6.5F-B6.6 Product Owner QA should exercise Connection navigation and field metadata; valid hostname, IPv4, bracketed IPv6, HTTPS, and base-path drafts; validation focus; success with endpoint/latency/version; representative DNS/refusal/timeout/TLS/HTTP/malformed-response failures; busy/duplicate-click behavior; stale-result clearing; saving without a successful test; restart-required messaging; active-versus-saved-versus-draft distinction; environment-override guidance; Connection individual/category/global reset; Connection-only Discard with no PATCH; mixed reset/Discard preservation of B6.5 runtime recovery; and responsive/accessibility behavior. Approval remains a manual checkpoint after automated regression passes.
 
 ## Request Traffic
 
@@ -359,7 +394,8 @@ Manual dashboard review should include:
 - Conversation Inspector desktop drawer and narrow full-width/backdrop behavior.
 - Settings categories and fields at desktop, tablet/narrow desktop, and mobile widths.
 - Settings labels, runtime/saved/default difference text, constraints, badges, individual/category/global reset controls, feedback, and the sticky Discard/runtime Save/configuration Save action bar wrap without horizontal overflow.
-- Settings loading, empty, retry, runtime-save success, reset-staged success, reset-cancelled, discard-recovery success, configuration-save success, validation-error, storage-error, and network-error states remain readable without color alone.
+- Connection Test action/results, long endpoint text, latency, version, and failure messages wrap without clipping and distinguish candidate state from active health.
+- Settings loading, empty, retry, runtime-save success, reset-staged success, reset-cancelled, discard-recovery success, configuration-save success, candidate-test success/failure, validation-error, storage-error, and network-error states remain readable without color alone.
 - Reset controls and native confirmation remain keyboard-operable, disabled states remain semantic, and reduced-motion behavior is unchanged.
 
 ## Reduced motion
@@ -377,6 +413,7 @@ Validate:
 
 - Fresh startup with no traffic.
 - Ollama offline.
+- Candidate Connection success and each safe failure class while active Ollama health remains unchanged.
 - Ollama online but no model observed.
 - Active generation request.
 - Streaming request.
@@ -419,7 +456,8 @@ Every release candidate should confirm:
 - Live Conversation Timeline updates.
 - Conversation Inspector opens, updates, and closes.
 - Settings navigation opens the metadata-driven form and returns to Operations without a page reload.
-- Settings runtime Save sends one changed-fields-only PATCH; individual/category/global reset sends one scope-limited atomic PATCH; Save to configuration sends one changed-fields-only PUT only after explicit action; Discard sends no request for browser-only drafts and one atomic PATCH when restoring persisted runtime values; failed operations preserve recoverable state.
+- Settings runtime Save sends one changed-fields-only PATCH; runtime reset sends one scope-limited atomic PATCH while Connection reset remains draft-only; Save to configuration sends one changed-fields-only PUT only after explicit action; Discard sends no request for browser-only/Connection-only drafts and one atomic PATCH only when restoring persisted runtime values; failed operations preserve recoverable state.
+- Test Connection uses current drafts and one bounded isolated `/api/version` request, reports normalized endpoint/latency/version or a safe failure category, closes temporary resources, and never changes YAML, active Settings/client/health/discovery state, proxy requests, or streams.
 - Runtime-only setting changes, including staged defaults, return to effective startup values after ContextKeeper restarts; persisted values survive restart, and no dashboard settings action restarts ContextKeeper automatically.
 - Configuration writes retain unrelated/model-specific data, fail atomically, leave no temporary file after ordinary failure cleanup, and do not expose filesystem paths or configuration contents.
 - Reset and Discard never clear logs, metrics, conversations, summaries, model files, or other application data and never alter Ollama-compatible proxy or streaming behavior.

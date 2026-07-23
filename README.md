@@ -2,7 +2,7 @@
 
 ContextKeeper is a local, Ollama-compatible middleware layer for long-running AI conversations. Clients point to ContextKeeper instead of Ollama; ContextKeeper preserves the Ollama API surface while adding diagnostics, context-window awareness, automatic compression, and a live operations dashboard.
 
-The current implementation is an active local product foundation, not a planning stub. It is still pre-1.0, but the transparent proxy, dashboard, context engine, compression engine, automatic model context discovery, Windows executable foundation, installer foundation, Conversation Inspector, runtime Settings API, explicit configuration persistence, dashboard Settings page, and managed settings reset controls are implemented.
+The current implementation is an active local product foundation, not a planning stub. It is still pre-1.0, but the transparent proxy, dashboard, context engine, compression engine, automatic model context discovery, Windows executable foundation, installer foundation, Conversation Inspector, runtime Settings API, explicit configuration persistence, dashboard Settings page, managed settings reset controls, and restart-required Ollama Connection configuration are implemented.
 
 ## Architecture summary
 
@@ -36,10 +36,11 @@ Dashboard Settings Page
 Settings Management API
   |-- GET snapshot --> Runtime + persisted metadata
   |-- PATCH --------> In-memory runtime settings
-  `-- PUT /config --> Active contextkeeper.yaml
+  |-- PUT /config --> Active contextkeeper.yaml
+  `-- POST /connection/test --> Isolated candidate Ollama probe
 ```
 
-Runtime processing and Operations visualization are deliberately separate. The proxy path handles client requests, diagnostics, context tracking, context-window enforcement, compression, and Ollama forwarding. Operations surfaces remain read-only observers built from bounded runtime snapshots. The Settings page is an explicit client of the dashboard management API: runtime Save and reset actions change shared in-memory settings through PATCH, while Save to configuration writes approved values through a separate PUT without mutating runtime state or restarting ContextKeeper.
+Runtime processing and Operations visualization are deliberately separate. The proxy path handles client requests, diagnostics, context tracking, context-window enforcement, compression, and Ollama forwarding. Operations surfaces remain read-only observers built from bounded runtime snapshots. The Settings page is an explicit client of the dashboard management API: runtime-editable Save and reset actions change shared in-memory settings through PATCH, while Save to configuration writes approved values through a separate PUT without mutating runtime state or restarting ContextKeeper. Connection settings are persistence-only drafts, and Test Connection uses one temporary client without changing the active client or health/discovery state.
 
 ## Key features
 
@@ -53,13 +54,13 @@ Runtime processing and Operations visualization are deliberately separate. The p
 - Compression engine support for rolling summaries, recent-message preservation, and confirmed compression metadata.
 - Browser Operations dashboard with health, recommendations, Request Traffic, Connection Flow, Context Trend, instrument gauges, Active Conversation, Live Conversation Timeline, and Conversation Inspector.
 - Conversation Inspector drawer with Overview metadata and deterministic Intelligence based on context/compression state.
-- Dashboard Settings API for approved Context, Compression, and Dashboard settings, including runtime-versus-persisted snapshots, authoritative defaults and reset eligibility, validated atomic in-memory updates, and explicit atomic YAML persistence.
-- Interactive Settings page inside the existing dashboard shell, with metadata-driven controls, typed draft state, individual/category/global managed-default resets, separate runtime and configuration Save actions, persistence-difference guidance, and Discard runtime changes.
+- Dashboard Settings API for approved Connection, Context, Compression, and Dashboard settings, including runtime-versus-persisted snapshots, authoritative defaults and reset eligibility, validated atomic in-memory updates, explicit atomic YAML persistence, and an isolated candidate Connection test.
+- Interactive Settings page inside the existing dashboard shell, with metadata-driven controls, typed draft state, individual/category/global managed-default resets, separate runtime and configuration Save actions, persistence-difference guidance, Discard behavior, and transient Connection success/failure, latency, and Ollama-version results.
 - First-run configuration wizard, PyInstaller executable foundation, Windows service host foundation, Inno Setup installer foundation, and release build script.
 
 ## Current implementation status
 
-The current working-tree implementation includes Phase 6.5F-B6.5; Product Owner and architect review are pending:
+The current working-tree implementation includes Phase 6.5F-B6.6; Product Owner and architect review are pending:
 
 - Transparent proxy, diagnostics, context monitoring, compression, dashboard modernization, live request visualization, animated Connection Flow, Live Conversation Timeline, and Conversation Inspector Overview & Intelligence are implemented.
 - Phase 6.5F-B5.6 synchronized documentation through the B5.5.2 implementation.
@@ -68,6 +69,7 @@ The current working-tree implementation includes Phase 6.5F-B6.5; Product Owner 
 - Phase 6.5F-B6.3 added a dedicated Settings page that loads API metadata dynamically, keeps confirmed and draft state separate, and provides changed-fields-only runtime Save and local Discard actions.
 - Phase 6.5F-B6.4 adds schema-v2 persisted-state metadata, `PUT /api/dashboard/settings/config`, atomic configuration-file writes, and an explicit Save to configuration action that remains separate from runtime Save.
 - Phase 6.5F-B6.5: Settings Reset and Recovery Controls adds metadata-authorized individual, category, and global managed-settings resets that stage built-in defaults through the existing atomic runtime PATCH path, plus Discard recovery to persisted values.
+- Phase 6.5F-B6.6: Connection Configuration exposes `ollama.base_url` and `ollama.timeout_seconds` as persistable, reset-eligible, restart-required settings and adds an isolated draft-value Test Connection action. Saving does not reconfigure the active Ollama client; a manual ContextKeeper restart is required.
 
 Still planned:
 
@@ -103,6 +105,7 @@ Default URLs:
 | --- | --- |
 | Dashboard | `http://localhost:11500/dashboard` |
 | Settings API | `http://localhost:11500/api/dashboard/settings` |
+| Candidate connection test | `http://localhost:11500/api/dashboard/settings/connection/test` |
 | ContextKeeper proxy | `http://localhost:11500` |
 | Upstream Ollama | `http://localhost:11434` |
 
@@ -127,6 +130,7 @@ Important defaults:
 
 - Proxy: `0.0.0.0:11500`
 - Ollama: `http://localhost:11434`
+- Ollama request timeout: `120 seconds`
 - Dashboard refresh: `1000 ms`
 - Default context window: `32768` tokens
 - Warning threshold: `75%`
@@ -136,7 +140,23 @@ Important defaults:
 
 See [docs/CONFIGURATION.md](docs/CONFIGURATION.md) for the complete source-verified configuration reference.
 
-The dashboard Settings page loads categories, runtime values, persisted values, defaults, reset eligibility, constraints, types, runtime editability, persistence eligibility, and restart guidance from `GET /api/dashboard/settings`. Schema version 2 distinguishes `value` from `persisted_value`, reports `differs_from_persisted`, and marks reset-supported settings with `reset_eligible`. The browser keeps the last confirmed server snapshot separate from the editable draft.
+The dashboard Settings page loads categories, runtime values, persisted values, defaults, reset eligibility, constraints, types, runtime editability, persistence eligibility, and restart guidance from `GET /api/dashboard/settings`. Schema version 2 distinguishes `value` from `persisted_value`, reports `differs_from_persisted`, and marks reset-supported settings with `reset_eligible`. The browser keeps the last confirmed server snapshot separate from the editable draft. The Connection category maps **AI Server Endpoint** to `ollama.base_url` and **Request Timeout** to `ollama.timeout_seconds`; both are persistable and reset-eligible but not runtime-editable, and both require a manual restart after saving.
+
+Test Connection sends the current Connection draft to `POST /api/dashboard/settings/connection/test` without saving it:
+
+```powershell
+$body = @{
+    base_url = "http://ai-server:11434"
+    timeout_seconds = 120
+} | ConvertTo-Json
+
+Invoke-RestMethod -Method Post `
+    -Uri http://localhost:11500/api/dashboard/settings/connection/test `
+    -ContentType "application/json" `
+    -Body $body
+```
+
+The route validates and normalizes the candidate, then performs one isolated `GET` to its base-path-preserving `/api/version` URL. The probe timeout is `min(timeout_seconds, 10)`, environment proxy variables are ignored, and no retry is performed. Success reports the normalized endpoint, measured latency, and Ollama version. A reachability failure returns a categorized result without changing YAML, the running `Settings`, the active Ollama HTTP client, active health/version data, or model-discovery state.
 
 Save runtime changes sends one `PATCH /api/dashboard/settings` containing only changed runtime-editable fields. Runtime updates are validated atomically, immediately visible through GET, and in-memory only. PATCH never writes YAML, and those changes reset when ContextKeeper restarts:
 
@@ -145,9 +165,9 @@ $body = @{ context = @{ warning_threshold_percent = 70 } } | ConvertTo-Json -Dep
 Invoke-RestMethod -Method Patch -Uri http://localhost:11500/api/dashboard/settings -ContentType "application/json" -Body $body
 ```
 
-Reset controls use only the server-provided `default_value` for settings marked `reset_eligible`; defaults are not duplicated in dashboard JavaScript or HTML. An individual reset immediately submits only that setting through PATCH. Category reset and **Reset managed settings to defaults** require confirmation, select all and only reset-eligible settings in scope, including eligible values already at default, and submit one atomic PATCH. A category or global action is disabled when every eligible value in its scope is already at default. A successful reset stages runtime defaults but does not write `contextkeeper.yaml`. When staged defaults differ from persisted values, Save to configuration is required for restart persistence; when persisted values already match, the UI reports that no configuration save is needed.
+Reset controls use only the server-provided `default_value` for settings marked `reset_eligible`; defaults are not duplicated in dashboard JavaScript or HTML. Runtime-editable resets use PATCH. Connection resets stage persistence-only defaults in the browser draft and send no runtime PATCH; a mixed global reset PATCHes only its runtime-editable subset while retaining Connection defaults in the draft. No reset writes `contextkeeper.yaml`. When staged defaults differ from persisted values, Save to configuration is required for restart persistence; when persisted values already match, the UI reports that no configuration save is needed.
 
-Discard runtime changes remains local when it only needs to abandon browser draft edits. When confirmed runtime values differ from persisted values, Discard issues one atomic PATCH that restores every runtime-editable differing value from `persisted_value`. Discard never writes YAML. A failed restore applies no partial recovery, leaves the current runtime values in place, and reports the error.
+Discard remains local when it only needs to abandon browser draft edits, including a Connection-only draft. When confirmed runtime values differ from persisted values, Discard issues one atomic PATCH that restores every runtime-editable differing value from `persisted_value`; Connection fields are never included. Discard never writes YAML. A failed restore applies no partial recovery, leaves the current runtime values in place, and reports the error.
 
 Save to configuration is a separate, explicit action. It sends only eligible draft values to `PUT /api/dashboard/settings/config`; it does not change the current runtime or restart ContextKeeper:
 
@@ -162,7 +182,7 @@ Invoke-RestMethod -Method Put -Uri http://localhost:11500/api/dashboard/settings
 
 A successful PUT returns `status: "saved"`, the sorted `persisted_setting_ids`, whether `configuration_created`, and a refreshed schema-v2 snapshot in `settings`. ContextKeeper re-reads the active file, validates the complete candidate, writes and verifies a UTF-8 temporary file beside the destination, checks that the source fingerprint has not changed, and atomically replaces the destination. Unrelated categories and model-specific entries are retained. PyYAML does not preserve comments or exact formatting, so a successful write may normalize the complete YAML document.
 
-Reset applies only to dashboard-managed settings. It does not delete or recreate the configuration file, clear logs, metrics, conversations, summaries, models, or other application data, or restart ContextKeeper. Saving changes the YAML tier only and cannot override a higher-priority configuration source.
+Reset applies only to dashboard-managed settings. It does not delete or recreate the configuration file, clear logs, metrics, conversations, summaries, models, or other application data, or restart ContextKeeper. Saving changes the YAML tier only and cannot override a higher-priority configuration source. In particular, `CONTEXTKEEPER_OLLAMA_URL` can keep the active endpoint different from the saved YAML value; the current snapshot does not identify provenance for that active value.
 
 ## Testing
 
@@ -178,6 +198,7 @@ Focused dashboard coverage lives primarily in:
 - `tests/test_dashboard_instrument_panel.py`
 - `tests/test_dashboard_inspector.py`
 - `tests/test_dashboard_settings.py`
+- `tests/test_dashboard_connection.py`
 - `tests/test_dashboard_settings_ui.py`
 - `tests/test_config_persistence.py`
 
@@ -246,6 +267,8 @@ Long-term v2+ ideas are tracked in [docs/FUTURE_IDEAS.md](docs/FUTURE_IDEAS.md).
 - Configuration persistence serializes writes only within one ContextKeeper process. It does not provide a distributed or multi-process file lock, configuration history, or automatic rollback UI.
 - PyYAML persistence preserves configuration data but not YAML comments or exact source formatting.
 - Settings reset is limited to metadata-approved dashboard-managed fields. It is not a factory reset, does not clear application data, and does not provide restart, self-diagnostic, repair, backup-history, or rollback controls.
+- Connection configuration supports one Ollama backend only. Saving never replaces the active client or switches in-flight requests; Test Connection is a transient one-attempt candidate probe, not background monitoring, and a manual restart is required to activate saved Connection values.
+- HTTPS endpoints use normal system/Python certificate verification. ContextKeeper does not provide certificate installation, trust management, client certificates, or a verification-bypass control.
 - Authentication, multi-user permissions, cloud model providers, routing, plugins, and multi-server orchestration are future ideas, not current Version 1 behavior.
 - Windows service installation hooks are still placeholders.
 

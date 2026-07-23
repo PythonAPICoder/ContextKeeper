@@ -23,7 +23,11 @@ def create_app(
     settings = settings or load_config(resolved_config_path)
     setup_logging(settings)
     activity_manager.reset()
-    configuration_persistence = ConfigurationPersistenceService(resolved_config_path)
+    configuration_persistence = ConfigurationPersistenceService(
+        resolved_config_path,
+        listener_host=settings.server.host,
+        listener_port=settings.server.port,
+    )
 
     app = FastAPI(
         title=PRODUCT_NAME,

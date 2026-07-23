@@ -69,7 +69,7 @@ Example: `Phase 6.5F-B4.2`
 | Dashboard modernization B4 workstream | Completed | Phase 6.5F-B4.8 automatic model context discovery is implemented and documented. |
 | Live data visualization and rich widgets | Completed through B5.5.2 | Request Traffic, Connection Flow, Live Conversation Timeline, layout refinement, Connection Flow visibility polish, Conversation Inspector foundation, and Conversation Inspector Overview & Intelligence are implemented; B5.6 synchronized documentation to that state. |
 | Documentation audit and synchronization | Completed | Phase 6.5F-B5.6 audited maintained Markdown documents and aligned documentation with the implementation through B5.5.2. |
-| Dashboard customization and user preferences | Active | Phase 6.5F-B6 has delivered the Settings Snapshot/read API, validated in-memory update API, Settings panel UI foundation, B6.4 explicit configuration persistence, and B6.5 managed settings reset/recovery controls; B6.5 Product Owner and architect review are pending. |
+| Dashboard customization and user preferences | Active | Phase 6.5F-B6 has delivered the Settings Snapshot/read API, validated in-memory update API, Settings panel UI foundation, B6.4 explicit configuration persistence, B6.5 managed settings reset/recovery controls, and B6.6 restart-required Ollama Connection configuration with isolated candidate testing; B6.6 Product Owner and architect review are pending. |
 | Release polish and final UX review | Planned | Phase 6.5F-B7 planned before historical memory retrieval and validation certification. |
 | Historical memory retrieval and detail preservation | Planned | Dedicated Phase 6.5G approved before Phase 6.6; no implementation exists yet. |
 | Validation framework and release certification | Planned | Dedicated Phase 6.6 approved after Phase 6.5G and before Phase 7; no implementation exists yet. |
@@ -1866,6 +1866,93 @@ Validation:
 - Headless Microsoft Edge engineering smoke validation exercised native reset controls, cancellation, a four-setting Context category reset, runtime/default/persisted presentation, three-setting Discard recovery, unchanged YAML, and zero observed JavaScript errors. A follow-up aligned-state smoke check verified truthful no-save-needed feedback, disabled configuration Save, and programmatic focus recovery after the initiating reset button rerendered.
 - Product Owner and architect review remain the acceptance checkpoint; this phase is not committed, merged, pushed, or released by this working-tree implementation.
 
+### Phase 6.5F-B6.6: Connection Configuration
+
+Status: Implemented in the working tree; Product Owner and architect review pending.
+
+Date: 2026-07-23.
+
+Objective:
+
+- Add a Connection category to the existing Settings page for ContextKeeper's single Ollama backend.
+- Expose AI Server Endpoint (`ollama.base_url`) and Request Timeout (`ollama.timeout_seconds`) through the existing authoritative snapshot, persistence, reset, discard, and validation architecture.
+- Test the current browser draft through one bounded isolated Ollama version probe and report normalized endpoint, latency, version, or a safe failure category.
+- Keep Connection settings restart-required and protect the active runtime Settings, Ollama HTTP client, proxy/streaming requests, health/version, metrics, diagnostics, and model-discovery state.
+
+Configuration model and validation:
+
+- Replaced the former prefix-only Ollama URL check with standards-based `urllib.parse.urlsplit` validation and normalization shared by startup, persistence, and candidate testing.
+- Accepted complete HTTP/HTTPS URLs using ordinary hostnames, IPv4, and bracketed IPv6 syntax, with optional valid ports and base paths.
+- Preserved a configured base path, trimmed surrounding whitespace, removed unnecessary trailing slashes, normalized scheme/host/IP representation, and rejected empty/relative URLs, remaining whitespace/control characters, unsupported schemes, malformed hosts/IPs/ports, embedded credentials, query strings, and fragments.
+- Added narrow deterministic self-proxy-loop detection for root, `/api`, and `/v1` endpoints whose normalized listener/localhost/loopback alias and effective port directly match ContextKeeper's configured listener. IPv4 wildcard listeners cover the deterministic loopback range and IPv4-mapped IPv6 forms. No DNS lookup or speculative remote-host rejection was added, and unrelated non-root base paths are not treated as obvious loops.
+- Kept `ollama.timeout_seconds` authoritative default `120`, strict integer typing, minimum `1`, and no product-level maximum. Booleans, floats, strings, zero, and negative values are rejected.
+
+Settings metadata, persistence, reset, and discard:
+
+- Added one `ollama` category displayed as Connection before Context, Compression, and Dashboard in the schema-v2 snapshot.
+- Added `ollama.base_url` and `ollama.timeout_seconds` with active runtime `value`, freshly read `persisted_value`, built-in `default_value`, typed constraints, and accurate difference state.
+- Marked both fields `persistable: true`, `runtime_editable: false`, `restart_required: true`, and `reset_eligible: true`.
+- Added only those two fields to the existing managed persistence allowlist. PUT continues to re-read and validate the complete candidate, preserve unknown/unmanaged YAML, verify a same-directory temporary file, detect stale source changes, and atomically replace the destination.
+- Saving Connection values changes only YAML. It does not mutate canonical runtime settings, replace the active client, affect active requests/streams, or restart ContextKeeper. A successful reachability test is not required before Save.
+- Connection individual/category reset stages authoritative defaults in the browser draft and sends no PATCH. A mixed global reset PATCHes only runtime-editable values and retains the Connection defaults as persistence-only drafts.
+- Connection-only Discard is local and sends no PATCH. Discard recovery continues to PATCH only runtime-editable values whose active and persisted values differ.
+- Preserved configuration precedence: `CONTEXTKEEPER_OLLAMA_URL` can override the YAML endpoint. The snapshot distinguishes active and persisted values but does not track source provenance or imply that saving YAML overrides the environment.
+
+Isolated Test Connection:
+
+- Added `src/ctxkeeper/dashboard/connection_test.py` as a focused candidate-validation/probe service and `POST /api/dashboard/settings/connection/test` on the existing dashboard management router.
+- The request body is exactly `{base_url, timeout_seconds}` and uses strict models plus the shared endpoint/timeout and listener-loop validation.
+- Valid requests create one temporary `httpx.AsyncClient` with `trust_env=False`, redirects disabled, normal TLS verification, and timeout `min(timeout_seconds, 10)`.
+- The service performs exactly one GET to the normalized base-path-preserving `/api/version` URL and closes the client on success or failure. Existing Automatic Model Context Discovery retry/backoff remains separate; the candidate test never retries.
+- HTTP `200` represents every validated probe outcome, successful or failed, with `connected`, `tested_endpoint`, `latency_ms`, `ollama_version`, `failure_category`, and a user-readable `message`.
+- HTTP `422` represents invalid endpoint, timeout, or request values with the same safe result fields plus field-associated `detail`. GET, PUT, PATCH, DELETE, HEAD, and OPTIONS return explicit `405` with `Allow: POST`.
+- Failure categories cover DNS resolution, connection refusal, timeout, TLS/certificate failure, HTTP error, malformed/non-Ollama response, missing/invalid version, and other network errors without exposing stack traces or unsafe exception detail.
+- The test changes no YAML, canonical runtime value, active client reference/endpoint, active dashboard Ollama health/version, metrics, diagnostics, discovery state, proxied request, or stream.
+
+Settings UI:
+
+- Added Connection to the metadata-driven Settings navigation/content with AI Server Endpoint, Request Timeout, active/saved/default/draft presentation, and explicit restart-required guidance.
+- Test Connection submits the current typed draft, prevents duplicate concurrent requests with a busy/disabled state, and renders safe success/failure status, normalized tested endpoint, measured latency, Ollama version when available, and save/restart guidance.
+- Editing either Connection draft clears the prior result so stale candidate evidence is not presented as current.
+- Candidate results remain distinct from Operations active Ollama health/version. The UI states that testing did not save or activate the candidate and does not require success before Save.
+- Existing responsive layout, accessible label/error association and focus recovery, native confirmations, reduced-motion behavior, single dashboard polling lifecycle, and B6.5 recovery protections remain in scope.
+
+Tests added or updated:
+
+- Expanded `tests/test_config.py` for endpoint formats/normalization, prohibited URL components, malformed syntax, narrow listener-loop validation, and strict positive timeout typing.
+- Expanded `tests/test_dashboard_settings.py` for the Connection category, both fields' active/persisted/default values and metadata, runtime PATCH exclusion, explicit methods, and unchanged existing categories/settings.
+- Added `tests/test_dashboard_connection.py` for request validation, normalized base-path probe URLs, bounded isolated client lifecycle, success/latency/version, failure categories, explicit methods, and protection of runtime/YAML/client/health/discovery state.
+- Expanded `tests/test_config_persistence.py` for one/both Connection fields, allowlisted-only changes, unmanaged YAML preservation, invalid-candidate atomicity, runtime/client protection, restart loading, and environment precedence.
+- Expanded `tests/test_dashboard_settings_ui.py` for Connection rendering/navigation, draft request payload, busy/duplicate guard, results/stale clearing, accessible validation, restart guidance, Save/Discard, persistence-only reset, mixed reset, and existing-category regression.
+- Preserved the complete proxy, streaming, dashboard, model discovery, context, compression, persistence, logging, service, wizard, packaging, and controlled-shutdown regression suite.
+
+Documentation updated:
+
+- `README.md`
+- `docs/README.md`
+- `docs/ARCHITECTURE.md`
+- `docs/CONFIGURATION.md`
+- `docs/API_COMPATIBILITY.md`
+- `docs/DASHBOARD_LAYOUT.md`
+- `docs/UI_COMPONENT_GUIDE.md`
+- `docs/TEST_PLAN.md`
+- `docs/ROADMAP.md`
+- `docs/ContextKeeper_Project_Plan.md`
+- `docs/PROJECT_HISTORY.md`
+
+Limitations and boundaries:
+
+- No runtime backend switching, active-client replacement, atomic live rollback, automatic/service restart, authentication, credentials, multiple servers/profiles, failover, load balancing, cloud providers, TLS trust/bypass controls, listener editing, retry settings, background monitoring, periodic testing, Connection model listing, self-diagnostics, recovery system, or environment/command-line editing was added.
+- HTTPS uses normal client certificate verification. Saving a valid but unreachable endpoint remains allowed.
+- Candidate self-loop protection covers safely detectable direct root and proxy-namespace references only; it deliberately does not use DNS to infer remote aliases.
+- The settings snapshot does not expose configuration-source provenance.
+
+Validation:
+
+- Focused B6.6 automated result: 300 tests passed with two existing third-party deprecation warnings.
+- Full B6.6 automated result: 552 tests passed with the same two warnings.
+- Product Owner visual and interaction QA remains the acceptance checkpoint; this phase is not committed, merged, pushed, or released by this working-tree implementation.
+
 ### Phase 6.5G — Historical Memory Retrieval & Detail Preservation (Approved Plan)
 
 Status: Planned; approved for the roadmap, not implemented.
@@ -2046,12 +2133,12 @@ Scope boundary:
 
 ## Current Project State
 
-- Current active implementation phase: Phase 6.5F-B6.5: Settings Reset and Recovery Controls; Product Owner and architect review pending.
+- Current active implementation phase: Phase 6.5F-B6.6: Connection Configuration; Product Owner and architect review pending.
 - Phase 6.5F-B4.8 — Automatic Model Context Discovery is implemented.
-- Phase 6.5F-B5.1 through the B6.5 working tree are represented in source, tests, and maintained documentation.
-- Latest focused B6.5 Settings persistence/API/UI validation has 132 tests passing with two third-party deprecation warnings.
-- Latest full B6.5 automated validation has 396 tests passing with the same two third-party deprecation warnings and no skipped tests.
-- Dashboard status: modern operations-console dashboard with live proxy, Ollama, request, context, compression, conversation, intelligence, health, operational activity, recommendations, grouped five-card system instrument panel, Context Trend, Request Traffic, animated Connection Flow, Live Conversation Timeline, Conversation Inspector drawer, Conversation Inspector Overview, deterministic Conversation Inspector Intelligence, and an interactive metadata-driven runtime-versus-persisted Settings page with managed-default reset/recovery controls.
+- Phase 6.5F-B5.1 through the B6.6 working tree are represented in source, tests, and maintained documentation.
+- Latest focused B6.6 Settings/Connection validation result: 300 tests passed with two existing third-party deprecation warnings.
+- Latest full B6.6 automated validation result: 552 tests passed with the same two warnings.
+- Dashboard status: modern operations-console dashboard with live proxy, Ollama, request, context, compression, conversation, intelligence, health, operational activity, recommendations, grouped five-card system instrument panel, Context Trend, Request Traffic, animated Connection Flow, Live Conversation Timeline, Conversation Inspector drawer, Conversation Inspector Overview, deterministic Conversation Inspector Intelligence, and an interactive metadata-driven runtime-versus-persisted Settings page with managed-default reset/recovery controls plus restart-required Ollama Connection configuration and isolated candidate testing.
 - Major capabilities currently present:
   - FastAPI-based transparent Ollama proxy.
   - `/api/*` and `/v1/*` passthrough with streaming preservation for supported endpoints.
@@ -2060,10 +2147,11 @@ Scope boundary:
   - Compression manager, compression planning, rolling-summary support, and confirmed compression metadata.
   - Automatic Model Context Discovery and context-window enforcement.
   - Browser dashboard with live monitoring and intelligence.
-  - Dashboard schema-v2 Settings snapshot, read API, validated in-memory runtime update API, explicit atomic configuration-persistence API, authoritative reset eligibility, and interactive Settings UI for approved Context, Compression, and Dashboard settings.
+  - Dashboard schema-v2 Settings snapshot, read API, validated in-memory runtime update API, explicit atomic configuration-persistence API, authoritative reset eligibility, and interactive Settings UI for approved Connection, Context, Compression, and Dashboard settings.
+  - Isolated one-attempt candidate Ollama Connection testing with normalized endpoint, measured latency, version, safe failures, and no active-state mutation.
   - Windows service foundation, PyInstaller executable foundation, first-run setup wizard, Inno Setup installer foundation, and release build script.
 - Planned work still ahead:
-  - Product Owner and architect review for Phase 6.5F-B6.5.
+  - Product Owner and architect review for Phase 6.5F-B6.6.
   - Later broader dashboard preference work after explicit approval.
   - Phase 6.5F-B7 — Release Polish & Final UX Review.
   - Phase 6.5G — Historical Memory Retrieval & Detail Preservation.
@@ -2080,7 +2168,7 @@ This section is tentative and subject to refinement. These names and boundaries 
 
 - Phase 6.5F-B5 — Live Data Visualization & Rich Widgets.
 - Phase 6.5F-B6 — Dashboard Customization & User Preferences.
-  - Product Owner and architect review for Phase 6.5F-B6.5: Settings Reset and Recovery Controls.
+  - Product Owner and architect review for Phase 6.5F-B6.6: Connection Configuration.
   - Later broader dashboard preference work after explicit approval.
 - Phase 6.5F-B7 — Release Polish & Final UX Review.
 - Phase 6.5G — Historical Memory Retrieval & Detail Preservation.

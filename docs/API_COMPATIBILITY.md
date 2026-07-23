@@ -1,6 +1,6 @@
 # ContextKeeper API Compatibility
 
-Status: Current through the Phase 6.5F-B6.4 working-tree implementation; Product Owner and architect review are pending.
+Status: Current through the Phase 6.5F-B6.5 working-tree implementation; Product Owner and architect review are pending.
 
 ContextKeeper must behave like an Ollama-compatible API server so existing clients can point to ContextKeeper instead of Ollama without code changes.
 
@@ -81,15 +81,15 @@ The dashboard management routes share the `/api/` prefix but are owned by Contex
 
 | Method and path | Responsibility |
 | --- | --- |
-| `GET /api/dashboard/settings` | Read the sanitized schema-v2 runtime and persisted settings snapshot. |
-| `PATCH /api/dashboard/settings` | Validate and update approved in-memory runtime settings only. |
+| `GET /api/dashboard/settings` | Read the sanitized schema-v2 runtime, persisted, default, and reset-eligibility settings snapshot. |
+| `PATCH /api/dashboard/settings` | Validate and atomically update approved in-memory runtime settings, including reset and Discard recovery payloads. |
 | `PUT /api/dashboard/settings/config` | Validate and atomically persist explicitly supplied approved settings only. |
 
-The PATCH and PUT operations are intentionally separate. PATCH does not write YAML. PUT does not mutate the running `Settings` instance, invoke PATCH, restart ContextKeeper, or alter an in-flight proxied request. Unsupported methods retain FastAPI/ContextKeeper `405 Method Not Allowed` behavior rather than falling through to the transparent `/api/{path:path}` proxy.
+The PATCH and PUT operations are intentionally separate. Individual, category, and global managed-default reset plus persisted-value Discard recovery reuse the existing PATCH contract; B6.5 adds no reset endpoint. PATCH does not write YAML. PUT does not mutate the running `Settings` instance, invoke PATCH, restart ContextKeeper, or alter an in-flight proxied request. Unsupported methods retain FastAPI/ContextKeeper `405 Method Not Allowed` behavior rather than falling through to the transparent `/api/{path:path}` proxy.
 
 The management API exposes no Ollama credentials, request bodies, prompt/response text, configuration paths, model override maps, or full configuration contents. Persistence errors use safe local-management details and do not use the upstream `502` proxy error contract.
 
-Phase 6.5F-B6.4 therefore adds a local management surface without changing the forwarded method, request-body, response, or streaming behavior of Ollama-compatible `/api/*` and `/v1/*` clients.
+Phase 6.5F-B6.5: Settings Reset and Recovery Controls extends only the local management client and additive snapshot metadata. It does not change the forwarded method, request body, response, or streaming behavior of Ollama-compatible `/api/*` and `/v1/*` clients, clear application data, or introduce restart behavior.
 
 ## Error behavior
 

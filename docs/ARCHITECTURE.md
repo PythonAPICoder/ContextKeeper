@@ -1,6 +1,6 @@
 # ContextKeeper Architecture
 
-Status: Current through the Phase 6.5F-B6.4 working-tree implementation; Product Owner and architect review are pending.
+Status: Current through the Phase 6.5F-B6.5 working-tree implementation; Product Owner and architect review are pending.
 
 ContextKeeper is a local FastAPI application that presents an Ollama-compatible API to clients while observing, measuring, and managing conversation context before requests reach Ollama.
 
@@ -177,7 +177,7 @@ Source:
 - `src/ctxkeeper/app.py`
 - `src/ctxkeeper/resources.py`
 
-Phase 6.5F-B6.1 added the settings snapshot/read foundation, B6.2 added validated in-memory runtime updates, B6.3 added the metadata-driven browser client, and B6.4 adds explicit configuration persistence without merging the runtime and persisted state concepts:
+Phase 6.5F-B6.1 added the settings snapshot/read foundation, B6.2 added validated in-memory runtime updates, B6.3 added the metadata-driven browser client, B6.4 added explicit configuration persistence, and B6.5 adds managed-default reset and runtime recovery controls without merging the runtime and persisted state concepts:
 
 ```text
 GET /api/dashboard/settings
@@ -191,9 +191,9 @@ The GET endpoint returns schema version 2 with:
 - ordered categories: Context, Compression, Dashboard;
 - setting id, category, display name, description, data type, and minimum/maximum validation metadata where applicable;
 - current runtime `value`, current disk-derived `persisted_value`, and built-in `default_value`;
-- `differs_from_persisted`, `runtime_editable`, `persistable`, and `restart_required` flags.
+- `differs_from_persisted`, `runtime_editable`, `persistable`, `reset_eligible`, and `restart_required` flags.
 
-The authoritative setting catalog remains in `settings_snapshot.py`; persistence does not introduce a second list of dashboard-managed fields. All eight approved Context, Compression, and Dashboard settings are currently both runtime-editable and persistable. The metadata model and browser renderer also support future settings that are runtime-only, persistence-only, non-persistable, or restart-required.
+The authoritative setting catalog remains in `settings_snapshot.py`; persistence and reset behavior do not introduce a second list of dashboard-managed fields or duplicate default values in the browser. All eight approved Context, Compression, and Dashboard settings are currently runtime-editable, persistable, and reset-eligible. The metadata model and browser renderer also support future settings that are runtime-only, persistence-only, non-persistable, reset-ineligible, or restart-required.
 
 Runtime PATCH architecture:
 
@@ -202,6 +202,7 @@ Runtime PATCH architecture:
 - Omitted settings retain their current in-memory values.
 - The update path merges submitted values into a proposed complete `Settings` state, validates the complete proposal, and mutates the shared in-memory `Settings` instance only after validation succeeds.
 - Failed validation is atomic: no partial setting changes are applied.
+- Individual, category, global, and Discard recovery updates reuse this same PATCH path. Reset payloads contain authoritative `default_value` metadata, while recovery payloads contain `persisted_value` for each runtime-editable setting whose confirmed runtime value differs.
 - Successful updates return the same canonical snapshot shape as the read API and are immediately visible to a subsequent GET.
 - PATCH reads persisted state before runtime mutation so its schema-v2 response cannot manufacture disk metadata; an unavailable or invalid active configuration fails safely before runtime changes are applied.
 - Settings GET and PATCH use FastAPI synchronous handlers, keeping configuration disk I/O and process-lock waits off the async proxy/streaming event loop.
@@ -238,18 +239,21 @@ Serialization and safety boundary:
 
 Settings browser architecture:
 
-- The Settings page requests the snapshot only when first opened and constructs categories, labels, descriptions, constraints, default-value context, controls, and editability indicators from API metadata rather than a browser-side setting list.
+- The Settings page requests the snapshot only when first opened and constructs categories, labels, descriptions, constraints, default-value context, controls, reset actions, and editability indicators from API metadata rather than a browser-side setting list.
 - The browser holds a frozen confirmed snapshot and a separately cloned draft snapshot. Edits affect only the draft until Save succeeds.
 - Dirty state compares typed draft values separately with confirmed runtime and persisted values.
+- Each eligible setting has a native reset button with an accessible setting-specific name. It is disabled when the confirmed runtime value already equals the authoritative built-in default.
+- An individual reset immediately issues one PATCH for that setting. Each category has a confirmed reset action that includes all and only reset-eligible settings in that category, including eligible values already at default. **Reset managed settings to defaults** requires confirmation and applies the same complete selection across the current snapshot. Category and global controls are disabled when their complete eligible scope is already at default.
+- Category and global reset payloads are submitted as one atomic PATCH. Cancellation sends no request; success accepts the canonical snapshot and reports that defaults are staged without writing configuration. Feedback requires Save to configuration when persisted values differ, or states that no save is needed when they already match.
 - Save runtime changes derives a nested payload from metadata and issues one `PATCH` containing only changed runtime-editable fields.
 - Save to configuration is a separate button, never an edit/input side effect. It issues one `PUT /api/dashboard/settings/config` containing only persistable draft values that differ from the confirmed `persisted_value`.
 - While either save is pending, controls and both save actions are locked to prevent duplicate or conflicting submissions.
 - The successful PATCH snapshot becomes the new authoritative confirmed state and a fresh draft while retaining any future persistence-only draft values that PATCH was not eligible to apply. If a success response cannot be interpreted, the client performs at most one settings GET to confirm the accepted state. If that confirmation also fails, the visible draft is locked and an explicit retry-load action prevents further edits against stale confirmed state.
 - A successful PUT accepts the refreshed runtime/persisted snapshot while restoring the user's draft values. This allows a value to be saved for a later restart without silently applying it to the current process.
 - Validation, persistence, and network failures leave the draft and dirty state intact. API error messages are rendered as text, and exact field locations are associated with controls where the response supplies them.
-- Discard clones the latest confirmed snapshot without a PATCH, GET, browser storage, or configuration-file operation.
+- Discard remains local when only browser draft edits need to be abandoned. When confirmed runtime differs from persisted state, Discard issues one atomic PATCH restoring every runtime-editable differing value from `persisted_value`; it never calls PUT or writes the configuration file.
 
-Current B6.4 boundary:
+Current B6.5 boundary:
 
 - The Settings page is a management API client, not another source of configuration rules or setting ownership.
 - Settings controls are temporary browser state; no LocalStorage or SessionStorage is used.
@@ -258,7 +262,8 @@ Current B6.4 boundary:
 - Restart-required metadata is represented generically. If a future persistable setting requires restart, its persisted value can differ from the active runtime value until a manual restart; no currently approved setting is marked restart-required.
 - No history browser, backup-management UI, rollback workflow, import/export, or multi-process locking.
 - No authentication or multi-user setting ownership.
-- No reset-to-defaults workflow.
+- Reset is limited to metadata-approved dashboard-managed settings. It does not delete or recreate YAML, clear logs, metrics, conversations, summaries, model files, or other application data, and it is not a factory reset.
+- No restart control, self-diagnostic workflow, automated repair, configuration backup history, or saved-configuration rollback.
 - No proxy, streaming, context-engine, or compression-engine contract changes.
 
 ## Dashboard visualization path
@@ -278,7 +283,7 @@ The browser dashboard is a vanilla HTML/CSS/JavaScript operations console. It cu
 - Live Conversation Timeline;
 - Conversation Inspector drawer with Overview and Intelligence;
 - client-side navigation between Operations, Conversations, Context, Analytics, Logs, and the interactive Settings page;
-- a visible runtime-versus-saved notice, metadata-driven category form, persisted-value/difference guidance, feedback regions, separate runtime/configuration Save actions, and Discard on Settings.
+- a visible runtime-versus-saved notice, metadata-driven category form, individual/category/global managed-default reset controls, persisted-value/difference guidance, feedback regions, separate runtime/configuration Save actions, and Discard on Settings.
 
 The dashboard polls the existing endpoints on the configured refresh interval, defaulting to `1000 ms`. It uses one reschedulable interval and a guard to avoid overlapping refreshes. Page switching does not create polling timers or duplicate listeners. When the runtime refresh interval changes, the canonical `/dashboard/data` value reschedules that same timer; opening Settings adds only its guarded first-load request.
 

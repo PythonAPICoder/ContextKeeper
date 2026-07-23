@@ -128,6 +128,7 @@ class DashboardSetting:
     runtime_editable: bool = True
     persistable: bool = True
     restart_required: bool = False
+    reset_eligible: bool = False
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -147,6 +148,7 @@ class DashboardSetting:
             "runtime_editable": self.runtime_editable,
             "persistable": self.persistable,
             "restart_required": self.restart_required,
+            "reset_eligible": self.reset_eligible and self.runtime_editable,
             "data_type": self.data_type,
         }
 
@@ -215,6 +217,7 @@ def build_dashboard_settings_snapshot(
                             persisted_value=persisted.context.enabled,
                             default_value=defaults.context.enabled,
                             data_type="boolean",
+                            reset_eligible=True,
                         ),
                         DashboardSetting(
                             id="context.warning_threshold_percent",
@@ -227,6 +230,7 @@ def build_dashboard_settings_snapshot(
                             data_type="integer",
                             minimum=0,
                             maximum=100,
+                            reset_eligible=True,
                         ),
                         DashboardSetting(
                             id="context.compression_threshold_percent",
@@ -239,6 +243,7 @@ def build_dashboard_settings_snapshot(
                             data_type="integer",
                             minimum=0,
                             maximum=100,
+                            reset_eligible=True,
                         ),
                         DashboardSetting(
                             id="context.keep_recent_messages",
@@ -250,6 +255,7 @@ def build_dashboard_settings_snapshot(
                             default_value=defaults.context.keep_recent_messages,
                             data_type="integer",
                             minimum=1,
+                            reset_eligible=True,
                         ),
                     ],
                 ),
@@ -267,6 +273,7 @@ def build_dashboard_settings_snapshot(
                             persisted_value=persisted.compression.enabled,
                             default_value=defaults.compression.enabled,
                             data_type="boolean",
+                            reset_eligible=True,
                         ),
                         DashboardSetting(
                             id="compression.summarizer_model",
@@ -277,6 +284,7 @@ def build_dashboard_settings_snapshot(
                             persisted_value=persisted.compression.summarizer_model,
                             default_value=defaults.compression.summarizer_model,
                             data_type="string",
+                            reset_eligible=True,
                         ),
                         DashboardSetting(
                             id="compression.max_summary_tokens",
@@ -288,6 +296,7 @@ def build_dashboard_settings_snapshot(
                             default_value=defaults.compression.max_summary_tokens,
                             data_type="integer",
                             minimum=1,
+                            reset_eligible=True,
                         ),
                     ],
                 ),
@@ -306,6 +315,7 @@ def build_dashboard_settings_snapshot(
                             default_value=defaults.dashboard.refresh_interval_ms,
                             data_type="integer",
                             minimum=1,
+                            reset_eligible=True,
                         ),
                     ],
                 ),

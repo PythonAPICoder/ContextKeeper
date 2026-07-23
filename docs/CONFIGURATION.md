@@ -1,6 +1,6 @@
 # ContextKeeper Configuration
 
-Status: Current through the Phase 6.5F-B6.4 working-tree implementation; Product Owner and architect review are pending. Verified against `src/ctxkeeper/config.py`, `src/ctxkeeper/resources.py`, `src/ctxkeeper/dashboard/settings_snapshot.py`, `src/ctxkeeper/dashboard/config_persistence.py`, `src/ctxkeeper/dashboard/routes.py`, and `src/ctxkeeper/dashboard/template.py`.
+Status: Current through the Phase 6.5F-B6.5 working-tree implementation; Product Owner and architect review are pending. Verified against `src/ctxkeeper/config.py`, `src/ctxkeeper/resources.py`, `src/ctxkeeper/dashboard/settings_snapshot.py`, `src/ctxkeeper/dashboard/config_persistence.py`, `src/ctxkeeper/dashboard/routes.py`, and `src/ctxkeeper/dashboard/template.py`.
 
 ContextKeeper is configured through `contextkeeper.yaml`, with a small set of environment variable overrides. The first-run wizard creates this file when it is missing.
 
@@ -90,13 +90,16 @@ No environment variable currently overrides dashboard refresh timing, context th
 
 ## Configuration precedence
 
-Current source behavior:
+The configuration precedence policy, from highest to lowest, is:
 
-1. Built-in defaults from `Settings`.
-2. Values loaded from `contextkeeper.yaml`.
-3. Supported environment variable overrides.
+1. Command-line setting overrides, where a command supports them.
+2. Supported environment variable overrides.
+3. Values loaded from `contextkeeper.yaml`.
+4. Built-in defaults from `Settings`.
 
-The `--configure` command-line flag launches the configuration wizard and exits. It does not provide per-setting runtime overrides.
+Current source behavior implements no command-line setting override. The `--configure` flag launches the configuration wizard and exits; it does not provide per-setting runtime overrides. Among the currently implemented value sources, loading begins with built-in defaults, overlays YAML, and finally overlays the supported environment variables. The current environment variables affect server, Ollama, and logging fields that are not exposed as dashboard-managed settings.
+
+Save to configuration writes only the YAML tier. It does not edit command-line arguments or environment variables and cannot override a higher-priority source.
 
 ## Dashboard Settings page and Settings Management API
 
@@ -108,7 +111,7 @@ PATCH /api/dashboard/settings         Update the current process only
 PUT   /api/dashboard/settings/config  Persist explicitly supplied values only
 ```
 
-None of these dashboard management routes is proxied to Ollama. Editing a control sends no request. Runtime Save never writes YAML, and Save to configuration never applies runtime changes or restarts ContextKeeper.
+None of these dashboard management routes is proxied to Ollama. Ordinary field editing sends no request. Runtime Save, reset, and Discard recovery use PATCH and never write YAML. Save to configuration uses PUT and never applies runtime changes or restarts ContextKeeper. B6.5 adds no reset endpoint.
 
 ### GET settings snapshot
 
@@ -122,17 +125,19 @@ Schema version 2 includes, for each setting:
 - built-in `default_value`;
 - `data_type` plus `minimum` and `maximum` where applicable;
 - computed `differs_from_persisted`;
-- `runtime_editable`, `persistable`, and `restart_required`.
+- `runtime_editable`, `persistable`, `reset_eligible`, and `restart_required`.
 
 GET freshly reads and validates the active configuration so persisted metadata reflects disk rather than only startup state. GET is read-only: it changes neither runtime state nor the file. A missing file is represented by validated built-in defaults until an explicit PUT creates it. Invalid UTF-8, malformed/non-mapping YAML, an invalid existing configuration, or a read failure returns a safe error rather than manufacturing persisted metadata.
 
-All eight currently exposed settings are runtime-editable and persistable, and none currently requires restart. The metadata and UI still support future runtime-only, persistence-only, non-persistable, and restart-required settings. For a restart-required setting, a successful PUT can make `persisted_value` differ from the active runtime `value` until the user manually restarts ContextKeeper; there is no automatic restart action.
+All eight currently exposed settings are runtime-editable, persistable, and reset-eligible, and none currently requires restart. Reset eligibility is an explicit server-owned contract, not an inference from a browser-side allowlist. The metadata and UI still support future runtime-only, persistence-only, non-persistable, reset-ineligible, and restart-required settings. For a restart-required setting, a successful PUT can make `persisted_value` differ from the active runtime `value` until the user manually restarts ContextKeeper; there is no automatic restart action.
 
 ### PATCH runtime settings
 
 Save runtime changes constructs one nested PATCH body containing only draft values that differ from confirmed runtime values and are marked `runtime_editable`. Numeric, boolean, and string values retain their JSON types. The backend merges the partial update into the current complete runtime state, validates the proposal, and mutates the shared in-memory `Settings` instance only after all validation succeeds.
 
 Omitted settings retain their current runtime values. Failed validation is atomic, and a successful response is the complete schema-v2 snapshot. PATCH never invokes the persistence service, never writes the active YAML file, and never restarts ContextKeeper. Runtime-only differences reset at process restart unless the user separately chooses Save to configuration.
+
+Reset and Discard recovery requests use the same partial update model and validation path. The frontend can assemble a multi-setting request from `default_value` or `persisted_value` metadata, but the backend still independently rejects unknown, unsupported, incorrectly typed, out-of-range, or cross-field-invalid updates before any runtime mutation.
 
 Because a successful schema-v2 response must contain truthful persisted metadata, PATCH reads and validates the active configuration before changing runtime state. If persisted state is malformed or inaccessible, PATCH returns the same safe configuration error as GET and leaves runtime state unchanged. GET and PATCH are synchronous FastAPI handlers, so these disk reads and any wait on the process-local persistence lock run in the framework worker pool rather than blocking proxy/streaming event-loop work.
 
@@ -155,6 +160,22 @@ Invoke-RestMethod `
     -ContentType "application/json" `
     -Body $body
 ```
+
+### Reset and recovery controls
+
+Reset to defaults is a runtime staging operation. It is deliberately separate from Save to configuration:
+
+- Each setting marked `reset_eligible` has an individual reset action. The action submits only that setting with its server-provided `default_value`; the button is disabled when the current runtime value already equals the built-in default.
+- Each category has a reset action that uses a native keyboard-operable confirmation. It includes all and only reset-eligible settings in that category, including eligible values already at default, and sends them in one PATCH.
+- The deliberate global action is labeled **Reset managed settings to defaults**. It requires native confirmation and sends all and only reset-eligible settings from the current snapshot, including eligible values already at default, in one PATCH. Category and global controls are disabled when their complete eligible scope is already at default.
+- Category and global payloads are validated as complete proposals. If any value or cross-field relationship is invalid, PATCH applies none of the requested runtime changes.
+- Successful feedback identifies how many settings were staged where practical and states that reset did not write configuration. It directs the user to Save to configuration when persisted values differ, or reports that no save is needed when they already match. Cancellation sends no request and changes no settings.
+
+Reset values come from authoritative snapshot metadata. Dashboard JavaScript and HTML do not contain a duplicate table of built-in defaults. Read-only, unsupported, reset-ineligible, and unmanaged fields are excluded. Reset does not delete, recreate, or replace the complete YAML document; clear logs, metrics, conversations, summaries, model files, or other application data; or restart ContextKeeper. It is not a factory reset.
+
+Discard runtime changes has two paths. Browser-only draft edits are restored from the confirmed snapshot locally. When confirmed runtime values differ from persisted values, Discard sends one atomic PATCH that restores every runtime-editable differing value from `persisted_value`. It never sends PUT or changes YAML. A validation or request failure preserves the current runtime/UI state and reports an error instead of claiming success.
+
+After a reset, Save to configuration remains the only persistence action. It sends eligible staged defaults through the existing validated PUT service. A successful save refreshes runtime and persisted metadata, preserves unmanaged YAML content, and does not override higher-priority sources or restart ContextKeeper.
 
 ### PUT persisted configuration
 
@@ -203,6 +224,7 @@ A successful response has this top-level structure; the representative nested sn
             "runtime_editable": true,
             "persistable": true,
             "restart_required": false,
+            "reset_eligible": true,
             "data_type": "boolean"
           }
           // Remaining approved Context settings, followed by complete Compression and Dashboard categories.
@@ -239,24 +261,24 @@ PyYAML preserves parsed configuration values, including unmanaged categories and
 
 ### Settings page state and feedback
 
-The browser keeps the confirmed server snapshot separate from the editable draft. It computes runtime changes against `value` and persistence changes against `persisted_value`. Save runtime changes submits only the first set through PATCH; Save to configuration submits only the second set through PUT. Save to configuration is disabled when no eligible persistence difference exists, never runs automatically from editing, shows an in-progress label, and locks controls and both save actions while pending.
+The browser keeps the confirmed server snapshot separate from the editable draft. It computes runtime changes against `value`, persistence changes against `persisted_value`, and reset availability against `default_value` plus `reset_eligible`, all with typed equality. Save runtime changes submits draft/runtime differences through PATCH; reset controls immediately submit authoritative defaults through PATCH; Save to configuration submits draft/persisted differences through PUT. Save to configuration is disabled when no eligible persistence difference exists, never runs automatically from editing or reset, shows an in-progress label, and locks conflicting controls while pending.
 
-Successful PUT refreshes runtime/persisted metadata while restoring the user's draft values, so a newly persisted value may remain an unapplied runtime draft. Validation, network, server, and malformed-response failures retain the draft and present inline feedback. Discard restores the latest confirmed runtime draft and sends no GET, PATCH, or PUT. Per-setting text identifies the saved value and whether the draft, runtime, and persisted values differ; badges identify runtime-read-only, non-persistable, and restart-required states without relying on color alone.
+Successful reset feedback states that defaults are staged and reset did not write configuration. It distinguishes persisted differences that require Save to configuration from an already-matching persisted state that needs no save. Successful PUT refreshes runtime/persisted metadata while restoring the user's draft values, so a newly persisted value may remain an unapplied runtime draft. Validation, network, server, and malformed-response failures retain the relevant state and present inline feedback. Discard is local for browser-only draft changes and uses one PATCH when runtime-editable confirmed values must be restored from persisted metadata. Per-setting text identifies the default and saved values and whether the draft, runtime, and persisted values differ; badges identify runtime-read-only, non-persistable, runtime-different-from-saved, and restart-required states without relying on color alone.
 
 `POST`, `PUT`, and `DELETE` on `/api/dashboard/settings` itself continue to return `405`; configuration persistence is available only at the separate `/api/dashboard/settings/config` resource.
 
 Exposed settings:
 
-| Category | Setting |
-| --- | --- |
-| Context | `context.enabled` |
-| Context | `context.warning_threshold_percent` |
-| Context | `context.compression_threshold_percent` |
-| Context | `context.keep_recent_messages` |
-| Compression | `compression.enabled` |
-| Compression | `compression.summarizer_model` |
-| Compression | `compression.max_summary_tokens` |
-| Dashboard | `dashboard.refresh_interval_ms` |
+| Category | Setting | Reset eligible |
+| --- | --- | --- |
+| Context | `context.enabled` | Yes |
+| Context | `context.warning_threshold_percent` | Yes |
+| Context | `context.compression_threshold_percent` | Yes |
+| Context | `context.keep_recent_messages` | Yes |
+| Compression | `compression.enabled` | Yes |
+| Compression | `compression.summarizer_model` | Yes |
+| Compression | `compression.max_summary_tokens` | Yes |
+| Dashboard | `dashboard.refresh_interval_ms` | Yes |
 
 Startup-only or unexposed fields remain rejected by both update APIs, including server host/port, Ollama base URL, logging paths, metrics settings, model override maps, `context.default_context_window_tokens`, and `context.minimum_threshold_percent`.
 

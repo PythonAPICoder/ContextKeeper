@@ -1,8 +1,8 @@
 # ContextKeeper Documentation
 
-Status: Current through the Phase 6.5F-B6.4 working-tree implementation; Product Owner and architect review are pending.
+Status: Current through the Phase 6.5F-B6.5 working-tree implementation; Product Owner and architect review are pending.
 
-ContextKeeper is a local Ollama-compatible middleware layer with diagnostics, Context Usage tracking, compression support, Automatic Model Context Discovery, and a live operations dashboard with separate runtime Settings updates and explicit configuration persistence.
+ContextKeeper is a local Ollama-compatible middleware layer with diagnostics, Context Usage tracking, compression support, Automatic Model Context Discovery, and a live operations dashboard with separate runtime Settings updates, managed-default reset controls, and explicit configuration persistence.
 
 Use the current implementation as the source of truth. Older planning and mockup documents are retained because they preserve product reasoning, but they do not override source behavior.
 
@@ -42,16 +42,16 @@ Use the current implementation as the source of truth. Older planning and mockup
 
 | Document | Classification | Notes |
 | --- | --- | --- |
-| `README.md` | Current | Modern project landing page synchronized through B6.4. |
+| `README.md` | Current | Modern project landing page synchronized through B6.5. |
 | `docs/README.md` | Current | Documentation index and audit inventory. |
-| `docs/ARCHITECTURE.md` | Current | Runtime/dashboard/settings/persistence architecture source-aligned through B6.4. |
-| `docs/API_COMPATIBILITY.md` | Current | Ollama compatibility, request-observation, and local dashboard-management boundaries. |
-| `docs/CONFIGURATION.md` | Current | Source-verified defaults, overrides, thresholds, GET/PATCH/PUT Settings behavior, atomic persistence, and precedence. |
-| `docs/TEST_PLAN.md` | Current | Automated/manual/visual/regression validation plan including configuration persistence and Settings UI integration. |
-| `docs/ROADMAP.md` | Current | Active roadmap synchronized through B6.4. |
-| `docs/PROJECT_HISTORY.md` | Current | Phase record through B6.4. |
+| `docs/ARCHITECTURE.md` | Current | Runtime/dashboard/settings/reset/persistence architecture source-aligned through B6.5. |
+| `docs/API_COMPATIBILITY.md` | Current | Ollama compatibility, request-observation, and local dashboard-management boundaries through B6.5. |
+| `docs/CONFIGURATION.md` | Current | Source-verified defaults, overrides, reset/recovery controls, GET/PATCH/PUT Settings behavior, atomic persistence, and precedence. |
+| `docs/TEST_PLAN.md` | Current | Automated/manual/visual/regression validation plan including Settings reset/recovery, configuration persistence, and UI integration. |
+| `docs/ROADMAP.md` | Current | Active roadmap synchronized through B6.5. |
+| `docs/PROJECT_HISTORY.md` | Current | Phase record through B6.5. |
 | `docs/CONVERSATION_INSPECTOR.md` | Current | Current inspector contract and deferred detail phases. |
-| `docs/DASHBOARD_LAYOUT.md` | Current | Current Operations and runtime-versus-persisted Settings layout and visual hierarchy. |
+| `docs/DASHBOARD_LAYOUT.md` | Current | Current Operations and runtime-versus-persisted Settings layout, reset controls, and visual hierarchy. |
 | `docs/DASHBOARD_VISUALIZATION_AUDIT.md` | Historical | B5.1 audit retained with current-state addendum; not a live contract for every widget. |
 | `docs/LIVE_FLOW_VISUALIZATION.md` | Current | Connection Flow behavior updated from placeholder to implemented animation. |
 | `docs/ANIMATION_GUIDELINES.md` | Current | Motion/reduced-motion guidance remains applicable. |
@@ -60,7 +60,7 @@ Use the current implementation as the source of truth. Older planning and mockup
 | `docs/DESIGN_SYSTEM.md` | Current | Visual foundation remains applicable. |
 | `docs/DESIGN_LANGUAGE.md` | Current | Product design principles remain applicable. |
 | `docs/TYPOGRAPHY.md` | Current | Typography guidance remains applicable. |
-| `docs/UI_COMPONENT_GUIDE.md` | Current | Compact dashboard and metadata-driven runtime/configuration Settings component guidance. |
+| `docs/UI_COMPONENT_GUIDE.md` | Current | Compact dashboard and metadata-driven runtime/reset/configuration Settings component guidance. |
 | `docs/UI_STYLE_GUIDE.md` | Current | Spacing, radius, elevation, and icon guidance. |
 | `docs/CODING_STANDARDS.md` | Current | Engineering standards; dashboard decision updated from pending to browser dashboard. |
 | `docs/FUTURE_IDEAS.md` | Current | Future-ideas parking lot, not v1 commitment. |

@@ -1,6 +1,6 @@
 # ContextKeeper Test Plan
 
-Status: Current through the Phase 6.5F-B6.4 working-tree implementation; Product Owner and architect review are pending.
+Status: Current through the Phase 6.5F-B6.5 working-tree implementation; Product Owner and architect review are pending.
 
 This document defines automated and manual validation expectations for ContextKeeper. The automated suite is the default regression gate; manual Visual QA remains required for dashboard layout, motion, responsive behavior, and Product Owner acceptance.
 
@@ -128,7 +128,7 @@ Validate:
 
 - `GET /api/dashboard/settings` returns a read-only schema-v2 settings snapshot without changing runtime or disk state.
 - Categories are ordered as Context, Compression, and Dashboard.
-- Each setting includes stable id, category, display name, description, runtime `value`, `persisted_value`, `default_value`, `differs_from_persisted`, minimum, maximum, `runtime_editable`, `persistable`, `restart_required`, and data type.
+- Each setting includes stable id, category, display name, description, runtime `value`, `persisted_value`, `default_value`, `differs_from_persisted`, minimum, maximum, `runtime_editable`, `persistable`, `reset_eligible`, `restart_required`, and data type.
 - Approved settings are exposed:
   - `context.enabled`
   - `context.warning_threshold_percent`
@@ -139,6 +139,8 @@ Validate:
   - `compression.max_summary_tokens`
   - `dashboard.refresh_interval_ms`
 - Current effective values come from the runtime `Settings` instance; persisted values come from a fresh active-file read; built-in defaults remain available for comparison.
+- Reset eligibility is explicit authoritative metadata; read-only, unsupported, unmanaged, and reset-ineligible settings are excluded from reset payloads.
+- Current boolean, integer, and string settings retain correctly typed authoritative defaults. An already-default individual setting has a disabled reset action; an entirely-default category or global scope is also disabled.
 - Runtime/persisted divergence and equality produce the correct `differs_from_persisted` value without type coercion.
 - Validation metadata includes integer minimum/maximum values where applicable.
 - Output is sanitized and does not include environment variables, config file paths, secrets, server bind details, Ollama base URL, logging paths, metrics settings, or model override maps.
@@ -150,11 +152,31 @@ Validate:
 - Invalid boolean, integer, percentage, `keep_recent_messages`, `max_summary_tokens`, blank model, unknown field, read-only field, wrong-shape, missing-body, and malformed JSON inputs are rejected.
 - Threshold relationships are validated on the merged proposed state, including partial updates that conflict with retained current threshold values.
 - Atomic rejection is verified: a request containing one valid setting and one invalid setting changes neither value.
+- Reset and Discard recovery payloads receive the same strict complete-proposal validation and all-or-nothing mutation behavior as ordinary PATCH updates.
 - Empty JSON update bodies are deliberately rejected.
 - PATCH does not write configuration automatically, and a runtime update can differ from persisted metadata until an explicit PUT.
 - Malformed or inaccessible persisted state causes PATCH to fail before runtime mutation rather than returning fabricated persisted metadata.
 - Settings GET/PATCH disk reads are registered as synchronous FastAPI handlers so slow file I/O or lock waits use the worker pool rather than blocking unrelated async proxy work.
 - `POST`, `PUT`, and `DELETE` on `/api/dashboard/settings` itself return `405`; persistence uses the separate config resource.
+
+Settings reset and recovery coverage should confirm:
+
+- An individual reset updates only the selected reset-eligible setting, uses its authoritative `default_value`, marks runtime/persisted divergence correctly, and does not write YAML.
+- Individual reset still receives backend type, range, full-model, and cross-field validation; an invalid proposal does not mutate runtime.
+- A category reset requires confirmation, includes all and only reset-eligible settings in that category, including eligible values already at default, leaves unrelated categories unchanged, and sends one atomic PATCH.
+- A rejected category reset applies no partial runtime mutation and does not modify YAML.
+- The global control is labeled **Reset managed settings to defaults**, requires confirmation, and stages all and only reset-eligible dashboard-managed settings in one atomic PATCH.
+- Read-only, unsupported, reset-ineligible, and unmanaged settings remain unchanged; no logs, metrics, conversations, summaries, model files, or other application data are cleared; no restart is triggered.
+- Cancelling category or global confirmation sends no request, changes no setting, and reports cancellation without false success.
+- Successful reset feedback reports a staged count where practical, states that reset did not write configuration, and distinguishes Save-required persisted divergence from an already-matching configuration that needs no save.
+- Runtime, persisted, default, unsaved, and restart-required states remain distinguishable after individual, category, and global reset.
+- Discard restores browser-only drafts locally; when runtime-editable confirmed values differ from persisted state, it sends one atomic PATCH using each differing `persisted_value`, writes no YAML, and refreshes confirmed/draft metadata from the canonical response.
+- Failed Discard recovery applies no partial update and does not falsely report that runtime was restored.
+- Reset alone never calls `PUT /api/dashboard/settings/config`, creates/replaces YAML, or changes its bytes.
+- Save after reset persists staged defaults through the existing PUT service, refreshes persisted state, retains unmanaged YAML keys/sections, and preserves restart-required guidance.
+- Save validation or storage failure retains the prior valid file and staged runtime/UI state and does not falsely report success.
+- Restart loading observes successfully persisted default values according to normal configuration precedence.
+- No reset endpoint or unnecessary public API method is introduced; existing GET, PATCH, PUT, and unsupported-method responses remain compatible.
 
 Persistence service coverage should confirm:
 
@@ -174,6 +196,7 @@ Persistence service coverage should confirm:
 - two concurrent in-process writes serialize and do not interleave replacement work;
 - persistence does not mutate the shared runtime settings instance or restart ContextKeeper;
 - successful persistence refreshes metadata, including restart-required persisted/runtime divergence when metadata is configured for that generic case.
+- saving staged default values changes only allowlisted managed fields and retains unknown/unmanaged YAML content under the B6.4 persistence contract.
 
 Persistence API coverage should confirm:
 
@@ -190,7 +213,13 @@ Settings UI coverage should confirm:
 - Opening Settings performs a guarded first `GET /api/dashboard/settings`; repeated page switching does not duplicate listeners, loads, or polling timers.
 - Categories and controls are generated from API metadata rather than a hard-coded setting list.
 - Boolean, integer, and string rendering paths preserve value types; supplied minimum/maximum constraints are represented.
-- Labels, descriptions, saved values, runtime/persisted difference text, status/live regions, runtime-read-only/non-persistable explanations, and restart-required indicators have accessible markup.
+- Labels, descriptions, default/saved values, runtime/persisted difference text, status/live regions, runtime-read-only/non-persistable explanations, reset availability/disabled state, and restart-required indicators have accessible markup.
+- Each eligible setting has a native reset button with a setting-specific accessible name; it is semantically and visually disabled when runtime already equals the default or reset is unavailable.
+- Reset values and inclusion are derived from `default_value` and `reset_eligible` metadata without hard-coded browser defaults or a parallel setting allowlist.
+- Individual reset sends one single-setting PATCH without confirmation; category and global reset use native keyboard-operable confirmation and send one multi-setting PATCH only after acceptance.
+- Category reset selection is isolated to the requested category; category and global selection include all and only reset-eligible managed settings in scope, including eligible values already at default once an action is enabled.
+- Reset success accepts the canonical snapshot, preserves runtime/persisted/default distinctions, and announces staged-unsaved state and count where practical.
+- Reset cancellation changes no state and uses the existing feedback convention; reset failure preserves the current UI/runtime representation for retry.
 - Confirmed and draft snapshots are separate clones, and confirmed state is protected from draft mutation.
 - Runtime dirty calculation compares draft with runtime `value`; persistence dirty calculation compares draft with `persisted_value`; both use typed equality and metadata eligibility.
 - Save runtime changes guards duplicate submission and sends one nested PATCH containing only intended changed runtime-editable fields.
@@ -200,19 +229,22 @@ Settings UI coverage should confirm:
 - Successful PUT accepts refreshed runtime/persisted metadata while restoring the user's draft, so persisted values can remain pending runtime application.
 - Validation failures map exact API error locations to controls when possible, provide a page-level alert, preserve all draft values, preserve dirty state, and allow correction/retry.
 - PATCH and PUT network, server, and malformed-response paths fail safely, render response data as text, preserve the draft, and allow retry.
-- Discard restores the latest confirmed runtime draft, clears field errors/dirty state, and performs no GET, PATCH, or PUT.
-- The visible notice distinguishes runtime Save from Save to configuration and states that neither action restarts ContextKeeper automatically.
-- No browser storage, reset-to-defaults workflow, automatic persistence, per-setting autosave, or restart orchestration is added.
+- Discard restores browser-only draft edits locally; when confirmed runtime differs from persisted state, it sends one atomic changed-fields-only PATCH using `persisted_value` for every runtime-editable differing setting, never PUT, and accepts the canonical response.
+- Discard validation, network, server, and malformed-response failures preserve the current state and do not falsely report success.
+- The visible notice distinguishes Discard runtime changes, Reset to defaults, and Save to configuration, and states that none writes YAML except Save to configuration and none restarts ContextKeeper automatically.
+- No browser storage, automatic persistence, per-setting autosave, reset endpoint, factory reset, restart orchestration, application-data clearing, self-diagnostics, or repair workflow is added.
 - Manual observation should confirm runtime-only changes reset after process restart, persisted changes survive restart, and restart-required guidance remains explicit where applicable.
 - Existing `/dashboard/data`, proxy/streaming behavior, Conversation Inspector, Connection Flow, Request Traffic, Context Trend, instrument panel, reduced-motion, context-engine, and compression tests remain green.
 
-Focused B6.4 command:
+Focused B6.5 command:
 
 ```powershell
 python -m pytest -q tests/test_config_persistence.py tests/test_dashboard_settings.py tests/test_dashboard_settings_ui.py
 ```
 
-Phase B6.4 Product Owner QA should exercise keyboard navigation between Operations and Settings; manual reversal, runtime Save, Save to configuration, retry after validation/storage failure, and Discard; runtime-versus-persisted messaging; restart-required guidance; live dashboard behavior during repeated view switching; and layout at supported desktop and narrow widths. Approval remains a manual checkpoint after automated regression passes.
+Latest B6.5 implementation evidence: the focused command passed 132 tests, and the complete `python -m pytest -q` suite passed 396 tests. Both runs reported only the two existing third-party deprecation warnings documented in Project History.
+
+Phase 6.5F-B6.5 Product Owner QA should exercise keyboard navigation between Operations and Settings; individual reset; category/global confirmation and cancellation; already-default disabled states; staged-count and unsaved feedback; Discard recovery to persisted values; Save to configuration after reset; retry after reset, validation, or storage failure; runtime-versus-persisted/default messaging; restart-required guidance; live dashboard behavior during repeated view switching; and layout at supported desktop and narrow widths. Approval remains a manual checkpoint after automated regression passes.
 
 ## Request Traffic
 
@@ -326,8 +358,9 @@ Manual dashboard review should include:
 - Operations lower row: Traffic, Active Conversation, Live Conversation Timeline.
 - Conversation Inspector desktop drawer and narrow full-width/backdrop behavior.
 - Settings categories and fields at desktop, tablet/narrow desktop, and mobile widths.
-- Settings labels, runtime/saved difference text, constraints, badges, feedback, and the sticky Discard/runtime Save/configuration Save action bar wrap without horizontal overflow.
-- Settings loading, empty, retry, runtime-save success, configuration-save success, validation-error, storage-error, and network-error states remain readable without color alone.
+- Settings labels, runtime/saved/default difference text, constraints, badges, individual/category/global reset controls, feedback, and the sticky Discard/runtime Save/configuration Save action bar wrap without horizontal overflow.
+- Settings loading, empty, retry, runtime-save success, reset-staged success, reset-cancelled, discard-recovery success, configuration-save success, validation-error, storage-error, and network-error states remain readable without color alone.
+- Reset controls and native confirmation remain keyboard-operable, disabled states remain semantic, and reduced-motion behavior is unchanged.
 
 ## Reduced motion
 
@@ -386,8 +419,9 @@ Every release candidate should confirm:
 - Live Conversation Timeline updates.
 - Conversation Inspector opens, updates, and closes.
 - Settings navigation opens the metadata-driven form and returns to Operations without a page reload.
-- Settings runtime Save sends one changed-fields-only PATCH; Save to configuration sends one changed-fields-only PUT only after explicit action; Discard sends none; failed saves preserve the draft.
-- Runtime-only settings reset after ContextKeeper restarts, persisted values survive restart, and no action restarts ContextKeeper automatically.
+- Settings runtime Save sends one changed-fields-only PATCH; individual/category/global reset sends one scope-limited atomic PATCH; Save to configuration sends one changed-fields-only PUT only after explicit action; Discard sends no request for browser-only drafts and one atomic PATCH when restoring persisted runtime values; failed operations preserve recoverable state.
+- Runtime-only setting changes, including staged defaults, return to effective startup values after ContextKeeper restarts; persisted values survive restart, and no dashboard settings action restarts ContextKeeper automatically.
 - Configuration writes retain unrelated/model-specific data, fail atomically, leave no temporary file after ordinary failure cleanup, and do not expose filesystem paths or configuration contents.
+- Reset and Discard never clear logs, metrics, conversations, summaries, model files, or other application data and never alter Ollama-compatible proxy or streaming behavior.
 - Reduced-motion behavior is respected.
 - No prompt/response/summary content appears in routine dashboard surfaces.

@@ -69,7 +69,7 @@ Example: `Phase 6.5F-B4.2`
 | Dashboard modernization B4 workstream | Completed | Phase 6.5F-B4.8 automatic model context discovery is implemented and documented. |
 | Live data visualization and rich widgets | Completed through B5.5.2 | Request Traffic, Connection Flow, Live Conversation Timeline, layout refinement, Connection Flow visibility polish, Conversation Inspector foundation, and Conversation Inspector Overview & Intelligence are implemented; B5.6 synchronized documentation to that state. |
 | Documentation audit and synchronization | Completed | Phase 6.5F-B5.6 audited maintained Markdown documents and aligned documentation with the implementation through B5.5.2. |
-| Dashboard customization and user preferences | Active | Phase 6.5F-B6 has delivered the Settings Snapshot/read API, validated in-memory update API, Settings panel UI foundation, and B6.4 explicit configuration-persistence foundation; B6.4 Product Owner and architect review are pending. |
+| Dashboard customization and user preferences | Active | Phase 6.5F-B6 has delivered the Settings Snapshot/read API, validated in-memory update API, Settings panel UI foundation, B6.4 explicit configuration persistence, and B6.5 managed settings reset/recovery controls; B6.5 Product Owner and architect review are pending. |
 | Release polish and final UX review | Planned | Phase 6.5F-B7 planned before historical memory retrieval and validation certification. |
 | Historical memory retrieval and detail preservation | Planned | Dedicated Phase 6.5G approved before Phase 6.6; no implementation exists yet. |
 | Validation framework and release certification | Planned | Dedicated Phase 6.6 approved after Phase 6.5G and before Phase 7; no implementation exists yet. |
@@ -1784,6 +1784,88 @@ Validation:
 - Whitespace/error validation with `git diff --check`, passing.
 - Product Owner and architect review remain the acceptance checkpoint; this phase is not committed, merged, pushed, or released by this working-tree implementation.
 
+### Phase 6.5F-B6.5: Settings Reset and Recovery Controls
+
+Status: Implemented in the working tree; Product Owner and architect review pending.
+
+Date: 2026-07-20.
+
+Objective:
+
+- Add safe recovery controls for restoring one setting, one category, or all dashboard-managed settings to built-in defaults.
+- Keep reset as an explicit runtime-only operation and preserve Save to configuration as the only dashboard YAML write.
+- Preserve authoritative backend metadata, validation, atomicity, runtime/persisted separation, restart guidance, and unmanaged configuration content.
+- Preserve proxy compatibility, streaming, dashboard refresh, context, compression, and application data.
+
+Settings metadata and architecture:
+
+- Added additive `reset_eligible` metadata to the canonical schema-v2 Settings snapshot.
+- Kept `src/ctxkeeper/dashboard/settings_snapshot.py` as the single authoritative catalog for setting identity, type, constraints, built-in `default_value`, runtime editability, persistence eligibility, reset eligibility, and restart requirements.
+- Kept built-in defaults out of dashboard JavaScript and HTML. The browser derives every reset value and inclusion decision from the current validated server snapshot.
+- Reused `PATCH /api/dashboard/settings` for reset and recovery. No reset endpoint or second validation path was added.
+- The backend continues to merge a request into the complete proposed runtime Settings state, validate it fully, and mutate shared runtime state only after validation succeeds.
+
+Reset behavior:
+
+- Added an accessible reset action for each `reset_eligible` setting. It is disabled when the confirmed runtime value already equals the built-in default and submits only the selected setting when used.
+- Added one reset action to each settings category. Native confirmation is required, all and only reset-eligible settings in that category are included, including eligible values already at default, and the complete category payload is sent in one atomic PATCH.
+- Added the deliberate global control labeled **Reset managed settings to defaults**. Native confirmation is required, and one atomic PATCH contains all and only reset-eligible settings from the current snapshot, including eligible values already at default. Category and global actions are disabled when their complete eligible scope is already at default.
+- Confirmation cancellation sends no request and changes no settings. Successful feedback identifies the number staged where practical, states that reset did not write configuration, and distinguishes Save-required persisted divergence from an already-matching configuration.
+- Reset never calls the persistence service, writes or recreates YAML, restarts ContextKeeper, or clears logs, metrics, conversations, summaries, model files, or other application data. It is not a factory reset.
+
+Discard and persistence behavior:
+
+- Discard remains a local operation when it only abandons unsaved browser draft edits.
+- When confirmed runtime values differ from persisted values, Discard constructs updates for every runtime-editable differing setting from authoritative `persisted_value` metadata and sends one atomic PATCH. It never sends PUT or writes YAML.
+- Save to configuration remains a separate explicit `PUT /api/dashboard/settings/config`. Staged default values persist through the existing allowlisted validation and atomic replacement service.
+- Successful Save refreshes runtime/persisted metadata. Failed reset, Discard, or Save operations preserve recoverable UI/runtime state and do not report false success.
+- Unmanaged and unknown YAML keys remain outside the dashboard reset allowlist and remain protected by the B6.4 persistence contract. Saving affects the YAML tier only and cannot override a higher-priority source.
+
+State presentation and accessibility:
+
+- The page continues to distinguish draft, current runtime, persisted, and built-in default values, plus unsaved and restart-required state.
+- Individual controls use native button semantics and setting-specific accessible names. Disabled reset states are represented visually and semantically.
+- Category and global confirmation use the browser's native keyboard-operable confirmation interaction.
+- Existing status/live regions announce staged, cancelled, successful, and failed outcomes without relying on color alone.
+- Responsive layout, focus visibility, reduced-motion behavior, page switching, and the single dashboard refresh lifecycle remain intact.
+
+Tests added or updated:
+
+- Expanded `tests/test_dashboard_settings.py` for `reset_eligible` snapshot compatibility, authoritative defaults, supported eligibility, atomic reset/update behavior, runtime-versus-persisted synchronization, API compatibility, and no persistence side effects.
+- Expanded `tests/test_dashboard_settings_ui.py` for individual/category/global reset selection, exact global label, native confirmation/cancellation, accessible and disabled states, staged-unsaved feedback, Discard recovery, Save integration, failure preservation, responsive behavior, and lifecycle regression.
+- Expanded configuration-persistence coverage for saving staged defaults, allowlisted-only changes, unknown/unmanaged content preservation, validation/write failures, atomic replacement safeguards, and restart loading.
+- Preserved the complete proxy, streaming, dashboard, context, compression, configuration, logging, service, and controlled-shutdown regression suite.
+
+Documentation updated:
+
+- `README.md`
+- `docs/README.md`
+- `docs/ARCHITECTURE.md`
+- `docs/API_COMPATIBILITY.md`
+- `docs/CONFIGURATION.md`
+- `docs/DASHBOARD_LAYOUT.md`
+- `docs/ROADMAP.md`
+- `docs/TEST_PLAN.md`
+- `docs/PROJECT_HISTORY.md`
+- `docs/UI_COMPONENT_GUIDE.md`
+- `docs/ContextKeeper_Project_Plan.md`
+
+Limitations and boundaries:
+
+- Reset applies only to metadata-approved dashboard-managed settings.
+- No restart control, Windows service restart, force-stop, self-diagnostics, automated repair, configuration backup history, rollback, import/export, profiles, environment-variable editing, command-line editing, authentication, or multi-user management was added.
+- Restart-required settings still require a manual restart when their metadata indicates one.
+- Configuration precedence and the B6.4 atomic persistence limitations remain unchanged.
+
+Validation:
+
+- Focused Settings persistence/API/UI validation: `.\.venv\Scripts\python.exe -m pytest -q tests\test_config_persistence.py tests\test_dashboard_settings.py tests\test_dashboard_settings_ui.py`, 132 tests passing in 1.34 seconds with one third-party FastAPI/Starlette TestClient deprecation warning and one existing `httpx` raw-content deprecation warning.
+- Full automated suite: `.\.venv\Scripts\python.exe -m pytest -q`, 396 tests passing in 6.62 seconds with the same two third-party deprecation warnings and no skipped tests.
+- Python syntax validation for the changed source and tests with `py_compile`, passing.
+- Rendered dashboard JavaScript syntax validation with `node --check`, passing.
+- Headless Microsoft Edge engineering smoke validation exercised native reset controls, cancellation, a four-setting Context category reset, runtime/default/persisted presentation, three-setting Discard recovery, unchanged YAML, and zero observed JavaScript errors. A follow-up aligned-state smoke check verified truthful no-save-needed feedback, disabled configuration Save, and programmatic focus recovery after the initiating reset button rerendered.
+- Product Owner and architect review remain the acceptance checkpoint; this phase is not committed, merged, pushed, or released by this working-tree implementation.
+
 ### Phase 6.5G — Historical Memory Retrieval & Detail Preservation (Approved Plan)
 
 Status: Planned; approved for the roadmap, not implemented.
@@ -1964,12 +2046,12 @@ Scope boundary:
 
 ## Current Project State
 
-- Current active implementation phase: Phase 6.5F-B6.4 — Configuration Persistence Foundation; Product Owner and architect review pending.
+- Current active implementation phase: Phase 6.5F-B6.5: Settings Reset and Recovery Controls; Product Owner and architect review pending.
 - Phase 6.5F-B4.8 — Automatic Model Context Discovery is implemented.
-- Phase 6.5F-B5.1 through the B6.4 working tree are represented in source and tests.
-- Latest focused B6.4 Settings persistence/service/API/UI validation: 117 tests passing with two third-party deprecation warnings.
-- Latest full-suite result for B6.4: 381 tests passing with the same two third-party deprecation warnings and no skipped tests.
-- Dashboard status: modern operations-console dashboard with live proxy, Ollama, request, context, compression, conversation, intelligence, health, operational activity, recommendations, grouped five-card system instrument panel, Context Trend, Request Traffic, animated Connection Flow, Live Conversation Timeline, Conversation Inspector drawer, Conversation Inspector Overview, deterministic Conversation Inspector Intelligence, and an interactive metadata-driven runtime-versus-persisted Settings page.
+- Phase 6.5F-B5.1 through the B6.5 working tree are represented in source, tests, and maintained documentation.
+- Latest focused B6.5 Settings persistence/API/UI validation has 132 tests passing with two third-party deprecation warnings.
+- Latest full B6.5 automated validation has 396 tests passing with the same two third-party deprecation warnings and no skipped tests.
+- Dashboard status: modern operations-console dashboard with live proxy, Ollama, request, context, compression, conversation, intelligence, health, operational activity, recommendations, grouped five-card system instrument panel, Context Trend, Request Traffic, animated Connection Flow, Live Conversation Timeline, Conversation Inspector drawer, Conversation Inspector Overview, deterministic Conversation Inspector Intelligence, and an interactive metadata-driven runtime-versus-persisted Settings page with managed-default reset/recovery controls.
 - Major capabilities currently present:
   - FastAPI-based transparent Ollama proxy.
   - `/api/*` and `/v1/*` passthrough with streaming preservation for supported endpoints.
@@ -1978,11 +2060,11 @@ Scope boundary:
   - Compression manager, compression planning, rolling-summary support, and confirmed compression metadata.
   - Automatic Model Context Discovery and context-window enforcement.
   - Browser dashboard with live monitoring and intelligence.
-  - Dashboard schema-v2 Settings snapshot, read API, validated in-memory runtime update API, explicit atomic configuration-persistence API, and interactive Settings UI for approved Context, Compression, and Dashboard settings.
+  - Dashboard schema-v2 Settings snapshot, read API, validated in-memory runtime update API, explicit atomic configuration-persistence API, authoritative reset eligibility, and interactive Settings UI for approved Context, Compression, and Dashboard settings.
   - Windows service foundation, PyInstaller executable foundation, first-run setup wizard, Inno Setup installer foundation, and release build script.
 - Planned work still ahead:
-  - Product Owner and architect review for Phase 6.5F-B6.4.
-  - Later Phase 6.5F-B6 reset/default controls and broader dashboard preference work after explicit approval.
+  - Product Owner and architect review for Phase 6.5F-B6.5.
+  - Later broader dashboard preference work after explicit approval.
   - Phase 6.5F-B7 — Release Polish & Final UX Review.
   - Phase 6.5G — Historical Memory Retrieval & Detail Preservation.
   - Phase 6.6 — Validation Framework & Release Certification.
@@ -1998,8 +2080,8 @@ This section is tentative and subject to refinement. These names and boundaries 
 
 - Phase 6.5F-B5 — Live Data Visualization & Rich Widgets.
 - Phase 6.5F-B6 — Dashboard Customization & User Preferences.
-  - Product Owner and architect review for Phase 6.5F-B6.4 — Configuration Persistence Foundation.
-  - Later B6 reset/default controls and broader dashboard preference work after explicit approval.
+  - Product Owner and architect review for Phase 6.5F-B6.5: Settings Reset and Recovery Controls.
+  - Later broader dashboard preference work after explicit approval.
 - Phase 6.5F-B7 — Release Polish & Final UX Review.
 - Phase 6.5G — Historical Memory Retrieval & Detail Preservation.
   - Phase 6.5G.1 — Durable Conversation Archive.

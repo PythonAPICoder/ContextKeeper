@@ -62,12 +62,22 @@ def test_settings_page_has_form_states_actions_and_accessible_feedback(dashboard
     assert parser.attributes_by_id["settingsCategories"]["aria-label"] == "ContextKeeper settings categories"
     assert parser.attributes_by_id["settingsStatus"]["role"] == "status"
     assert parser.attributes_by_id["settingsStatus"]["aria-live"] == "polite"
+    assert parser.attributes_by_id["settingsStatus"]["tabindex"] == "-1"
     assert parser.attributes_by_id["settingsErrorSummary"]["role"] == "alert"
     assert parser.attributes_by_id["settingsErrorSummary"]["aria-live"] == "assertive"
     assert parser.attributes_by_id["settingsRetryButton"]["type"] == "button"
+    assert parser.attributes_by_id["settingsResetAllButton"]["tag"] == "button"
+    assert parser.attributes_by_id["settingsResetAllButton"]["type"] == "button"
+    assert parser.attributes_by_id["settingsResetAllButton"]["disabled"] is None
     assert parser.attributes_by_id["settingsDiscardButton"]["type"] == "button"
     assert parser.attributes_by_id["settingsPersistButton"]["type"] == "button"
     assert parser.attributes_by_id["settingsSaveButton"]["type"] == "submit"
+    assert (
+        '<button id="settingsResetAllButton" class="settings-button recovery" type="button" disabled>'
+        "Reset managed settings to defaults</button>"
+    ) in dashboard_html
+    assert "Reset managed settings to defaults" in dashboard_html
+    assert "Discard runtime changes" in dashboard_html
     assert "Save to configuration" in dashboard_html
     assert "Save runtime changes" in dashboard_html
     assert "label.htmlFor = controlId" in dashboard_html
@@ -78,8 +88,9 @@ def test_settings_page_has_form_states_actions_and_accessible_feedback(dashboard
 def test_settings_runtime_and_configuration_notice_is_unambiguous(dashboard_html: str) -> None:
     assert 'class="settings-runtime-notice" role="note"' in dashboard_html
     assert "Runtime and saved configuration are separate" in dashboard_html
-    assert "The Save runtime changes action applies eligible values to the current ContextKeeper process only" in dashboard_html
-    assert "Save to configuration explicitly writes eligible draft values to contextkeeper.yaml" in dashboard_html
+    assert "Save runtime changes and Reset actions apply eligible values to the current ContextKeeper process only" in dashboard_html
+    assert "Reset uses built-in defaults supplied by ContextKeeper and never writes YAML" in dashboard_html
+    assert "Save to configuration explicitly writes eligible values to contextkeeper.yaml" in dashboard_html
     assert "without changing the current runtime or restarting ContextKeeper" in dashboard_html
 
 
@@ -91,7 +102,7 @@ def test_settings_uses_distinct_runtime_and_configuration_endpoints(dashboard_ht
     assert "method:'GET'" in dashboard_html
     assert "method:'PATCH'" in dashboard_html
     assert "method:'PUT'" in dashboard_html
-    assert dashboard_html.count("fetch(SETTINGS_ENDPOINT") == 2
+    assert dashboard_html.count("fetch(SETTINGS_ENDPOINT") == 4
     assert dashboard_html.count("fetch(SETTINGS_CONFIG_ENDPOINT") == 1
 
 
@@ -110,14 +121,19 @@ def test_settings_controls_are_metadata_driven_and_safely_rendered(dashboard_htm
     assert "control.min = String(setting.minimum)" in settings_renderer
     assert "control.max = String(setting.maximum)" in settings_renderer
     assert "typeof setting.persistable !== 'boolean'" in settings_renderer
+    assert "typeof setting.reset_eligible !== 'boolean'" in settings_renderer
     assert "typeof setting.differs_from_persisted !== 'boolean'" in settings_renderer
     assert "settingValueMatchesDataType(setting.data_type, setting.persisted_value)" in settings_renderer
+    assert "settingValueMatchesDataType(setting.data_type, setting.default_value)" in settings_renderer
+    assert "if (setting.reset_eligible && !setting.runtime_editable) invalid()" in settings_renderer
     assert "control.disabled = (!setting.runtime_editable && !setting.persistable)" in settings_renderer
     assert "if (setting.restart_required)" in settings_renderer
     assert "Runtime read-only" in settings_renderer
     assert "Not persistable" in settings_renderer
     assert "Runtime differs from saved" in settings_renderer
     assert "Restart required" in settings_renderer
+    assert "Current runtime: " in settings_renderer
+    assert "Default: " in settings_renderer
     assert "Saved configuration: " in settings_renderer
     assert "Saved changes require a ContextKeeper restart before they become active." in settings_renderer
     assert "ContextKeeper is not restarted automatically." in settings_renderer
@@ -136,6 +152,60 @@ def test_settings_controls_are_metadata_driven_and_safely_rendered(dashboard_htm
         "dashboard.refresh_interval_ms",
     ):
         assert setting_id not in settings_renderer
+
+
+def test_reset_controls_are_native_accessible_and_metadata_driven(dashboard_html: str) -> None:
+    renderer = _source_between(dashboard_html, "function createSettingsItem", "function settingsValuesEqual")
+    initialization = _source_between(dashboard_html, "function initializeSettingsPage", "function showPage")
+
+    assert "if (setting.reset_eligible)" in renderer
+    assert "resetButton.type = 'button'" in renderer
+    assert "resetButton.dataset.settingsResetSetting = setting.id" in renderer
+    assert "resetButton.setAttribute('aria-label', 'Reset ' + setting.display_name + ' to built-in default')" in renderer
+    assert "resetSettingsToDefaults({ settingId:setting.id, label:setting.display_name })" in renderer
+    assert "resetCategory.type = 'button'" in renderer
+    assert "resetCategory.dataset.settingsResetCategory = category.id" in renderer
+    assert "resetCategory.setAttribute('aria-label', 'Reset ' + category.display_name + ' settings to built-in defaults')" in renderer
+    assert "resetSettingsToDefaults({ categoryId:category.id, label:category.display_name, confirmation:true })" in renderer
+    assert "const resetAll = byId('settingsResetAllButton')" in initialization
+    assert "resetAll.addEventListener('click', () => void resetSettingsToDefaults({ confirmation:true }))" in initialization
+    assert ".innerHTML" not in renderer
+
+
+def test_reset_eligibility_scope_and_noop_state_are_authoritative(dashboard_html: str) -> None:
+    reset_helpers = _source_between(dashboard_html, "function settingCanReset", "function changedDraftSettings")
+    actions = _source_between(dashboard_html, "function updateSettingsActions", "function captureSettingsDraftValues")
+
+    assert "setting.reset_eligible && setting.runtime_editable" in reset_helpers
+    assert "settingValueMatchesDataType(setting.data_type, setting.default_value)" in reset_helpers
+    assert "settingsPageState.confirmedSnapshot.categories.forEach(category" in reset_helpers
+    assert "if (selection.categoryId && category.id !== selection.categoryId) return" in reset_helpers
+    assert "if (selection.settingId && setting.id !== selection.settingId) return" in reset_helpers
+    assert "if (!selection.includeAlreadyDefault && settingsValuesEqual(setting.value, setting.default_value)) return" in reset_helpers
+    assert "settingsValuesEqual(setting.value, setting.default_value)" in reset_helpers
+    assert "changes.push({ setting:setting, value:setting.default_value })" in reset_helpers
+    assert "resettableSettings({ settingId:settingId }).length" in actions
+    assert "resettableSettings({ categoryId:categoryId }).length" in actions
+    assert "setSettingsButtonDisabled(resetAll, locked || !settingsPageState.loaded || !resettableSettings().length)" in actions
+
+    reset_source = reset_helpers + _source_between(
+        dashboard_html,
+        "async function resetSettingsToDefaults",
+        "function restoreSettingsDraft",
+    )
+    for setting_id in (
+        "context.enabled",
+        "context.warning_threshold_percent",
+        "context.compression_threshold_percent",
+        "context.keep_recent_messages",
+        "compression.enabled",
+        "compression.summarizer_model",
+        "compression.max_summary_tokens",
+        "dashboard.refresh_interval_ms",
+    ):
+        assert setting_id not in reset_source
+    for hard_coded_default in ("gpt-oss:20b", "value:75", "value:85", "value:8", "value:1200", "value:1000"):
+        assert hard_coded_default not in reset_source
 
 
 def test_confirmed_and_draft_snapshots_are_separate_and_type_safe(dashboard_html: str) -> None:
@@ -163,6 +233,7 @@ def test_dirty_actions_follow_changed_and_valid_draft_state(dashboard_html: str)
 
     assert "const draftChanges = changedDraftSettings()" in actions
     assert "const runtimeChanges = changedRuntimeSettings()" in actions
+    assert "const runtimeRecoveryChanges = runtimeSettingsDifferentFromPersisted()" in actions
     assert "const persistenceChanges = changedPersistableSettings()" in actions
     assert "const draftValid = settingsDraftIsValid()" in actions
     assert "const locked = busy || settingsPageState.confirmationRequired" in actions
@@ -172,6 +243,10 @@ def test_dirty_actions_follow_changed_and_valid_draft_state(dashboard_html: str)
     assert "Runtime and saved configuration values are aligned. No unsaved changes." in actions
     assert "Correct invalid draft values before saving." in actions
     assert "settingsPageState.loading || settingsPageState.saving || settingsPageState.persisting" in actions
+    assert "settingsPageState.resetting || settingsPageState.discarding" in actions
+    assert "(!draftChanges.length && !runtimeRecoveryChanges.length)" in actions
+    assert "settingsPageState.discarding ? 'Restoring runtime...' : 'Discard runtime changes'" in actions
+    assert "form.setAttribute('aria-busy', busy ? 'true' : 'false')" in actions
 
 
 def test_save_builds_one_nested_changed_fields_only_request(dashboard_html: str) -> None:
@@ -225,6 +300,86 @@ def test_save_failures_preserve_draft_and_surface_safe_retryable_errors(dashboar
     assert "summary.innerHTML" not in dashboard_html
 
 
+def test_reset_builds_one_atomic_runtime_patch_and_never_persists(dashboard_html: str) -> None:
+    reset_logic = _source_between(
+        dashboard_html,
+        "async function resetSettingsToDefaults",
+        "function restoreSettingsDraft",
+    )
+
+    assert "const resetSelection = { ...selection, includeAlreadyDefault:Boolean(selection.confirmation) }" in reset_logic
+    assert "const changes = resettableSettings(resetSelection)" in reset_logic
+    assert "const resetSettingIds = new Set(changes.map(change => change.setting.id))" in reset_logic
+    assert "firstInvalidSettingsControlOutside(resetSettingIds)" in reset_logic
+    assert "payload = buildSettingsPayload(changes)" in reset_logic
+    assert "captureSettingsDraftValuesExcept(resetSettingIds)" in reset_logic
+    assert reset_logic.count("fetch(SETTINGS_ENDPOINT") == 1
+    assert reset_logic.count("method:'PATCH'") == 1
+    assert "body:JSON.stringify(payload)" in reset_logic
+    assert "SETTINGS_CONFIG_ENDPOINT" not in reset_logic
+    assert "method:'PUT'" not in reset_logic
+    assert "persistSettings(" not in reset_logic
+    assert reset_logic.index("payload = buildSettingsPayload(changes)") < reset_logic.index("fetch(SETTINGS_ENDPOINT")
+    assert "const snapshot = await authoritativeSettingsSnapshot(responsePayload)" in reset_logic
+    assert "acceptSettingsSnapshot(snapshot, preservedDraftValues)" in reset_logic
+    assert "requestDashboardRefresh()" in reset_logic
+
+
+def test_category_and_global_reset_require_keyboard_operable_confirmation(dashboard_html: str) -> None:
+    reset_logic = _source_between(
+        dashboard_html,
+        "async function resetSettingsToDefaults",
+        "function restoreSettingsDraft",
+    )
+    renderer = _source_between(dashboard_html, "function createSettingsItem", "function settingsValuesEqual")
+
+    assert "confirmation:true" in renderer
+    assert "if (selection.confirmation)" in reset_logic
+    assert "Reset the ' + selection.label + ' category to built-in defaults?" in reset_logic
+    assert "Reset all dashboard-managed settings to built-in defaults?" in reset_logic
+    assert "Configuration will not be saved." in reset_logic
+    assert "if (!window.confirm(confirmationMessage))" in reset_logic
+    assert "Reset was cancelled. No settings were changed." in reset_logic
+    cancel_branch = _source_between(
+        reset_logic,
+        "if (!window.confirm(confirmationMessage))",
+        "let payload",
+    )
+    assert "return;" in cancel_branch
+    assert "fetch(" not in cancel_branch
+    assert reset_logic.index("window.confirm(confirmationMessage)") < reset_logic.index("fetch(SETTINGS_ENDPOINT")
+    assert "factory reset" not in dashboard_html.lower()
+
+
+def test_reset_feedback_validation_and_restart_state_are_explicit(dashboard_html: str) -> None:
+    reset_logic = _source_between(
+        dashboard_html,
+        "async function resetSettingsToDefaults",
+        "function restoreSettingsDraft",
+    )
+
+    assert "The selected runtime settings already use their built-in defaults." in reset_logic
+    assert "settingsPageState.resetting ||" in reset_logic
+    assert "settingsPageState.discarding || settingsPageState.confirmationRequired" in reset_logic
+    assert "Correct invalid draft values outside this reset before continuing." in reset_logic
+    assert "Defaults were not staged. No settings were changed." in reset_logic
+    assert "applySettingsValidationErrors(responsePayload)" in reset_logic
+    assert "Reset validation failed. No settings were changed." in reset_logic
+    assert "const runtimeResetChanges = changes.filter" in reset_logic
+    assert "const unsavedResetCount = changes.filter" in reset_logic
+    assert "Configuration has not been saved. Use Save to configuration for restart persistence." in reset_logic
+    assert "persisted values already match. No configuration save is needed." in reset_logic
+    assert "runtimeResetChanges.filter(change => change.setting.restart_required).length" in reset_logic
+    assert "will still require a manual restart after saving." in reset_logic
+    assert "focusSettingsStatus()" in reset_logic
+    assert "settingsPageState.confirmationAction = 'reset'" in reset_logic
+    assert "settingsPageState.confirmationPreservedDraftValues = preservedDraftValues" in reset_logic
+    assert "showSettingsLoadState('Confirm staged defaults'" in reset_logic
+    assert "Reset could not be confirmed. Configuration was not saved." in reset_logic
+    assert "settingsPageState.resetting = true" in reset_logic
+    assert "settingsPageState.resetting = false" in reset_logic
+
+
 def test_persistence_payload_uses_only_persistable_values_that_differ_from_saved(dashboard_html: str) -> None:
     change_logic = _source_between(dashboard_html, "function changedPersistableSettings", "function settingsDifferenceMessage")
     payload_logic = _source_between(dashboard_html, "function buildSettingsPayload", "async function readSettingsResponse")
@@ -259,10 +414,15 @@ def test_persistence_busy_state_disables_duplicate_actions_and_reports_progress(
     persist_logic = _source_between(dashboard_html, "async function persistSettings", "function initializeSettingsPage")
 
     assert "persisting:false" in dashboard_html
+    assert "resetting:false" in dashboard_html
+    assert "discarding:false" in dashboard_html
     assert "const busy = settingsPageState.loading || settingsPageState.saving || settingsPageState.persisting" in actions
+    assert "settingsPageState.resetting || settingsPageState.discarding" in actions
     assert "persist.disabled = locked || !settingsPageState.loaded || !persistenceChanges.length || !draftValid" in actions
     assert "settingsPageState.persisting ? 'Saving to configuration...' : 'Save to configuration'" in actions
     assert "if (settingsPageState.persisting || settingsPageState.saving || settingsPageState.loading" in persist_logic
+    assert "settingsPageState.resetting" in persist_logic
+    assert "settingsPageState.discarding" in persist_logic
     assert "settingsPageState.persisting = true" in persist_logic
     assert "settingsPageState.persisting = false" in persist_logic
 
@@ -306,6 +466,8 @@ def test_runtime_and_persisted_differences_are_explicit_and_restart_safe(dashboa
     assert "Draft matches the saved configuration and differs from the current runtime." in difference_logic
     assert "Current runtime differs from the saved configuration." in difference_logic
     assert "Draft matches the current runtime and saved configuration." in difference_logic
+    assert "Default: " in renderer
+    assert "Current runtime: " in renderer
     assert "Saved configuration: " in renderer
     assert "Runtime differs from saved" in renderer
     assert "Saved changes require a ContextKeeper restart before they become active." in renderer
@@ -313,16 +475,53 @@ def test_runtime_and_persisted_differences_are_explicit_and_restart_safe(dashboa
     assert "This draft can be saved to configuration, but it cannot be applied to the current runtime." in renderer
 
 
-def test_discard_restores_latest_confirmed_snapshot_without_network_request(dashboard_html: str) -> None:
-    restore_logic = _source_between(dashboard_html, "function restoreSettingsDraft", "async function authoritativeSettingsSnapshot")
-    discard_logic = _source_between(dashboard_html, "function discardSettingsDraft", "async function authoritativeSettingsSnapshot")
+def test_discard_keeps_local_draft_recovery_network_free(dashboard_html: str) -> None:
+    restore_logic = _source_between(dashboard_html, "function restoreSettingsDraft", "async function discardSettingsDraft")
+    discard_logic = _source_between(dashboard_html, "async function discardSettingsDraft", "async function authoritativeSettingsSnapshot")
+    local_branch = _source_between(discard_logic, "if (!runtimeChanges.length)", "let payload")
 
     assert "cloneSettingsSnapshot(settingsPageState.confirmedSnapshot)" in restore_logic
     assert "settingsPageState.fieldErrors = new Map()" in restore_logic
-    assert "restoreSettingsDraft()" in discard_logic
-    assert "Unsaved changes discarded." in discard_logic
-    assert "fetch(" not in discard_logic
-    assert "PATCH" not in discard_logic
+    assert "restoreSettingsDraft()" in local_branch
+    assert "Unsaved draft changes discarded. Runtime and configuration were not changed." in local_branch
+    assert "return;" in local_branch
+    assert "fetch(" not in local_branch
+    assert "PATCH" not in local_branch
+
+
+def test_discard_restores_confirmed_runtime_divergence_with_one_atomic_patch(dashboard_html: str) -> None:
+    recovery_changes = _source_between(
+        dashboard_html,
+        "function runtimeSettingsDifferentFromPersisted",
+        "function changedDraftSettings",
+    )
+    discard_logic = _source_between(dashboard_html, "async function discardSettingsDraft", "async function authoritativeSettingsSnapshot")
+
+    assert "if (!setting.runtime_editable || settingsValuesEqual(setting.value, setting.persisted_value)) return" in recovery_changes
+    assert "changes.push({ setting:setting, value:setting.persisted_value })" in recovery_changes
+    assert "const draftChanges = changedDraftSettings()" in discard_logic
+    assert "const runtimeChanges = runtimeSettingsDifferentFromPersisted()" in discard_logic
+    assert "settingsPageState.resetting ||" in discard_logic
+    assert "settingsPageState.discarding || settingsPageState.confirmationRequired" in discard_logic
+    assert "payload = buildSettingsPayload(runtimeChanges)" in discard_logic
+    assert discard_logic.count("fetch(SETTINGS_ENDPOINT") == 1
+    assert discard_logic.count("method:'PATCH'") == 1
+    assert "body:JSON.stringify(payload)" in discard_logic
+    assert "SETTINGS_CONFIG_ENDPOINT" not in discard_logic
+    assert "method:'PUT'" not in discard_logic
+    assert "const snapshot = await authoritativeSettingsSnapshot(responsePayload)" in discard_logic
+    assert "acceptSettingsSnapshot(snapshot)" in discard_logic
+    assert "const remainingRuntimeDifferences = runtimeSettingsDifferentFromPersisted()" in discard_logic
+    assert "Persisted configuration changed during runtime recovery." in discard_logic
+    assert "still differs from persisted configuration. YAML was not changed." in discard_logic
+    assert "restored from persisted configuration. YAML was not changed." in discard_logic
+    assert "Runtime recovery validation failed. No runtime settings were changed." in discard_logic
+    assert "Your draft is still available." in discard_logic
+    assert "settingsPageState.confirmationAction = 'discard'" in discard_logic
+    assert "showSettingsLoadState('Confirm restored runtime'" in discard_logic
+    assert "settingsPageState.discarding = true" in discard_logic
+    assert "settingsPageState.discarding = false" in discard_logic
+    assert "requestDashboardRefresh()" in discard_logic
 
 
 def test_load_failure_retry_and_malformed_data_paths_fail_safely(dashboard_html: str) -> None:
@@ -340,12 +539,19 @@ def test_load_failure_retry_and_malformed_data_paths_fail_safely(dashboard_html:
 
 def test_settings_responsive_accessibility_and_dashboard_lifecycle_guards(dashboard_html: str) -> None:
     assert ".settings-input:focus-visible,.settings-checkbox:focus-visible" in dashboard_html
+    assert ".settings-button:focus-visible" in dashboard_html
     assert ".settings-button:disabled { cursor:not-allowed; opacity:.5" in dashboard_html
+    assert ".settings-button.recovery" in dashboard_html
+    assert ".settings-reset-setting" in dashboard_html
     assert "@media (max-width: 700px)" in dashboard_html
+    assert ".settings-category-header { align-items:stretch; flex-direction:column; }" in dashboard_html
+    assert ".settings-category-header .settings-button { align-self:flex-start; }" in dashboard_html
     assert ".settings-item { grid-template-columns:1fr" in dashboard_html
     assert ".settings-action-bar { align-items:stretch; flex-direction:column" in dashboard_html
+    assert ".settings-reset-setting,.settings-button.compact { flex:0 0 auto; }" in dashboard_html
     assert "@media (prefers-reduced-motion: reduce)" in dashboard_html
     assert ".settings-button,.settings-input { transition:none; }" in dashboard_html
+    assert ".settings-button:hover:not(:disabled) { transform:none; }" in dashboard_html
     assert dashboard_html.count("setInterval(") == 1
     assert "clearInterval(dashboardRefreshTimer)" in dashboard_html
     assert "scheduleDashboardRefresh(data.refresh_interval_ms)" in dashboard_html

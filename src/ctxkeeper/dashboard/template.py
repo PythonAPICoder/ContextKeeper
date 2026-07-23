@@ -265,7 +265,8 @@ a.badge:focus-visible {{ outline:2px solid rgba(56,189,248,.72); outline-offset:
 .settings-form {{ display:grid; gap:12px; min-width:0; }}
 .settings-categories {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr)); gap:12px; min-width:0; align-items:start; }}
 .settings-category {{ min-width:0; display:grid; gap:12px; align-content:start; padding:14px; }}
-.settings-category-header {{ min-width:0; padding-bottom:10px; border-bottom:1px solid rgba(203,213,225,.1); }}
+.settings-category-header {{ min-width:0; display:flex; align-items:flex-start; justify-content:space-between; gap:10px; padding-bottom:10px; border-bottom:1px solid rgba(203,213,225,.1); }}
+.settings-category-heading {{ min-width:0; }}
 .settings-category-title {{ margin:0; color:#f8fafc; font-size:16px; line-height:1.25; }}
 .settings-category-description {{ margin:4px 0 0; color:var(--muted); font-size:12px; line-height:1.4; overflow-wrap:anywhere; }}
 .settings-list {{ display:grid; gap:10px; min-width:0; }}
@@ -277,6 +278,7 @@ a.badge:focus-visible {{ outline:2px solid rgba(56,189,248,.72); outline-offset:
 .settings-item-description {{ margin:4px 0 0; color:var(--muted); font-size:11px; line-height:1.4; overflow-wrap:anywhere; }}
 .settings-metadata {{ display:flex; flex-wrap:wrap; gap:6px 10px; margin-top:7px; color:#aebbd0; font-size:10px; line-height:1.35; }}
 .settings-control-panel {{ display:grid; gap:6px; align-content:start; }}
+.settings-reset-setting {{ justify-self:start; min-height:30px; padding:5px 9px; font-size:11px; }}
 .settings-input {{ width:100%; min-width:0; height:38px; padding:7px 9px; border:1px solid rgba(148,163,184,.28); border-radius:8px; outline:none; background:rgba(2,6,23,.52); color:var(--text); font:inherit; font-size:13px; transition:border-color .18s ease,background .18s ease,box-shadow .18s ease; }}
 .settings-input:hover:not(:disabled) {{ border-color:rgba(148,163,184,.46); background:rgba(2,6,23,.68); }}
 .settings-input:focus-visible,.settings-checkbox:focus-visible {{ outline:2px solid rgba(56,189,248,.72); outline-offset:2px; }}
@@ -298,10 +300,13 @@ a.badge:focus-visible {{ outline:2px solid rgba(56,189,248,.72); outline-offset:
 .settings-button:hover:not(:disabled) {{ border-color:rgba(56,189,248,.38); background:rgba(56,189,248,.12); color:#fff; transform:translateY(-1px); }}
 .settings-button.primary {{ border-color:rgba(56,189,248,.4); background:linear-gradient(135deg,rgba(14,165,233,.78),rgba(79,70,229,.74)); color:#fff; box-shadow:0 8px 18px rgba(14,165,233,.16); }}
 .settings-button.primary:hover:not(:disabled) {{ background:linear-gradient(135deg,rgba(14,165,233,.92),rgba(79,70,229,.88)); }}
+.settings-button.recovery {{ border-color:rgba(245,158,11,.3); color:#fde68a; background:rgba(245,158,11,.08); }}
+.settings-button.recovery:hover:not(:disabled) {{ border-color:rgba(245,158,11,.5); background:rgba(245,158,11,.14); color:#fff7d6; }}
+.settings-button.compact {{ min-height:30px; flex:0 0 auto; padding:5px 9px; font-size:11px; }}
 .settings-button:disabled {{ cursor:not-allowed; opacity:.5; box-shadow:none; transform:none; }}
 .settings-button:focus-visible {{ outline:2px solid rgba(56,189,248,.72); outline-offset:2px; }}
 @media (prefers-reduced-motion: reduce) {{ .settings-button,.settings-input {{ transition:none; }} .settings-button:hover:not(:disabled) {{ transform:none; }} }}
-@media (max-width: 700px) {{ .settings-runtime-notice {{ grid-template-columns:1fr; }} .settings-runtime-icon {{ display:none; }} .settings-category {{ padding:11px; }} .settings-item {{ grid-template-columns:1fr; gap:9px; }} .settings-action-bar {{ align-items:stretch; flex-direction:column; }} .settings-actions {{ width:100%; }} .settings-button {{ flex:1 1 130px; }} }}
+@media (max-width: 700px) {{ .settings-runtime-notice {{ grid-template-columns:1fr; }} .settings-runtime-icon {{ display:none; }} .settings-category {{ padding:11px; }} .settings-category-header {{ align-items:stretch; flex-direction:column; }} .settings-category-header .settings-button {{ align-self:flex-start; }} .settings-item {{ grid-template-columns:1fr; gap:9px; }} .settings-action-bar {{ align-items:stretch; flex-direction:column; }} .settings-actions {{ width:100%; }} .settings-button {{ flex:1 1 130px; }} .settings-reset-setting,.settings-button.compact {{ flex:0 0 auto; }} }}
 .bar {{ height:12px; border-radius:999px; background:#334155; overflow:hidden; margin:10px 0; }}
 .fill {{ height:100%; background:var(--accent); width:0%; transition:width .25s ease; }}
 table {{ width:100%; border-collapse:collapse; font-size:13px; table-layout:fixed; }}
@@ -1059,16 +1064,16 @@ body.conversation-inspector-open .conversation-inspector-drawer {{ transform:tra
 
 <section id="settings" class="page settings-page" data-page="settings" aria-labelledby="settingsPageTitle">
   <div class="page-header">
-    <div><h2 id="settingsPageTitle" class="page-title">Settings</h2><div class="page-sub">Review current runtime values, saved configuration, and eligible draft changes.</div></div>
+    <div><h2 id="settingsPageTitle" class="page-title">Settings</h2><div class="page-sub">Review runtime, saved, and built-in values, then stage or recover managed settings safely.</div></div>
   </div>
   <aside class="settings-runtime-notice" role="note" aria-labelledby="settingsRuntimeNoticeTitle">
     <div class="settings-runtime-icon" aria-hidden="true">!</div>
     <div>
       <h3 id="settingsRuntimeNoticeTitle" class="settings-runtime-title">Runtime and saved configuration are separate</h3>
-      <p class="settings-runtime-copy">The Save runtime changes action applies eligible values to the current ContextKeeper process only. Save to configuration explicitly writes eligible draft values to contextkeeper.yaml without changing the current runtime or restarting ContextKeeper.</p>
+      <p class="settings-runtime-copy">Save runtime changes and Reset actions apply eligible values to the current ContextKeeper process only. Reset uses built-in defaults supplied by ContextKeeper and never writes YAML. Save to configuration explicitly writes eligible values to contextkeeper.yaml without changing the current runtime or restarting ContextKeeper.</p>
     </div>
   </aside>
-  <div id="settingsStatus" class="settings-status" role="status" aria-live="polite" aria-atomic="true">Settings load when this page is opened.</div>
+  <div id="settingsStatus" class="settings-status" role="status" aria-live="polite" aria-atomic="true" tabindex="-1">Settings load when this page is opened.</div>
   <div id="settingsErrorSummary" class="settings-feedback settings-feedback-error" role="alert" aria-live="assertive" tabindex="-1" hidden></div>
   <div id="settingsLoadState" class="settings-state" hidden>
     <div id="settingsLoadStateTitle" class="settings-state-title">Loading settings</div>
@@ -1080,7 +1085,8 @@ body.conversation-inspector-open .conversation-inspector-drawer {{ transform:tra
     <div class="settings-action-bar">
       <div id="settingsDirtySummary" class="settings-dirty-summary">No unsaved changes.</div>
       <div class="settings-actions">
-        <button id="settingsDiscardButton" class="settings-button" type="button" disabled>Discard changes</button>
+        <button id="settingsResetAllButton" class="settings-button recovery" type="button" disabled>Reset managed settings to defaults</button>
+        <button id="settingsDiscardButton" class="settings-button" type="button" disabled>Discard runtime changes</button>
         <button id="settingsPersistButton" class="settings-button" type="button" disabled>Save to configuration</button>
         <button id="settingsSaveButton" class="settings-button primary" type="submit" disabled>Save runtime changes</button>
       </div>
@@ -1173,6 +1179,8 @@ const settingsPageState = {{
   confirmedSettingsById:new Map(),
   draftSettingsById:new Map(),
   controlsById:new Map(),
+  resetButtonsById:new Map(),
+  categoryResetButtonsById:new Map(),
   errorElementsById:new Map(),
   differenceElementsById:new Map(),
   fieldErrors:new Map(),
@@ -1180,8 +1188,11 @@ const settingsPageState = {{
   loading:false,
   saving:false,
   persisting:false,
+  resetting:false,
+  discarding:false,
   confirmationRequired:false,
-  confirmationAction:null
+  confirmationAction:null,
+  confirmationPreservedDraftValues:null
 }};
 const conversationInspectorState = {{
   selectedConversationId:null,
@@ -1784,7 +1795,8 @@ function validateSettingsSnapshot(snapshot) {{
       if (!setting || typeof setting !== 'object' || typeof setting.id !== 'string' || typeof setting.category !== 'string' ||
           typeof setting.display_name !== 'string' || typeof setting.description !== 'string' ||
           typeof setting.runtime_editable !== 'boolean' || typeof setting.restart_required !== 'boolean' ||
-          typeof setting.persistable !== 'boolean' || typeof setting.differs_from_persisted !== 'boolean' ||
+          typeof setting.persistable !== 'boolean' || typeof setting.reset_eligible !== 'boolean' ||
+          typeof setting.differs_from_persisted !== 'boolean' ||
           !['boolean','integer','string'].includes(setting.data_type) || setting.category !== category.id || settingIds.has(setting.id) ||
           !settingValueMatchesDataType(setting.data_type, setting.value) ||
           !settingValueMatchesDataType(setting.data_type, setting.persisted_value) ||
@@ -1800,6 +1812,7 @@ function validateSettingsSnapshot(snapshot) {{
           (setting.value < setting.minimum || setting.persisted_value < setting.minimum || setting.default_value < setting.minimum)) invalid();
       if (setting.data_type === 'integer' && setting.maximum !== null &&
           (setting.value > setting.maximum || setting.persisted_value > setting.maximum || setting.default_value > setting.maximum)) invalid();
+      if (setting.reset_eligible && !setting.runtime_editable) invalid();
       if (setting.differs_from_persisted !== !settingsValuesEqual(setting.value, setting.persisted_value)) invalid();
       settingIds.add(setting.id);
     }});
@@ -1817,6 +1830,10 @@ function setSettingsStatus(message, tone) {{
   if (!status) return;
   status.className = 'settings-status' + (tone ? ' ' + safeClass(tone) : '');
   status.textContent = message;
+}}
+function focusSettingsStatus() {{
+  const status = byId('settingsStatus');
+  if (status && settingsPageIsActive()) status.focus();
 }}
 function clearSettingsPageError() {{
   const summary = byId('settingsErrorSummary');
@@ -1904,7 +1921,8 @@ function configureSettingsControl(controlRoot, setting, controlId) {{
   control.dataset.settingId = setting.id;
   control.dataset.settingType = setting.data_type;
   control.setAttribute('aria-describedby', settingsDescriptionIds(controlId, setting));
-  control.disabled = (!setting.runtime_editable && !setting.persistable) || settingsPageState.loading || settingsPageState.saving || settingsPageState.persisting;
+  control.disabled = (!setting.runtime_editable && !setting.persistable) || settingsPageState.loading || settingsPageState.saving ||
+    settingsPageState.persisting || settingsPageState.resetting || settingsPageState.discarding;
   if (control.disabled) control.setAttribute('aria-disabled', 'true');
   else control.removeAttribute('aria-disabled');
   settingsPageState.controlsById.set(setting.id, control);
@@ -1912,6 +1930,7 @@ function configureSettingsControl(controlRoot, setting, controlId) {{
 }}
 function createSettingsItem(setting, itemNumber) {{
   const controlId = 'settings-control-' + itemNumber;
+  const confirmedSetting = settingsPageState.confirmedSettingsById.get(setting.id) || setting;
   const item = createSettingsElement('article', 'settings-item');
   const metadata = createSettingsElement('div', 'settings-item-meta');
   const labelRow = createSettingsElement('div', 'settings-label-row');
@@ -1927,6 +1946,7 @@ function createSettingsItem(setting, itemNumber) {{
   const metadataLine = createSettingsElement('div', 'settings-metadata');
   metadataLine.id = controlId + '-metadata';
   metadataLine.append(createSettingsElement('span', '', 'Default: ' + formatSettingValue(setting.default_value, setting.data_type)));
+  metadataLine.append(createSettingsElement('span', '', 'Current runtime: ' + formatSettingValue(confirmedSetting.value, setting.data_type)));
   metadataLine.append(createSettingsElement('span', '', 'Saved configuration: ' + formatSettingValue(setting.persisted_value, setting.data_type)));
   if (setting.minimum !== null || setting.maximum !== null) {{
     const minimum = setting.minimum === null ? 'no minimum' : String(setting.minimum);
@@ -1939,6 +1959,15 @@ function createSettingsItem(setting, itemNumber) {{
   const controlRoot = createSettingsControl(setting, controlId);
   const control = configureSettingsControl(controlRoot, setting, controlId);
   controlPanel.append(controlRoot);
+  if (setting.reset_eligible) {{
+    const resetButton = createSettingsElement('button', 'settings-button recovery settings-reset-setting', 'Reset to default');
+    resetButton.type = 'button';
+    resetButton.dataset.settingsResetSetting = setting.id;
+    resetButton.setAttribute('aria-label', 'Reset ' + setting.display_name + ' to built-in default');
+    resetButton.addEventListener('click', () => void resetSettingsToDefaults({{ settingId:setting.id, label:setting.display_name }}));
+    controlPanel.append(resetButton);
+    settingsPageState.resetButtonsById.set(setting.id, resetButton);
+  }}
   if (!setting.runtime_editable || !setting.persistable) {{
     let availabilityMessage = '';
     if (!setting.runtime_editable && setting.persistable) availabilityMessage = 'This draft can be saved to configuration, but it cannot be applied to the current runtime.';
@@ -1969,6 +1998,8 @@ function renderSettingsCategories() {{
   const container = byId('settingsCategories');
   if (!container || !settingsPageState.draftSnapshot) return false;
   settingsPageState.controlsById = new Map();
+  settingsPageState.resetButtonsById = new Map();
+  settingsPageState.categoryResetButtonsById = new Map();
   settingsPageState.errorElementsById = new Map();
   settingsPageState.differenceElementsById = new Map();
   const fragment = document.createDocumentFragment();
@@ -1978,10 +2009,18 @@ function renderSettingsCategories() {{
     const headingId = 'settings-category-' + (categoryIndex + 1);
     section.setAttribute('aria-labelledby', headingId);
     const header = createSettingsElement('header', 'settings-category-header');
+    const headingGroup = createSettingsElement('div', 'settings-category-heading');
     const heading = createSettingsElement('h3', 'settings-category-title', category.display_name);
     heading.id = headingId;
     const description = createSettingsElement('p', 'settings-category-description', category.description);
-    header.append(heading, description);
+    headingGroup.append(heading, description);
+    const resetCategory = createSettingsElement('button', 'settings-button recovery compact', 'Reset category to defaults');
+    resetCategory.type = 'button';
+    resetCategory.dataset.settingsResetCategory = category.id;
+    resetCategory.setAttribute('aria-label', 'Reset ' + category.display_name + ' settings to built-in defaults');
+    resetCategory.addEventListener('click', () => void resetSettingsToDefaults({{ categoryId:category.id, label:category.display_name, confirmation:true }}));
+    settingsPageState.categoryResetButtonsById.set(category.id, resetCategory);
+    header.append(headingGroup, resetCategory);
     const list = createSettingsElement('div', 'settings-list');
     if (category.settings.length) {{
       category.settings.forEach(setting => {{
@@ -2000,6 +2039,34 @@ function renderSettingsCategories() {{
 }}
 function settingsValuesEqual(confirmedValue, draftValue) {{
   return typeof confirmedValue === typeof draftValue && confirmedValue === draftValue;
+}}
+function settingCanReset(setting) {{
+  return Boolean(setting && setting.reset_eligible && setting.runtime_editable &&
+    settingValueMatchesDataType(setting.data_type, setting.default_value));
+}}
+function resettableSettings(options) {{
+  if (!settingsPageState.confirmedSnapshot) return [];
+  const selection = options || {{}};
+  const changes = [];
+  settingsPageState.confirmedSnapshot.categories.forEach(category => {{
+    if (selection.categoryId && category.id !== selection.categoryId) return;
+    category.settings.forEach(setting => {{
+      if (selection.settingId && setting.id !== selection.settingId) return;
+      if (!settingCanReset(setting)) return;
+      if (!selection.includeAlreadyDefault && settingsValuesEqual(setting.value, setting.default_value)) return;
+      changes.push({{ setting:setting, value:setting.default_value }});
+    }});
+  }});
+  return changes;
+}}
+function runtimeSettingsDifferentFromPersisted() {{
+  if (!settingsPageState.confirmedSnapshot) return [];
+  const changes = [];
+  settingsPageState.confirmedSnapshot.categories.forEach(category => category.settings.forEach(setting => {{
+    if (!setting.runtime_editable || settingsValuesEqual(setting.value, setting.persisted_value)) return;
+    changes.push({{ setting:setting, value:setting.persisted_value }});
+  }}));
+  return changes;
 }}
 function changedDraftSettings() {{
   if (!settingsPageState.confirmedSnapshot || !settingsPageState.draftSnapshot) return [];
@@ -2094,22 +2161,41 @@ function refreshSettingsPageErrorFromFields() {{
   }}
   showSettingsPageError('Some settings still need attention. ' + messages.join(' '), false);
 }}
+function setSettingsButtonDisabled(button, disabled) {{
+  if (!button) return;
+  button.disabled = disabled;
+  if (disabled) button.setAttribute('aria-disabled', 'true');
+  else button.removeAttribute('aria-disabled');
+}}
 function updateSettingsActions() {{
   const draftChanges = changedDraftSettings();
   const runtimeChanges = changedRuntimeSettings();
+  const runtimeRecoveryChanges = runtimeSettingsDifferentFromPersisted();
   const persistenceChanges = changedPersistableSettings();
   const draftValid = settingsDraftIsValid();
-  const busy = settingsPageState.loading || settingsPageState.saving || settingsPageState.persisting;
+  const busy = settingsPageState.loading || settingsPageState.saving || settingsPageState.persisting ||
+    settingsPageState.resetting || settingsPageState.discarding;
   const locked = busy || settingsPageState.confirmationRequired;
   const save = byId('settingsSaveButton');
   const persist = byId('settingsPersistButton');
   const discard = byId('settingsDiscardButton');
+  const resetAll = byId('settingsResetAllButton');
   if (save) save.disabled = locked || !settingsPageState.loaded || !runtimeChanges.length || !draftValid;
   if (persist) {{
     persist.disabled = locked || !settingsPageState.loaded || !persistenceChanges.length || !draftValid;
     persist.textContent = settingsPageState.persisting ? 'Saving to configuration...' : 'Save to configuration';
   }}
-  if (discard) discard.disabled = locked || !settingsPageState.loaded || !draftChanges.length;
+  if (discard) {{
+    setSettingsButtonDisabled(discard, locked || !settingsPageState.loaded || (!draftChanges.length && !runtimeRecoveryChanges.length));
+    discard.textContent = settingsPageState.discarding ? 'Restoring runtime...' : 'Discard runtime changes';
+  }}
+  settingsPageState.resetButtonsById.forEach((button, settingId) => {{
+    setSettingsButtonDisabled(button, locked || !settingsPageState.loaded || !resettableSettings({{ settingId:settingId }}).length);
+  }});
+  settingsPageState.categoryResetButtonsById.forEach((button, categoryId) => {{
+    setSettingsButtonDisabled(button, locked || !settingsPageState.loaded || !resettableSettings({{ categoryId:categoryId }}).length);
+  }});
+  setSettingsButtonDisabled(resetAll, locked || !settingsPageState.loaded || !resettableSettings().length);
   settingsPageState.controlsById.forEach((control, settingId) => {{
     const setting = settingsPageState.draftSettingsById.get(settingId);
     control.disabled = locked || !setting || (!setting.runtime_editable && !setting.persistable);
@@ -2124,10 +2210,13 @@ function updateSettingsActions() {{
   const summary = byId('settingsDirtySummary');
   if (summary) {{
     if (settingsPageState.confirmationRequired) summary.textContent = 'Confirm the current server values before making another change.';
-    else if (!draftChanges.length && !persistenceChanges.length) summary.textContent = 'Runtime and saved configuration values are aligned. No unsaved changes.';
+    else if (!draftChanges.length && !persistenceChanges.length && !runtimeRecoveryChanges.length) summary.textContent = 'Runtime and saved configuration values are aligned. No unsaved changes.';
     else if (!draftValid) summary.textContent = 'Correct invalid draft values before saving.';
     else {{
-      const runtimeLabel = runtimeChanges.length + ' runtime change' + (runtimeChanges.length === 1 ? '' : 's');
+      const pendingRuntimeIds = new Set(runtimeRecoveryChanges.map(change => change.setting.id));
+      runtimeChanges.forEach(change => pendingRuntimeIds.add(change.setting.id));
+      const runtimeCount = pendingRuntimeIds.size;
+      const runtimeLabel = runtimeCount + ' runtime change' + (runtimeCount === 1 ? '' : 's');
       const configurationLabel = persistenceChanges.length + ' configuration change' + (persistenceChanges.length === 1 ? '' : 's');
       summary.textContent = runtimeLabel + '; ' + configurationLabel + ' eligible to save.';
     }}
@@ -2137,6 +2226,22 @@ function captureSettingsDraftValues() {{
   const values = new Map();
   settingsPageState.draftSettingsById.forEach((setting, settingId) => values.set(settingId, setting.value));
   return values;
+}}
+function captureSettingsDraftValuesExcept(settingIds) {{
+  const values = new Map();
+  settingsPageState.draftSettingsById.forEach((setting, settingId) => {{
+    if (!settingIds.has(settingId)) values.set(settingId, setting.value);
+  }});
+  return values;
+}}
+function firstInvalidSettingsControlOutside(settingIds) {{
+  for (const [settingId, setting] of settingsPageState.draftSettingsById.entries()) {{
+    if (settingIds.has(settingId) || (!setting.runtime_editable && !setting.persistable)) continue;
+    const control = settingsPageState.controlsById.get(settingId);
+    if (!settingsDraftValueIsValid(setting, setting.value)) return control || null;
+    if (control && !control.disabled && typeof control.checkValidity === 'function' && !control.checkValidity()) return control;
+  }}
+  return null;
 }}
 function capturePersistenceOnlyDraftValues() {{
   const values = new Map();
@@ -2166,6 +2271,7 @@ function acceptSettingsSnapshot(snapshot, preservedDraftValues) {{
   settingsPageState.loaded = true;
   settingsPageState.confirmationRequired = false;
   settingsPageState.confirmationAction = null;
+  settingsPageState.confirmationPreservedDraftValues = null;
   const hasSettings = renderSettingsCategories();
   const form = byId('settingsForm');
   if (form) form.hidden = !hasSettings;
@@ -2187,7 +2293,8 @@ function valueFromSettingsControl(control, setting) {{
 }}
 function handleSettingsInput(event) {{
   const control = event.target.closest ? event.target.closest('.settings-input,.settings-checkbox') : null;
-  if (!control || settingsPageState.loading || settingsPageState.saving || settingsPageState.persisting || settingsPageState.confirmationRequired) return;
+  if (!control || settingsPageState.loading || settingsPageState.saving || settingsPageState.persisting ||
+      settingsPageState.resetting || settingsPageState.discarding || settingsPageState.confirmationRequired) return;
   const settingId = control.dataset.settingId;
   const setting = settingsPageState.draftSettingsById.get(settingId);
   if (!setting || (!setting.runtime_editable && !setting.persistable)) return;
@@ -2298,7 +2405,7 @@ async function requestSettingsSnapshot() {{
   return validateSettingsSnapshot(payload);
 }}
 async function loadSettings() {{
-  if (settingsPageState.loading || settingsPageState.saving || settingsPageState.persisting) return;
+  if (settingsPageState.loading || settingsPageState.saving || settingsPageState.persisting || settingsPageState.resetting || settingsPageState.discarding) return;
   settingsPageState.loading = true;
   clearSettingsPageError();
   const form = byId('settingsForm');
@@ -2320,6 +2427,8 @@ async function loadSettings() {{
     settingsPageState.confirmedSettingsById = new Map();
     settingsPageState.draftSettingsById = new Map();
     settingsPageState.controlsById = new Map();
+    settingsPageState.resetButtonsById = new Map();
+    settingsPageState.categoryResetButtonsById = new Map();
     settingsPageState.errorElementsById = new Map();
     settingsPageState.differenceElementsById = new Map();
     settingsPageState.fieldErrors = new Map();
@@ -2338,11 +2447,16 @@ function ensureSettingsLoaded() {{
   if (!settingsPageState.loaded && !settingsPageState.loading) void loadSettings();
 }}
 async function confirmSettingsAfterAcceptedUpdate() {{
-  if (!settingsPageState.confirmationRequired || settingsPageState.loading || settingsPageState.saving || settingsPageState.persisting) return;
+  if (!settingsPageState.confirmationRequired || settingsPageState.loading || settingsPageState.saving || settingsPageState.persisting ||
+      settingsPageState.resetting || settingsPageState.discarding) return;
   const confirmationAction = settingsPageState.confirmationAction;
   const preservedDraftValues = confirmationAction === 'configuration'
     ? captureSettingsDraftValues()
-    : capturePersistenceOnlyDraftValues();
+    : confirmationAction === 'reset' && settingsPageState.confirmationPreservedDraftValues instanceof Map
+      ? settingsPageState.confirmationPreservedDraftValues
+      : confirmationAction === 'discard'
+        ? new Map()
+        : capturePersistenceOnlyDraftValues();
   settingsPageState.loading = true;
   clearSettingsPageError();
   if (confirmationAction === 'configuration') {{
@@ -2371,6 +2485,110 @@ async function confirmSettingsAfterAcceptedUpdate() {{
     updateSettingsActions();
   }}
 }}
+async function resetSettingsToDefaults(options) {{
+  if (settingsPageState.loading || settingsPageState.saving || settingsPageState.persisting || settingsPageState.resetting ||
+      settingsPageState.discarding || settingsPageState.confirmationRequired || !settingsPageState.loaded) return;
+  const selection = options || {{}};
+  const resetSelection = {{ ...selection, includeAlreadyDefault:Boolean(selection.confirmation) }};
+  const changes = resettableSettings(resetSelection);
+  if (!changes.length) {{
+    setSettingsStatus('The selected runtime settings already use their built-in defaults.', 'success');
+    return;
+  }}
+  const runtimeResetChanges = changes.filter(change =>
+    !settingsValuesEqual(change.setting.value, change.value));
+  const resetSettingIds = new Set(changes.map(change => change.setting.id));
+  const firstUnrelatedInvalid = firstInvalidSettingsControlOutside(resetSettingIds);
+  if (firstUnrelatedInvalid) {{
+    showSettingsPageError('Correct invalid draft values outside this reset before continuing.', false);
+    setSettingsStatus('Defaults were not staged. No settings were changed.', 'warning');
+    if (settingsPageIsActive()) firstUnrelatedInvalid.focus();
+    return;
+  }}
+  if (selection.confirmation) {{
+    const confirmationMessage = selection.categoryId
+      ? 'Reset the ' + selection.label + ' category to built-in defaults? ' + changes.length + ' runtime setting' + (changes.length === 1 ? '' : 's') + ' will be staged. Configuration will not be saved.'
+      : 'Reset all dashboard-managed settings to built-in defaults? ' + changes.length + ' runtime setting' + (changes.length === 1 ? '' : 's') + ' will be staged. Configuration will not be saved.';
+    if (!window.confirm(confirmationMessage)) {{
+      setSettingsStatus('Reset was cancelled. No settings were changed.', '');
+      return;
+    }}
+  }}
+  let payload;
+  try {{
+    payload = buildSettingsPayload(changes);
+  }} catch (error) {{
+    showSettingsPageError('The reset could not be prepared safely. Reload the page and try again.', true);
+    setSettingsStatus('Defaults were not staged. No settings were changed.', 'warning');
+    return;
+  }}
+
+  const preservedDraftValues = captureSettingsDraftValuesExcept(resetSettingIds);
+  settingsPageState.resetting = true;
+  clearSettingsPageError();
+  clearSettingsFieldErrors();
+  setSettingsStatus('Staging built-in defaults for the current runtime...', '');
+  updateSettingsActions();
+  let patchAccepted = false;
+  let focusAfterReset = null;
+  try {{
+    const response = await fetch(SETTINGS_ENDPOINT, {{
+      method:'PATCH',
+      headers:{{'Accept':'application/json','Content-Type':'application/json'}},
+      body:JSON.stringify(payload)
+    }});
+    const responsePayload = await readSettingsResponse(response);
+    if (!response.ok) {{
+      const firstInvalid = applySettingsValidationErrors(responsePayload);
+      const message = settingsErrorMessage(responsePayload, response.status, 'reset');
+      showSettingsPageError(message, !firstInvalid);
+      setSettingsStatus(response.status === 400 || response.status === 422
+        ? 'Reset validation failed. No settings were changed.'
+        : 'Defaults were not staged. No settings were changed.', 'warning');
+      focusAfterReset = firstInvalid;
+      return;
+    }}
+    patchAccepted = true;
+    const snapshot = await authoritativeSettingsSnapshot(responsePayload);
+    acceptSettingsSnapshot(snapshot, preservedDraftValues);
+    const scopeLabel = selection.settingId
+      ? selection.label + ' default'
+      : selection.categoryId
+        ? selection.label + ' defaults'
+        : 'Managed settings defaults';
+    const unsavedResetCount = changes.filter(change => {{
+      const confirmed = settingsPageState.confirmedSettingsById.get(change.setting.id);
+      return confirmed && confirmed.persistable && !settingsValuesEqual(confirmed.value, confirmed.persisted_value);
+    }}).length;
+    const configurationMessage = unsavedResetCount
+      ? ' Configuration has not been saved. Use Save to configuration for restart persistence.'
+      : ' Configuration was not changed by this reset; persisted values already match. No configuration save is needed.';
+    const restartCount = runtimeResetChanges.filter(change => change.setting.restart_required).length;
+    const restartMessage = restartCount
+      ? ' ' + restartCount + ' restart-required setting' + (restartCount === 1 ? '' : 's') +
+        (unsavedResetCount ? ' will still require a manual restart after saving.' : ' may still require a manual restart.')
+      : '';
+    setSettingsStatus(scopeLabel + ' staged for ' + changes.length + ' setting' + (changes.length === 1 ? '' : 's') + '.' + configurationMessage + restartMessage, 'success');
+    focusSettingsStatus();
+    requestDashboardRefresh();
+  }} catch (error) {{
+    if (patchAccepted) {{
+      settingsPageState.confirmationRequired = true;
+      settingsPageState.confirmationAction = 'reset';
+      settingsPageState.confirmationPreservedDraftValues = preservedDraftValues;
+      showSettingsLoadState('Confirm staged defaults', 'ContextKeeper accepted the reset, but the current runtime values could not be confirmed. Retry before making another change.', true);
+      showSettingsPageError('ContextKeeper accepted the reset, but the current runtime values could not be confirmed. Editing and Save actions are paused.', false);
+      setSettingsStatus('The accepted reset requires confirmation.', 'warning');
+    }} else {{
+      showSettingsPageError('ContextKeeper could not confirm whether defaults were staged. No configuration was saved; check the connection and retry.', false);
+      setSettingsStatus('Reset could not be confirmed. Configuration was not saved.', 'warning');
+    }}
+  }} finally {{
+    settingsPageState.resetting = false;
+    updateSettingsActions();
+    if (focusAfterReset && settingsPageIsActive()) focusAfterReset.focus();
+  }}
+}}
 function restoreSettingsDraft() {{
   if (!settingsPageState.confirmedSnapshot) return;
   settingsPageState.draftSnapshot = cloneSettingsSnapshot(settingsPageState.confirmedSnapshot);
@@ -2380,14 +2598,83 @@ function restoreSettingsDraft() {{
   clearSettingsPageError();
   updateSettingsActions();
 }}
-function discardSettingsDraft() {{
-  if (settingsPageState.loading || settingsPageState.saving || settingsPageState.persisting || settingsPageState.confirmationRequired || !settingsPageState.confirmedSnapshot) return;
-  if (!changedDraftSettings().length) {{
-    setSettingsStatus('No changes to discard.', '');
+async function discardSettingsDraft() {{
+  if (settingsPageState.loading || settingsPageState.saving || settingsPageState.persisting || settingsPageState.resetting ||
+      settingsPageState.discarding || settingsPageState.confirmationRequired || !settingsPageState.confirmedSnapshot) return;
+  const draftChanges = changedDraftSettings();
+  const runtimeChanges = runtimeSettingsDifferentFromPersisted();
+  if (!draftChanges.length && !runtimeChanges.length) {{
+    setSettingsStatus('No runtime changes to discard.', '');
     return;
   }}
-  restoreSettingsDraft();
-  setSettingsStatus('Unsaved changes discarded.', 'success');
+  if (!runtimeChanges.length) {{
+    restoreSettingsDraft();
+    setSettingsStatus('Unsaved draft changes discarded. Runtime and configuration were not changed.', 'success');
+    return;
+  }}
+  let payload;
+  try {{
+    payload = buildSettingsPayload(runtimeChanges);
+  }} catch (error) {{
+    showSettingsPageError('The runtime recovery could not be prepared safely. Reload the page and try again.', true);
+    setSettingsStatus('Runtime changes were not discarded.', 'warning');
+    return;
+  }}
+
+  settingsPageState.discarding = true;
+  clearSettingsPageError();
+  clearSettingsFieldErrors();
+  setSettingsStatus('Restoring persisted values to the current runtime...', '');
+  updateSettingsActions();
+  let patchAccepted = false;
+  let focusAfterDiscard = null;
+  try {{
+    const response = await fetch(SETTINGS_ENDPOINT, {{
+      method:'PATCH',
+      headers:{{'Accept':'application/json','Content-Type':'application/json'}},
+      body:JSON.stringify(payload)
+    }});
+    const responsePayload = await readSettingsResponse(response);
+    if (!response.ok) {{
+      const firstInvalid = applySettingsValidationErrors(responsePayload);
+      const message = settingsErrorMessage(responsePayload, response.status, 'discard runtime');
+      showSettingsPageError(message, !firstInvalid);
+      setSettingsStatus(response.status === 400 || response.status === 422
+        ? 'Runtime recovery validation failed. No runtime settings were changed.'
+        : 'Runtime changes were not discarded. Your draft is still available.', 'warning');
+      focusAfterDiscard = firstInvalid;
+      return;
+    }}
+    patchAccepted = true;
+    const snapshot = await authoritativeSettingsSnapshot(responsePayload);
+    acceptSettingsSnapshot(snapshot);
+    const remainingRuntimeDifferences = runtimeSettingsDifferentFromPersisted();
+    requestDashboardRefresh();
+    if (remainingRuntimeDifferences.length) {{
+      showSettingsPageError('Persisted configuration changed during runtime recovery. Review the refreshed values and retry Discard.', false);
+      setSettingsStatus(remainingRuntimeDifferences.length + ' runtime setting' + (remainingRuntimeDifferences.length === 1 ? '' : 's') + ' still differs from persisted configuration. YAML was not changed.', 'warning');
+      focusSettingsStatus();
+      return;
+    }}
+    setSettingsStatus(runtimeChanges.length + ' runtime setting' + (runtimeChanges.length === 1 ? '' : 's') + ' restored from persisted configuration. YAML was not changed.', 'success');
+    focusSettingsStatus();
+  }} catch (error) {{
+    if (patchAccepted) {{
+      settingsPageState.confirmationRequired = true;
+      settingsPageState.confirmationAction = 'discard';
+      settingsPageState.confirmationPreservedDraftValues = null;
+      showSettingsLoadState('Confirm restored runtime', 'ContextKeeper accepted the recovery update, but the current runtime values could not be confirmed. Retry before making another change.', true);
+      showSettingsPageError('ContextKeeper accepted the recovery update, but the current runtime values could not be confirmed. Editing and Save actions are paused.', false);
+      setSettingsStatus('The accepted runtime recovery requires confirmation.', 'warning');
+    }} else {{
+      showSettingsPageError('ContextKeeper could not confirm whether runtime values were restored. YAML was not changed; check the connection and retry.', false);
+      setSettingsStatus('Runtime recovery could not be confirmed. Your draft is still available.', 'warning');
+    }}
+  }} finally {{
+    settingsPageState.discarding = false;
+    updateSettingsActions();
+    if (focusAfterDiscard && settingsPageIsActive()) focusAfterDiscard.focus();
+  }}
 }}
 async function authoritativeSettingsSnapshot(patchPayload) {{
   try {{
@@ -2409,7 +2696,8 @@ async function authoritativePersistenceResult(responsePayload) {{
   }}
 }}
 async function saveSettings() {{
-  if (settingsPageState.saving || settingsPageState.persisting || settingsPageState.loading || settingsPageState.confirmationRequired || !settingsPageState.loaded) return;
+  if (settingsPageState.saving || settingsPageState.persisting || settingsPageState.loading || settingsPageState.resetting ||
+      settingsPageState.discarding || settingsPageState.confirmationRequired || !settingsPageState.loaded) return;
   const changes = changedRuntimeSettings();
   if (!changes.length) {{
     setSettingsStatus('No changes to save.', '');
@@ -2477,7 +2765,8 @@ async function saveSettings() {{
   }}
 }}
 async function persistSettings() {{
-  if (settingsPageState.persisting || settingsPageState.saving || settingsPageState.loading || settingsPageState.confirmationRequired || !settingsPageState.loaded) return;
+  if (settingsPageState.persisting || settingsPageState.saving || settingsPageState.loading || settingsPageState.resetting ||
+      settingsPageState.discarding || settingsPageState.confirmationRequired || !settingsPageState.loaded) return;
   const changes = changedPersistableSettings();
   if (!changes.length) {{
     setSettingsStatus('No configuration changes to save.', '');
@@ -2527,7 +2816,16 @@ async function persistSettings() {{
     acceptSettingsSnapshot(result.settings, preservedDraftValues);
     const savedCount = result.persisted_setting_ids.length || changes.length;
     const createdMessage = result.configuration_created ? ' A new configuration file was created.' : '';
-    setSettingsStatus(savedCount + ' setting' + (savedCount === 1 ? '' : 's') + ' saved to configuration. Runtime values were not changed.' + createdMessage, 'success');
+    const savedDefaults = changes.length > 0 && changes.every(change =>
+      change.setting.reset_eligible && settingsValuesEqual(change.value, change.setting.default_value));
+    const savedMessage = savedDefaults
+      ? savedCount + ' managed setting' + (savedCount === 1 ? '' : 's') + ' restored to built-in defaults and saved.'
+      : savedCount + ' setting' + (savedCount === 1 ? '' : 's') + ' saved to configuration.';
+    const restartCount = changes.filter(change => change.setting.restart_required).length;
+    const restartMessage = restartCount
+      ? ' ' + restartCount + ' saved setting' + (restartCount === 1 ? '' : 's') + ' still requires a manual ContextKeeper restart.'
+      : '';
+    setSettingsStatus(savedMessage + ' Runtime values were not changed.' + restartMessage + createdMessage, 'success');
   }} catch (error) {{
     if (persistenceAccepted) {{
       settingsPageState.confirmationRequired = true;
@@ -2555,7 +2853,9 @@ function initializeSettingsPage() {{
     }});
   }}
   const discard = byId('settingsDiscardButton');
-  if (discard) discard.addEventListener('click', discardSettingsDraft);
+  if (discard) discard.addEventListener('click', () => void discardSettingsDraft());
+  const resetAll = byId('settingsResetAllButton');
+  if (resetAll) resetAll.addEventListener('click', () => void resetSettingsToDefaults({{ confirmation:true }}));
   const persist = byId('settingsPersistButton');
   if (persist) persist.addEventListener('click', () => void persistSettings());
   const retry = byId('settingsRetryButton');

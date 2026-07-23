@@ -7,7 +7,7 @@ import yaml
 from fastapi.testclient import TestClient
 
 from ctxkeeper.app import create_app
-from ctxkeeper.config import Settings
+from ctxkeeper.config import Settings, load_config
 from ctxkeeper.dashboard.routes import create_dashboard_router
 from ctxkeeper.dashboard.settings_snapshot import DashboardSetting, build_dashboard_settings_snapshot
 
@@ -26,6 +26,7 @@ SETTING_KEYS = {
     "runtime_editable",
     "persistable",
     "restart_required",
+    "reset_eligible",
     "data_type",
 }
 
@@ -49,6 +50,33 @@ def _settings_by_id(snapshot: dict[str, object]) -> dict[str, dict[str, object]]
 
 def _setting_value(snapshot: dict[str, object], setting_id: str) -> object:
     return _settings_by_id(snapshot)[setting_id]["value"]
+
+
+def _default_reset_payload(
+    snapshot: dict[str, object],
+    *,
+    category_id: str | None = None,
+    setting_id: str | None = None,
+) -> dict[str, dict[str, object]]:
+    payload: dict[str, dict[str, object]] = {}
+    for category in snapshot["categories"]:
+        assert isinstance(category, dict)
+        if category_id is not None and category["id"] != category_id:
+            continue
+        for setting in category["settings"]:
+            assert isinstance(setting, dict)
+            if not setting["reset_eligible"]:
+                continue
+            if setting_id is not None and setting["id"] != setting_id:
+                continue
+            prefix = f"{category['id']}."
+            assert str(setting["id"]).startswith(prefix)
+            field_name = str(setting["id"])[len(prefix) :]
+            assert field_name and "." not in field_name
+            payload.setdefault(str(category["id"]), {})[field_name] = setting[
+                "default_value"
+            ]
+    return payload
 
 
 def _settings_client(
@@ -85,6 +113,7 @@ def test_dashboard_settings_snapshot_schema_and_categories() -> None:
             assert setting["runtime_editable"] is True
             assert setting["persistable"] is True
             assert setting["restart_required"] is False
+            assert setting["reset_eligible"] is True
             assert setting["persisted_value"] == setting["value"]
             assert setting["differs_from_persisted"] is False
             assert setting["data_type"] in {"boolean", "integer", "string"}
@@ -181,6 +210,7 @@ def test_dashboard_setting_supports_restart_required_persisted_runtime_divergenc
         runtime_editable=False,
         persistable=True,
         restart_required=True,
+        reset_eligible=True,
     )
 
     data = setting.to_dict()
@@ -191,6 +221,37 @@ def test_dashboard_setting_supports_restart_required_persisted_runtime_divergenc
     assert data["runtime_editable"] is False
     assert data["persistable"] is True
     assert data["restart_required"] is True
+    assert data["reset_eligible"] is False
+
+
+@pytest.mark.parametrize(
+    ("runtime_editable", "reset_eligible", "expected"),
+    [
+        (True, True, True),
+        (True, False, False),
+        (False, True, False),
+        (False, False, False),
+    ],
+)
+def test_dashboard_setting_reset_eligibility_requires_explicit_runtime_editability(
+    runtime_editable: bool,
+    reset_eligible: bool,
+    expected: bool,
+) -> None:
+    setting = DashboardSetting(
+        id="example.setting",
+        category="example",
+        display_name="Example setting",
+        description="Synthetic reset eligibility contract coverage.",
+        value=True,
+        persisted_value=True,
+        default_value=True,
+        data_type="boolean",
+        runtime_editable=runtime_editable,
+        reset_eligible=reset_eligible,
+    )
+
+    assert setting.to_dict()["reset_eligible"] is expected
 
 
 def test_dashboard_settings_snapshot_exposes_only_approved_settings() -> None:
@@ -651,6 +712,302 @@ def test_runtime_patch_remains_separate_and_does_not_write_configuration(tmp_pat
     assert setting["persisted_value"] is True
     assert setting["differs_from_persisted"] is True
     assert config_path.read_bytes() == original
+
+
+def test_individual_default_reset_uses_authoritative_metadata_until_explicit_put(
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / "contextkeeper.yaml"
+    original = _write_config(
+        config_path,
+        {
+            "context": {
+                "enabled": False,
+                "warning_threshold_percent": 60,
+                "compression_threshold_percent": 90,
+                "keep_recent_messages": 12,
+            },
+            "custom_future_category": {"preserve": "unchanged"},
+        },
+    )
+    runtime = Settings(
+        context={
+            "enabled": False,
+            "warning_threshold_percent": 60,
+            "compression_threshold_percent": 90,
+            "keep_recent_messages": 12,
+        }
+    )
+    client = _settings_client(runtime, config_path=config_path)
+    initial_snapshot = client.get("/api/dashboard/settings").json()
+    initial_by_id = _settings_by_id(initial_snapshot)
+    setting_id = "context.keep_recent_messages"
+    reset_payload = _default_reset_payload(
+        initial_snapshot,
+        setting_id=setting_id,
+    )
+
+    reset_response = client.patch("/api/dashboard/settings", json=reset_payload)
+
+    assert reset_response.status_code == 200
+    reset_by_id = _settings_by_id(reset_response.json())
+    assert reset_by_id[setting_id]["value"] == initial_by_id[setting_id][
+        "default_value"
+    ]
+    assert reset_by_id[setting_id]["persisted_value"] == initial_by_id[setting_id][
+        "value"
+    ]
+    assert reset_by_id[setting_id]["differs_from_persisted"] is True
+    for other_id, initial_setting in initial_by_id.items():
+        if other_id != setting_id:
+            assert reset_by_id[other_id]["value"] == initial_setting["value"]
+    assert config_path.read_bytes() == original
+
+    save_response = client.put(
+        "/api/dashboard/settings/config",
+        json=reset_payload,
+    )
+
+    assert save_response.status_code == 200
+    assert save_response.json()["persisted_setting_ids"] == [setting_id]
+    saved_by_id = _settings_by_id(save_response.json()["settings"])
+    assert saved_by_id[setting_id]["value"] == initial_by_id[setting_id][
+        "default_value"
+    ]
+    assert saved_by_id[setting_id]["persisted_value"] == initial_by_id[setting_id][
+        "default_value"
+    ]
+    assert saved_by_id[setting_id]["differs_from_persisted"] is False
+    persisted = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    assert persisted["context"]["keep_recent_messages"] == initial_by_id[setting_id][
+        "default_value"
+    ]
+    assert persisted["custom_future_category"] == {"preserve": "unchanged"}
+
+
+def test_discard_recovery_restores_persisted_value_after_default_reset_patch(
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / "contextkeeper.yaml"
+    original = _write_config(
+        config_path,
+        {
+            "context": {
+                "warning_threshold_percent": 60,
+                "compression_threshold_percent": 90,
+                "keep_recent_messages": 12,
+            }
+        },
+    )
+    runtime = Settings(
+        context={
+            "warning_threshold_percent": 60,
+            "compression_threshold_percent": 90,
+            "keep_recent_messages": 12,
+        }
+    )
+    client = _settings_client(runtime, config_path=config_path)
+    setting_id = "context.keep_recent_messages"
+    initial_snapshot = client.get("/api/dashboard/settings").json()
+    initial_setting = _settings_by_id(initial_snapshot)[setting_id]
+    assert initial_setting["value"] == initial_setting["persisted_value"]
+    assert initial_setting["value"] != initial_setting["default_value"]
+
+    reset_response = client.patch(
+        "/api/dashboard/settings",
+        json=_default_reset_payload(initial_snapshot, setting_id=setting_id),
+    )
+
+    assert reset_response.status_code == 200
+    reset_setting = _settings_by_id(reset_response.json())[setting_id]
+    assert reset_setting["value"] == initial_setting["default_value"]
+    assert reset_setting["persisted_value"] == initial_setting["persisted_value"]
+    assert reset_setting["differs_from_persisted"] is True
+    assert config_path.read_bytes() == original
+
+    category, field_name = setting_id.split(".", maxsplit=1)
+    recovery_response = client.patch(
+        "/api/dashboard/settings",
+        json={category: {field_name: reset_setting["persisted_value"]}},
+    )
+
+    assert recovery_response.status_code == 200
+    recovered_setting = _settings_by_id(recovery_response.json())[setting_id]
+    assert recovered_setting["value"] == initial_setting["persisted_value"]
+    assert recovered_setting["persisted_value"] == initial_setting[
+        "persisted_value"
+    ]
+    assert recovered_setting["default_value"] == initial_setting["default_value"]
+    assert recovered_setting["value"] != recovered_setting["default_value"]
+    assert recovered_setting["differs_from_persisted"] is False
+    assert config_path.read_bytes() == original
+
+
+def test_category_default_reset_updates_only_eligible_settings_in_that_category(
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / "contextkeeper.yaml"
+    runtime = Settings(
+        context={
+            "enabled": False,
+            "warning_threshold_percent": 60,
+            "compression_threshold_percent": 90,
+            "keep_recent_messages": 12,
+        },
+        compression={
+            "enabled": False,
+            "summarizer_model": "custom-summary:latest",
+            "max_summary_tokens": 900,
+        },
+        dashboard={"refresh_interval_ms": 2500},
+    )
+    original = _write_config(config_path, runtime.model_dump())
+    client = _settings_client(runtime, config_path=config_path)
+    initial_snapshot = client.get("/api/dashboard/settings").json()
+    initial_by_id = _settings_by_id(initial_snapshot)
+    reset_payload = _default_reset_payload(initial_snapshot, category_id="context")
+
+    response = client.patch("/api/dashboard/settings", json=reset_payload)
+
+    assert response.status_code == 200
+    reset_by_id = _settings_by_id(response.json())
+    for setting_id, initial_setting in initial_by_id.items():
+        if initial_setting["category"] == "context":
+            assert initial_setting["reset_eligible"] is True
+            assert reset_by_id[setting_id]["value"] == initial_setting[
+                "default_value"
+            ]
+        else:
+            assert reset_by_id[setting_id]["value"] == initial_setting["value"]
+    assert config_path.read_bytes() == original
+
+
+def test_category_default_reset_validation_failure_is_atomic(
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / "contextkeeper.yaml"
+    configuration = {
+        "context": {
+            "enabled": False,
+            "minimum_threshold_percent": 80,
+            "warning_threshold_percent": 82,
+            "compression_threshold_percent": 90,
+            "keep_recent_messages": 12,
+        }
+    }
+    original = _write_config(config_path, configuration)
+    runtime = Settings.model_validate(configuration)
+    client = _settings_client(runtime, config_path=config_path)
+    initial_snapshot = client.get("/api/dashboard/settings").json()
+    initial_by_id = _settings_by_id(initial_snapshot)
+    reset_payload = _default_reset_payload(initial_snapshot, category_id="context")
+
+    response = client.patch("/api/dashboard/settings", json=reset_payload)
+
+    assert response.status_code == 422
+    current_by_id = _settings_by_id(client.get("/api/dashboard/settings").json())
+    assert {
+        setting_id: setting["value"]
+        for setting_id, setting in current_by_id.items()
+    } == {
+        setting_id: setting["value"]
+        for setting_id, setting in initial_by_id.items()
+    }
+    assert runtime.context.minimum_threshold_percent == 80
+    assert config_path.read_bytes() == original
+
+
+def test_global_default_reset_and_put_touch_only_managed_eligible_settings(
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / "contextkeeper.yaml"
+    configuration = {
+        "server": {"host": "127.0.0.1", "port": 11605},
+        "context": {
+            "enabled": False,
+            "warning_threshold_percent": 60,
+            "compression_threshold_percent": 90,
+            "keep_recent_messages": 12,
+            "future_context_option": "preserve me",
+        },
+        "compression": {
+            "enabled": False,
+            "summarizer_model": "custom-summary:latest",
+            "max_summary_tokens": 900,
+        },
+        "dashboard": {
+            "title": "Custom dashboard",
+            "refresh_interval_ms": 2500,
+        },
+        "models": {"custom-model": {"context_window_tokens": 49152}},
+        "custom_future_category": {"nested": {"preserve": True}},
+    }
+    original = _write_config(config_path, configuration)
+    runtime = Settings.model_validate(configuration)
+    client = _settings_client(runtime, config_path=config_path)
+    initial_snapshot = client.get("/api/dashboard/settings").json()
+    initial_by_id = _settings_by_id(initial_snapshot)
+    reset_payload = _default_reset_payload(initial_snapshot)
+    reset_setting_ids = {
+        f"{category}.{field_name}"
+        for category, values in reset_payload.items()
+        for field_name in values
+    }
+
+    reset_response = client.patch("/api/dashboard/settings", json=reset_payload)
+
+    assert reset_response.status_code == 200
+    assert reset_setting_ids == {
+        setting_id
+        for setting_id, setting in initial_by_id.items()
+        if setting["reset_eligible"]
+    }
+    assert len(reset_setting_ids) == 8
+    reset_by_id = _settings_by_id(reset_response.json())
+    for setting_id in reset_setting_ids:
+        assert reset_by_id[setting_id]["value"] == initial_by_id[setting_id][
+            "default_value"
+        ]
+    assert runtime.server.host == "127.0.0.1"
+    assert runtime.server.port == 11605
+    assert runtime.dashboard.title == "Custom dashboard"
+    assert runtime.models == {"custom-model": {"context_window_tokens": 49152}}
+    assert config_path.read_bytes() == original
+
+    save_response = client.put(
+        "/api/dashboard/settings/config",
+        json=reset_payload,
+    )
+
+    assert save_response.status_code == 200
+    assert save_response.json()["persisted_setting_ids"] == sorted(reset_setting_ids)
+    saved_by_id = _settings_by_id(save_response.json()["settings"])
+    for setting_id in reset_setting_ids:
+        assert saved_by_id[setting_id]["value"] == initial_by_id[setting_id][
+            "default_value"
+        ]
+        assert saved_by_id[setting_id]["persisted_value"] == initial_by_id[
+            setting_id
+        ]["default_value"]
+        assert saved_by_id[setting_id]["differs_from_persisted"] is False
+
+    persisted = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    assert persisted["server"] == configuration["server"]
+    assert persisted["context"]["future_context_option"] == "preserve me"
+    assert persisted["dashboard"]["title"] == "Custom dashboard"
+    assert persisted["models"] == configuration["models"]
+    assert persisted["custom_future_category"] == configuration[
+        "custom_future_category"
+    ]
+
+    restarted = load_config(config_path)
+    for setting_id in reset_setting_ids:
+        category, field_name = setting_id.split(".", maxsplit=1)
+        assert getattr(getattr(restarted, category), field_name) == initial_by_id[
+            setting_id
+        ]["default_value"]
+    assert restarted.dashboard.title == configuration["dashboard"]["title"]
+    assert restarted.models == configuration["models"]
 
 
 @pytest.mark.parametrize(

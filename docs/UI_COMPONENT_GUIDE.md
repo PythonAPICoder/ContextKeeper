@@ -1,6 +1,6 @@
 # ContextKeeper UI Component Guide
 
-Status: Current through the Phase 6.5F-B6.4 working-tree implementation; Product Owner and architect review are pending.
+Status: Current through the Phase 6.5F-B6.5 working-tree implementation; Product Owner and architect review are pending.
 
 ## Purpose
 
@@ -199,41 +199,49 @@ Rules:
 
 ## Settings Page Controls
 
-The Settings page renders categories and controls from schema-v2 `GET /api/dashboard/settings` metadata. It does not maintain a browser-side list of setting identities or persistence rules.
+The Settings page renders categories and controls from schema-v2 `GET /api/dashboard/settings` metadata. It does not maintain a browser-side list of setting identities, built-in defaults, reset eligibility, or persistence rules.
 
 Components:
 
 - visible runtime-versus-saved configuration notice;
 - category cards with API-provided names and descriptions;
+- category reset actions with native confirmation;
 - setting labels and descriptions;
 - runtime, saved configuration, default, and minimum/maximum metadata where supplied;
 - dynamic draft/runtime/saved difference text;
 - runtime read-only, not-persistable, runtime-differs-from-saved, and restart-required badges;
 - boolean checkbox, integer number input, and string text input renderers;
+- setting-specific reset buttons with accessible names and semantic disabled states;
 - polite status region and assertive error summary;
 - loading, retry, empty, and error states;
 - typed runtime/persistence change summary;
-- Discard, Save to configuration, and Save runtime changes actions.
+- Discard runtime changes, Save to configuration, Save runtime changes, and **Reset managed settings to defaults** actions.
 
 Rules:
 
-- Use API metadata as the authority for setting identity, display text, runtime/persisted/default values, type, constraint, runtime editability, persistence eligibility, difference state, and restart guidance.
+- Use API metadata as the authority for setting identity, display text, runtime/persisted/default values, type, constraint, runtime editability, persistence eligibility, reset eligibility, difference state, and restart guidance.
 - Associate every control with a visible label and descriptive metadata.
 - Render API text with safe DOM text operations rather than HTML injection.
 - Keep a control editable when its setting is runtime-editable or persistable; disable it only when neither action is allowed, and explain partial availability explicitly.
 - Preserve boolean, numeric, and string values in the draft without type conversion artifacts.
 - Keep confirmed server state separate from editable draft state.
 - Calculate runtime changes against confirmed `value` and persistence changes against confirmed `persisted_value`, using strict typed equality.
+- Render an individual reset only for supported metadata, and enable it only when `reset_eligible` is true, runtime differs from `default_value`, and no conflicting request is pending.
+- Give every individual reset a setting-specific accessible name and native button semantics.
+- Submit an individual reset immediately as a single-setting PATCH using `default_value`; do not require confirmation for this one-setting action.
+- Require native keyboard-operable confirmation for category reset and **Reset managed settings to defaults**. Build one PATCH containing all and only reset-eligible settings in scope, including eligible values already at default; disable the scoped action when every eligible value is already at default. Cancellation sends no request.
+- Accept the canonical PATCH snapshot after reset and announce that defaults are staged and reset did not write configuration. Report how many settings were staged where practical, direct the user to Save when persisted values differ, and state when persisted values already match and need no save.
 - Enable Save runtime changes only for a valid changed runtime-editable draft; it sends one atomic PATCH containing only those values.
 - Enable Save to configuration only for valid persistable draft values that differ from saved configuration; it sends one explicit PUT to `/api/dashboard/settings/config` containing only those values.
 - Never persist from an input/change event, runtime form submit, page switch, refresh timer, or initial load.
 - On PUT success, accept refreshed metadata and restore the user's draft values so disk-only changes are not silently applied to runtime.
-- Discard restores the latest confirmed runtime draft and performs no network request.
+- Discard restores browser-only draft edits locally. When confirmed runtime differs from persisted state, send one atomic PATCH using `persisted_value` for every runtime-editable differing setting, accept its canonical snapshot, and never write YAML.
 - Preserve the draft and relevant dirty state after validation, storage, network, server, or malformed-response failure.
-- Disable editing and both save actions while either request is pending; change the persistence button label to communicate in-progress state.
-- Keep the separation notice visible: runtime Save resets at restart unless separately persisted; configuration Save does not mutate runtime; neither action restarts ContextKeeper.
+- Disable conflicting editing, reset, Discard, and save actions while a request is pending; change action labels where appropriate to communicate in-progress state.
+- Keep the separation notice visible: reset stages built-in defaults in runtime, Discard restores persisted/effective runtime values, configuration Save is required for restart persistence, and none of these actions restarts ContextKeeper.
+- Never describe managed reset as a factory reset or imply that it deletes YAML or clears logs, metrics, conversations, summaries, models, or other application data.
 - Use visible focus indicators, live feedback, explicit state text, and native keyboard-operable controls.
-- Stack setting rows and all three action controls cleanly at narrow widths.
+- Stack setting rows, individual/category/global reset controls, and all save/discard controls cleanly at narrow widths.
 - Respect reduced-motion preferences without removing status information.
 
 ## Empty, Error, and Loading States

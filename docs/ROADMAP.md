@@ -1,6 +1,6 @@
 # ContextKeeper Roadmap
 
-Status: Current through the Phase 6.5F-B6.4 working-tree implementation; Product Owner and architect review are pending.
+Status: Current through the Phase 6.5F-B6.5 working-tree implementation; Product Owner and architect review are pending.
 
 This document records approved product direction. It is not a claim that planned work already exists. For completed implementation details, use [Project History](PROJECT_HISTORY.md).
 
@@ -23,7 +23,7 @@ Version 1 must preserve:
 
 ## Implemented foundation
 
-Implemented work through the Phase 6.5F-B6.4 working tree, with Product Owner and architect review still pending for B6.4, includes:
+Implemented work through the Phase 6.5F-B6.5 working tree, with Product Owner and architect review still pending for B6.5, includes:
 
 - Transparent Ollama-compatible proxy.
 - `/api/*` and `/v1/*` passthrough.
@@ -48,6 +48,7 @@ Implemented work through the Phase 6.5F-B6.4 working tree, with Product Owner an
 - Dashboard Settings Snapshot plus read and validated in-memory update APIs on `/api/dashboard/settings`.
 - Interactive metadata-driven Settings page with typed draft editing, changed-fields-only runtime Save, Discard, validation feedback, and explicit runtime-state guidance.
 - Schema-v2 runtime-versus-persisted Settings metadata, explicit `PUT /api/dashboard/settings/config`, defensive atomic YAML persistence, and a separate Save to configuration UI action.
+- Metadata-authorized individual, category, and global managed-settings reset controls that stage authoritative built-in defaults through atomic runtime PATCH, plus Discard recovery to persisted values.
 - First-run configuration wizard.
 - PyInstaller executable foundation.
 - Windows service host foundation.
@@ -55,24 +56,26 @@ Implemented work through the Phase 6.5F-B6.4 working tree, with Product Owner an
 
 ## Current milestone
 
-### Phase 6.5F-B6.4 — Configuration Persistence Foundation
+### Phase 6.5F-B6.5: Settings Reset and Recovery Controls
 
 Status: Implemented in the working tree; Product Owner and architect review pending.
 
 Objective:
 
-- Keep runtime updates and persisted configuration as separate explicit concepts.
-- Extend GET with schema-v2 runtime, persisted, default, difference, editability, persistence, and restart metadata.
-- Add `PUT /api/dashboard/settings/config` for selected metadata-approved settings without changing runtime state or restarting ContextKeeper.
-- Re-read, validate, serialize, verify, fingerprint-check, and atomically replace the resolved active YAML file while retaining unrelated/model-specific configuration data.
-- Add Save to configuration to the existing draft-based Settings page with duplicate-submit protection, inline feedback, and draft retention.
+- Add safe individual, category, and global controls that restore dashboard-managed settings to authoritative built-in defaults.
+- Stage reset values in runtime only through the existing validated atomic PATCH operation.
+- Preserve explicit Save to configuration as the only dashboard action that writes YAML.
+- Let Discard runtime changes restore eligible runtime values from persisted metadata without changing YAML.
+- Keep default, runtime, persisted, unsaved, and restart-required states distinct.
 
 Scope:
 
-- Persist only explicitly requested approved settings; no automatic persistence after PATCH or editing.
-- Serialize writes within one running process and use best-effort fingerprint stale-write protection; no multi-process/distributed lock.
-- Use PyYAML plus standard-library temporary-file, `fsync`, and `os.replace` primitives; comments and exact formatting are not preserved.
-- No automatic restart, restart orchestration, browser storage, rollback/history UI, import/export, or reset-to-defaults workflow.
+- Add server-owned `reset_eligible` metadata without duplicating defaults or eligibility rules in dashboard JavaScript or HTML.
+- Individual reset changes only the selected eligible setting; category and global resets require confirmation and submit all and only eligible settings in scope, including eligible values already at default, in one all-or-nothing PATCH.
+- Label the global action **Reset managed settings to defaults** and report staged setting counts where practical.
+- Preserve validation, unknown-field rejection, cross-field rules, runtime/persisted refresh, save failure behavior, and restart-required guidance.
+- Preserve unmanaged YAML keys and sections by routing persistence through the existing allowlisted atomic PUT service.
+- No reset endpoint, automatic persistence, automatic restart, factory reset, application-data clearing, self-diagnostics, repair, backup history, rollback, import/export, authentication, or multi-user settings.
 - No changes to proxy compatibility, streaming, context, compression, or Conversation Inspector behavior.
 
 ## Completed Phase 6.5F-B5 live visualization workstream
@@ -105,7 +108,7 @@ Phase 6.5G must occur before Phase 6.6 so the Validation Framework can certify h
 
 ## Phase 6.5F-B6 — Dashboard Customization & User Preferences
 
-Status: Active; B6.1 provides the Settings Snapshot/read foundation, B6.2 the validated in-memory update API, B6.3 the Settings panel UI foundation, and B6.4 the configuration-persistence foundation pending Product Owner and architect review.
+Status: Active; B6.1 provides the Settings Snapshot/read foundation, B6.2 the validated in-memory update API, B6.3 the Settings panel UI foundation, B6.4 the configuration-persistence foundation, and B6.5 the settings reset and recovery controls pending Product Owner and architect review.
 
 Implemented B6 scope:
 
@@ -113,11 +116,12 @@ Implemented B6 scope:
 - Separate confirmed/draft state, typed dirty detection, changed-fields-only atomic Save, Discard, and failure-preserving correction/retry.
 - Explicit runtime-versus-persisted metadata and separate PATCH/runtime and PUT/configuration actions.
 - Atomic same-directory YAML replacement with in-process serialization, best-effort stale-write detection, safe failures, and no runtime mutation or restart side effect.
+- Authoritative reset eligibility and built-in defaults, immediate individual reset, confirmed category/global reset, and persisted-value Discard recovery through the existing atomic PATCH path.
 - Preserve existing Operations dashboard behavior.
 - Avoid destabilizing B5 live widgets.
 - Keep preferences local and understandable.
 
-Future B6 work, including reset/default controls, broader preferences, authentication, and multi-user ownership, remains separate and requires explicit Product Owner approval.
+Future B6 work, including broader preferences, authentication, and multi-user ownership, remains separate and requires explicit Product Owner approval.
 
 ## Phase 6.5F-B7 — Release Polish & Final UX Review
 

@@ -1,6 +1,6 @@
 # ContextKeeper Dashboard Layout
 
-Status: Current through the Phase 6.5F-B6.4 working-tree implementation; Product Owner and architect review are pending.
+Status: Current through the Phase 6.5F-B6.5 working-tree implementation; Product Owner and architect review are pending.
 
 This document describes the current dashboard shell, Operations hierarchy, Settings page, and layout contract. It defines layout and user flow; source code remains authoritative for exact CSS and DOM details.
 
@@ -162,6 +162,7 @@ Purpose:
 - Keep temporary edits visible until they are saved or discarded.
 - Keep runtime Save and configuration persistence separate and explicit.
 - Make runtime, persisted, default, and restart-required states understandable.
+- Provide scoped recovery to authoritative built-in defaults without presenting it as a factory reset.
 
 Current hierarchy:
 
@@ -171,13 +172,19 @@ Runtime-versus-saved configuration notice
 Accessible status and error feedback
 Loading, retry, or empty state
 Metadata-driven category cards
-Setting labels, descriptions, runtime/saved/default metadata, difference text, badges, and controls
+Category reset controls
+Setting labels, descriptions, runtime/saved/default metadata, difference text, badges, controls, and individual reset actions
 Sticky change summary with Discard, Save to configuration, and Save runtime changes
+Reset managed settings to defaults
 ```
 
-The page loads `GET /api/dashboard/settings` when first opened. Category cards and boolean, integer, and string controls are generated from schema-v2 metadata. Runtime-read-only, non-persistable, runtime-different-from-saved, and restart-required states use explicit text or badges rather than color alone. Every setting displays the saved configuration value and dynamic text describing how the draft compares with the current runtime and persisted value.
+The page loads `GET /api/dashboard/settings` when first opened. Category cards and boolean, integer, and string controls are generated from schema-v2 metadata. Runtime-read-only, non-persistable, runtime-different-from-saved, and restart-required states use explicit text, badges, or disabled controls rather than color alone; an individual reset action is omitted when metadata marks the setting reset-ineligible. Every setting displays built-in default and saved configuration values plus dynamic text describing how the draft compares with the current runtime and persisted value.
 
-The browser maintains separate confirmed and draft snapshots. Save runtime changes sends one changed-fields-only atomic `PATCH /api/dashboard/settings`. Save to configuration is a separate non-submit button that sends one changed-fields-only `PUT /api/dashboard/settings/config` containing only eligible draft values that differ from saved configuration. Editing never triggers persistence automatically. Discard restores the most recent confirmed runtime draft without a network request.
+The browser maintains separate confirmed and draft snapshots. Save runtime changes sends one changed-fields-only atomic `PATCH /api/dashboard/settings`. Save to configuration is a separate non-submit button that sends one changed-fields-only `PUT /api/dashboard/settings/config` containing only eligible draft values that differ from saved configuration. Editing and reset never trigger persistence automatically.
+
+Each reset-eligible setting has a native button with a setting-specific accessible name. It is disabled when the current runtime value already equals `default_value`. An individual reset immediately submits only that authoritative default through PATCH. Category reset and **Reset managed settings to defaults** use keyboard-operable native confirmation, include all and only reset-eligible settings in scope, including eligible values already at default, and send one atomic PATCH. A category or global action is disabled when its complete eligible scope is already at default. Cancellation changes nothing. Success feedback reports the staged count where practical, states that reset did not write configuration, and distinguishes Save-required divergence from an already-matching persisted state.
+
+Discard restores browser-only draft edits locally. When the confirmed runtime differs from the persisted state, Discard sends one atomic PATCH containing `persisted_value` for every runtime-editable differing setting, then refreshes the confirmed and draft presentation from the canonical response. Discard does not write YAML. Reset and Discard failures retain the current state and use the existing accessible error feedback.
 
 A PUT success refreshes runtime/persisted metadata while restoring the user's draft, so a setting can be saved to disk yet remain pending runtime application. Failed runtime or configuration saves leave the draft available for correction or retry. While either save is pending, controls and actions are locked to prevent duplicate submission. The visible notice explains that runtime Save does not write YAML, configuration Save does not change runtime state, and neither action restarts ContextKeeper.
 
@@ -193,7 +200,7 @@ Requirements:
 - Do not introduce horizontal page overflow.
 - Ensure the Conversation Inspector becomes effectively full-width on narrow layouts.
 - Allow Settings labels, descriptions, constraints, badges, and controls to wrap without compressing the form into unreadable columns.
-- Stack Settings rows and the Discard/runtime Save/configuration Save action area at the narrow breakpoint while keeping all actions reachable.
+- Stack Settings rows, per-setting/category reset controls, the global reset control, and the Discard/runtime Save/configuration Save action area at the narrow breakpoint while keeping all actions reachable.
 - Keep dashboard controls reachable while preserving context.
 
 Manual review should include:
@@ -231,8 +238,11 @@ Before accepting layout changes, verify:
 - Settings navigation works by keyboard and the active page is announced by navigation semantics.
 - Settings categories and controls remain readable at wide, standard, and narrow widths.
 - Runtime Save, Save to configuration, and Discard accurately reflect clean, runtime-dirty, persistence-dirty, invalid, and in-progress states.
-- Loading, runtime success, configuration success, validation, storage/network/server failure, discard, and retry feedback remain understandable without color alone.
+- Individual reset buttons have accessible setting-specific names and are visually and semantically disabled when already at default or otherwise unavailable.
+- Category and global reset confirmations work by keyboard; cancellation changes no settings and successful feedback distinguishes staged runtime defaults from saved configuration.
+- Loading, runtime success, reset-staged success, reset-cancelled, configuration success, validation, storage/network/server failure, discard, and retry feedback remain understandable without color alone.
 - The separation notice remains visible and unambiguously explains PATCH, PUT, draft preservation, and no automatic restart.
+- Reset does not clear application data, replace the full YAML document, or present itself as a factory reset.
 - No clipping or horizontal overflow.
 - Request Traffic, Connection Flow, Timeline, and Inspector remain readable under active polling.
 - Reduced-motion mode is calm and still informative.

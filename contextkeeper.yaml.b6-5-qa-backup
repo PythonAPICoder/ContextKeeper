@@ -1,0 +1,31 @@
+app:
+  name: ContextKeeper
+  environment: development
+server:
+  host: 0.0.0.0
+  port: 11500
+ollama:
+  base_url: http://192.168.0.100:11434
+  timeout_seconds: 120
+logging:
+  level: INFO
+  file: logs/contextkeeper.log
+  request_log_enabled: true
+  log_request_bodies: false
+metrics:
+  enabled: true
+  gpu_enabled: true
+  refresh_interval_seconds: 2
+dashboard:
+  enabled: true
+  title: ContextKeeper Dashboard
+context:
+  enabled: true
+  default_context_window_tokens: 32768
+  warning_threshold_percent: 72
+  compression_threshold_percent: 80
+  keep_recent_messages: 6
+compression:
+  enabled: true
+  summarizer_model: gpt-oss:20b
+  max_summary_tokens: 1200

@@ -1,6 +1,183 @@
 # ContextKeeper UI Component Guide
 
-Status: Current through the Phase 6.5F-B6.6 working-tree implementation; Product Owner and architect review are pending.
+Status: Phase 6.5F-B6 is complete. Phase 6.5F-B7.1 is the current dashboard release-readiness audit; Product Owner manual review is pending.
+
+See [Dashboard Release Readiness Audit](DASHBOARD_RELEASE_READINESS_AUDIT.md) for the evidence, classifications, limitations, and release recommendation.
+
+## Purpose
+
+This guide defines reusable dashboard components for the ContextKeeper browser UI. Components should support a stable operations-console experience across full desktop, snapped desktop, and narrow browser widths.
+
+## App Shell
+
+The app shell contains:
+
+- sticky left sidebar navigation
+- top status/header bar
+- main page container
+- page-level grid layout
+
+Rules:
+
+- Keep sidebar navigation persistent on desktop.
+- Allow sidebar width to compact at medium desktop widths.
+- Identify the active destination visually and with navigation semantics.
+- Switch between Operations and Settings within the shell without registering duplicate listeners or refresh timers.
+- Treat the browser UI as a desktop application; avoid landing-page composition.
+- Page containers may scroll vertically when needed.
+
+## Hero Health Card
+
+The hero health card summarizes overall system state.
+
+Content:
+
+- operational status label
+- status icon
+- health message
+- optional live/local badges
+
+States:
+
+- Healthy: "All Systems Operational"
+- Attention: "Attention Required"
+- Degraded: "System Degraded"
+- Unknown/loading: "Checking Systems"
+
+Rules:
+
+- Must stay compact in Operations.
+- Must not push core metrics below the fold at medium desktop widths.
+- Should link visually to the System Health metric card.
+
+## Metric Cards
+
+Metric cards summarize key operational values.
+
+Examples:
+
+- System Health
+- Context Usage
+- Request Statistics
+- Average Latency
+- Request Rate
+
+Rules:
+
+- Prefer a label, primary value, and one supporting line.
+- Use gauges only when they communicate threshold pressure.
+- Avoid long prose inside metric cards.
+- Medium desktop layouts should allow compact metric card variants.
+
+## Status Badges
+
+Badges communicate concise state.
+
+Types:
+
+- `healthy` / `positive`
+- `busy` / `info`
+- `warning`
+- `critical` / `offline`
+- `low`, `medium`, `high`
+
+Rules:
+
+- Badges must have text, not color alone.
+- Use uppercase sparingly.
+- Keep badge copy short.
+
+## Context Ring
+
+The context ring visualizes context-window pressure.
+
+Inputs:
+
+- usage percent
+- threshold state
+- token count summary
+
+Rules:
+
+- Ring color should follow system status conventions.
+- Support compact sizing for medium desktop layouts.
+- Always include the numeric percentage.
+
+## Request and Latency Widgets
+
+Request widgets show whether traffic is flowing and whether latency is healthy.
+
+Components:
+
+- total request count
+- request rate
+- trend label
+- latency gauge
+- sparkline
+
+Rules:
+
+- Operations page shows compact traffic state.
+- Analytics page may show longer history and richer charts.
+- Sparkline is supportive, not the primary value.
+
+## Compression Timeline
+
+Compression timeline shows context compression activity.
+
+Content:
+
+- compression count
+- recent compression events
+- conversation identifiers
+- timestamps
+
+Rules:
+
+- Operations should only show compression risk or action state.
+- Detailed history belongs on the Context page.
+- Empty state should clarify that no compression events have occurred.
+
+## Connection Flow Visualization
+
+The Connection Flow widget is the dashboard signature element.
+
+Topology:
+
+```text
+Client -> ContextKeeper -> Ollama -> Model
+```
+
+Current state:
+
+- topology nodes
+- live status dots
+- readable status labels and badges
+- animated moving marker during active traffic
+- visible degraded/offline segments
+
+Rules:
+
+- Animate only real request/stream activity.
+- Respect `prefers-reduced-motion`.
+- Must remain readable in compact desktop layouts.
+- May become a two-row or vertical topology when width is constrained.
+- Never hide endpoint status labels.
+
+## Live Conversation Timeline
+
+The Live Conversation Timeline shows a compact operational narrative for the active or most recently active conversation.
+
+Content:
+
+- timestamp
+- event title
+- short operational detail
+- severity/type marker
+
+Rules:
+
+- Do not expose prompt text, response text, rolling-summary body text, or request bodies.
 
 ## Purpose
 
@@ -182,7 +359,7 @@ Rules:
 
 ## Conversation Inspector
 
-The Conversation Inspector is a right-side drawer opened from selectable timeline entries.
+The Conversation Inspector is a right-side drawer opened from selectable timeline entries or the Active Conversation card Open button (`opsActiveConversationInspectBtn`, tracking B7.1-PO-01).
 
 Current sections:
 
@@ -193,13 +370,13 @@ Rules:
 
 - Keep the main dashboard visible on desktop.
 - Use loading, unavailable, and metadata states that are mutually exclusive.
-- Preserve keyboard access and Escape close behavior.
+- Move focus to the Close button on open, close on Escape, and return focus to the originating timeline entry or Open button.
+- Keep the closed drawer inert so hidden controls are absent from the keyboard tab order.
+- Keep the current effectively full-width narrow drawer a nonmodal complementary region. Track B7.1-07 until its background-focus escape receives focused remediation or explicit Product Owner acceptance; broader interaction redesign and B5.5.3+ content remain deferred.
 - Use deterministic metadata and aggregate signals only.
 - Do not add transcript browsing until a later inspector phase.
 
-## Settings Page Controls
-
-The Settings page renders categories and controls from schema-v2 `GET /api/dashboard/settings` metadata. It does not maintain a browser-side list of setting identities, built-in defaults, reset eligibility, or persistence rules.
+The Settings page's general renderer creates categories, labels, metadata, and typed controls from schema-v2 `GET /api/dashboard/settings` metadata; it does not maintain a browser-side list of general setting identities, built-in defaults, reset eligibility, or persistence rules. The specialized Connection UI recognizes category id `ollama` and field ids `ollama.base_url` and `ollama.timeout_seconds` for its endpoint control, draft-value Test Connection workflow, stale-result clearing, and result panel.
 
 Components:
 
@@ -217,7 +394,7 @@ Components:
 - polite status region and assertive error summary;
 - loading, retry, empty, and error states;
 - typed runtime/persistence change summary;
-- Discard runtime changes, Save to configuration, Save runtime changes, and **Reset managed settings to defaults** actions.
+- **Discard changes**, Save to configuration, Save runtime changes, and **Reset managed settings to defaults** actions.
 
 Rules:
 
@@ -237,10 +414,10 @@ Rules:
 - Enable Save to configuration only for valid persistable draft values that differ from saved configuration; it sends one explicit PUT to `/api/dashboard/settings/config` containing only those values.
 - Never persist from an input/change event, runtime form submit, page switch, refresh timer, or initial load.
 - On PUT success, accept refreshed metadata and restore the user's draft values so disk-only changes are not silently applied to runtime.
-- Discard restores browser-only draft edits locally. A Connection-only discard sends no PATCH. When confirmed runtime differs from persisted state, send one atomic PATCH using `persisted_value` for every runtime-editable differing setting, exclude Connection fields, accept its canonical snapshot, and never write YAML.
+- **Discard changes** restores browser-only draft edits locally. A Connection-only discard sends no PATCH. When confirmed runtime differs from persisted state, send one atomic PATCH using `persisted_value` for every runtime-editable differing setting, exclude Connection fields, accept its canonical snapshot, and never write YAML.
 - Preserve the draft and relevant dirty state after validation, storage, network, server, or malformed-response failure.
-- Disable conflicting editing, reset, Discard, and save actions while a request is pending; change action labels where appropriate to communicate in-progress state.
-- Keep the separation notice visible: reset stages runtime-editable defaults through PATCH and persistence-only defaults in the draft, Discard restores persisted/effective values without ever PATCHing Connection fields, configuration Save is required for restart persistence, and none of these actions restarts ContextKeeper.
+- Disable conflicting editing, reset, **Discard changes**, and save actions while a request is pending; change action labels where appropriate to communicate in-progress state.
+- Keep the separation notice visible: reset stages runtime-editable defaults through PATCH and persistence-only defaults in the draft, **Discard changes** restores persisted/effective values without ever PATCHing Connection fields, configuration Save is required for restart persistence, and none of these actions restarts ContextKeeper.
 - Treat Connection as persistence-only: `ollama.base_url` and `ollama.timeout_seconds` remain editable because they are persistable, but Save runtime changes and every PATCH payload must exclude them.
 - Build Test Connection payloads from the current typed Connection draft as `{base_url, timeout_seconds}`. Do not substitute runtime, saved, or default values.
 - Guard the Test Connection action against duplicate concurrent requests, expose a busy/disabled state, and use the backend as the validation authority. Associate returned `detail` locations with the endpoint or timeout control and focus the first invalid field.
@@ -251,6 +428,12 @@ Rules:
 - Use visible focus indicators, live feedback, explicit state text, and native keyboard-operable controls.
 - Stack setting rows, individual/category/global reset controls, and all save/discard controls cleanly at narrow widths.
 - Respect reduced-motion preferences without removing status information.
+
+### B7.1 release evidence and Product Owner QA
+
+The automated baseline was **553 passing tests**. Seven focused release-gate tests produce a verified final result of **560 passing tests**. Headless Edge measurements covered CSS widths `6880`, `4587`, `3440`, `1900`, `1500`, `1350`, `1000`, `700`, and `344`; body and document widths matched the viewport after the scoped containment fix, and a 683-character endpoint stayed contained with ellipsis.
+
+This is engineering evidence, not a manual pass. Product Owner QA must review 3440×1440 at 100% display scaling; 50%, 75%, and 100% browser zoom; all measured breakpoints; adverse endpoint/model/error/validation/id/path/status strings; dashboard and Settings states; complete keyboard paths including Inspector focus/Escape/return/inert behavior; reduced motion; visible focus; and disabled and secondary-text contrast.
 
 ## Empty, Error, and Loading States
 

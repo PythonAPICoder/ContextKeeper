@@ -1,6 +1,8 @@
 # ContextKeeper Component Library
 
-Status: Current through Phase 6.5F-B5.5.2.
+Status: Phase 6.5F-B6 is complete. Phase 6.5F-B7.1 is the current dashboard release-readiness audit; Product Owner manual review is pending.
+
+See [Dashboard Release Readiness Audit](DASHBOARD_RELEASE_READINESS_AUDIT.md) for the evidence, classifications, limitations, and release recommendation.
 
 ## 1. Purpose
 
@@ -546,11 +548,13 @@ Purpose:
 
 Usage rules:
 
-- Open from selectable Live Conversation Timeline entries.
+- Open from selectable Live Conversation Timeline entries or the Active Conversation card Open button (`opsActiveConversationInspectBtn`, tracking B7.1-PO-01).
 - Use a right-side drawer on desktop.
-- Use effectively full-width presentation on narrow layouts.
-- Provide a visible close control and Escape close behavior.
+- Use effectively full-width presentation on narrow layouts while retaining the current nonmodal complementary-region semantics; B7.1-07 tracks the resulting background-focus escape until focused remediation or explicit Product Owner acceptance.
+- Move focus to the visible Close control on open, close on Escape, and return focus to the originating timeline entry or Open button.
+- Keep the drawer inert while closed so hidden controls are not keyboard-focusable.
 - Do not add an independent polling loop.
+- Treat broader interaction redesign and B5.5.3+ content as deferred work.
 
 ### Inspector Overview Field
 
@@ -605,6 +609,22 @@ Usage rules:
 - Use red only for genuine degraded or critical states.
 - Show recommendations only when action is genuinely appropriate.
 - Do not expose prompts, responses, rolling-summary bodies, or request bodies.
+
+## 10A. Settings Components
+
+### Metadata-driven setting control
+
+Purpose:
+
+- Presents the active, draft, persisted, default, editability, reset, and restart-required state supplied by the Settings API.
+
+Usage rules:
+
+- Generate general categories, labels, metadata, and boolean, integer, and string controls from the schema-v2 API snapshot.
+- Keep the specialized Connection presentation limited to category id `ollama` and field ids `ollama.base_url` and `ollama.timeout_seconds` for the endpoint control, draft-value test, stale-result clearing, and result panel.
+- Keep Save runtime changes, Save to configuration, **Discard changes**, per-setting/category reset, and **Reset managed settings to defaults** semantically distinct.
+- Never imply that Test Connection activates or persists a draft, that a restart-required setting applies automatically, or that reset clears application data.
+- Use native labels, visible focus, typed validation, associated error text, busy/disabled state, and non-color status cues.
 
 ## 11. Event Components
 
@@ -898,6 +918,14 @@ Rules:
 - Loading and empty states should not cause layout shift.
 - Error states should be clear without being visually noisy.
 - Decorative elements should not compete with operational state.
+
+### B7.1 release evidence and manual gate
+
+The automated baseline was **553 passing tests**. Seven focused release-gate tests were added, and the verified final full-suite result is **560 passing tests**.
+
+Headless Edge engineering measurements exercised CSS viewport widths `6880`, `4587`, `3440`, `1900`, `1500`, `1350`, `1000`, `700`, and `344`. After the scoped containment fix, body and document-element scroll widths equaled the viewport at each width; a 683-character endpoint remained contained and ellipsized. These measurements do not constitute Product Owner visual or accessibility approval.
+
+Manual QA must cover 3440×1440 at 100% display scaling; browser zoom at 50%, 75%, and 100%; responsive transitions and adverse endpoint/model/error/validation/id/path/status strings; loading, empty, warning, failure, disabled, unsaved, restart-required, and conversation-absence states; keyboard paths for navigation, Settings actions, Test Connection, reset, **Discard changes**, saves, and Inspector focus/Escape/return/inert behavior; reduced motion; visible focus; and disabled/secondary-content contrast.
 
 ## 19. Future Components
 

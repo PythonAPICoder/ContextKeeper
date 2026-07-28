@@ -1,6 +1,6 @@
 # ContextKeeper Roadmap
 
-Status: Current through the Phase 6.5F-B6.6 working-tree implementation; Product Owner and architect review are pending.
+Status: Current through the Phase 6.5F-B7.1 automated engineering audit and remediation pass. Product Owner manual visual, responsive, keyboard, and accessibility approval remains pending.
 
 This document records approved product direction. It is not a claim that planned work already exists. For completed implementation details, use [Project History](PROJECT_HISTORY.md).
 
@@ -23,7 +23,7 @@ Version 1 must preserve:
 
 ## Implemented foundation
 
-Implemented work through the Phase 6.5F-B6.6 working tree, with Product Owner and architect review still pending for B6.6, includes:
+Implemented work through the Phase 6.5F-B7.1 automated engineering review includes:
 
 - Transparent Ollama-compatible proxy.
 - `/api/*` and `/v1/*` passthrough.
@@ -50,6 +50,7 @@ Implemented work through the Phase 6.5F-B6.6 working tree, with Product Owner an
 - Schema-v2 runtime-versus-persisted Settings metadata, explicit `PUT /api/dashboard/settings/config`, defensive atomic YAML persistence, and a separate Save to configuration UI action.
 - Metadata-authorized individual, category, and global managed-settings reset controls that stage authoritative built-in defaults, using atomic runtime PATCH for runtime-editable fields, plus Discard recovery to persisted values.
 - Restart-required Connection configuration for `ollama.base_url` and `ollama.timeout_seconds`, including strict endpoint/timeout validation, atomic YAML persistence, draft-only reset/discard behavior, and one isolated bounded candidate Test Connection probe with latency and Ollama version.
+- Dashboard release-readiness audit coverage, seven focused regressions, and demonstrated fixes for document-title escaping, long-endpoint overflow, null telemetry, closed Inspector inertness, refresh-failure status, and unsaved-change unload protection.
 - First-run configuration wizard.
 - PyInstaller executable foundation.
 - Windows service host foundation.
@@ -57,28 +58,24 @@ Implemented work through the Phase 6.5F-B6.6 working tree, with Product Owner an
 
 ## Current milestone
 
-### Phase 6.5F-B6.6: Connection Configuration
+### Phase 6.5F-B7.1: Dashboard Release Readiness Audit
 
-Status: Implemented in the working tree; Product Owner and architect review pending.
+Status: Automated engineering audit, focused remediation, documentation synchronization, and regression verification complete on the feature branch. Product Owner manual visual, responsive, keyboard, and accessibility approval remains pending.
 
 Objective:
 
-- Add a Connection category for configuring ContextKeeper's single Ollama backend.
-- Expose AI Server Endpoint (`ollama.base_url`) and Request Timeout (`ollama.timeout_seconds`) as persistable, reset-eligible, restart-required settings that are not runtime-editable.
-- Let users test current draft values through a temporary isolated Ollama version probe without saving or activating them.
-- Preserve the active runtime Settings, Ollama client, proxy/streaming requests, dashboard health/version, metrics, diagnostics, and model discovery.
+- Evaluate the complete Phase 6.5F dashboard against maintained design, accessibility, responsive-layout, state-handling, Settings-completion, and Version 1 release requirements.
+- Produce a definitive capability inventory and evidence-based release-readiness audit.
+- Add only focused regression coverage for important implemented behavior that was insufficiently protected.
+- Remediate only demonstrated release-readiness defects without broad dashboard redesign or refactoring.
 
-Scope:
+Automated engineering outcome:
 
-- Accept complete HTTP/HTTPS URLs with valid hostname, IPv4, or bracketed IPv6 syntax and optional base paths; reject credentials, query/fragment data, malformed ports/hosts, and deterministic direct root or proxy-namespace loops to ContextKeeper's listener.
-- Keep the authoritative timeout default at `120`, minimum at `1`, strict integer typing, and no new maximum.
-- Add `POST /api/dashboard/settings/connection/test`, which performs one `trust_env=False` GET to the candidate base-path-preserving `/api/version` URL with timeout `min(draft timeout, 10)` and no retry.
-- Return normalized endpoint, latency, Ollama version, and safe categorized result data; keep invalid requests at `422`, every validated probe outcome at `200`, and unsupported methods at explicit `405`.
-- Persist only through the existing atomic allowlisted PUT service. Saving does not require a successful test, does not reconfigure the active client, and requires a manual restart before the saved values can become active.
-- Stage Connection reset defaults locally without PATCH; mixed global reset PATCHes only runtime-editable settings. Connection-only Discard remains local.
-- Preserve configuration precedence. `CONTEXTKEEPER_OLLAMA_URL` can override saved YAML, while source provenance remains untracked in the snapshot.
-- No authentication, credentials, multiple servers/profiles, failover, load balancing, cloud providers, TLS trust controls, listener editing, retry controls, background monitoring, model listing, self-diagnostics, live endpoint switching, automatic restart, or service controls.
-- No changes to transparent proxy compatibility, streaming, context, compression, or Conversation Inspector behavior.
+- Baseline: 553 passing tests.
+- Added: seven focused release-readiness regression tests.
+- Final automated result: 560 passing tests.
+- Remediated document-title escaping (Critical), long Connection endpoint workspace overflow (High), and null telemetry, closed Inspector inertness, visible refresh-failure status, and unsaved-change unload protection (Medium).
+- Manual Product Owner review remains required; automated evidence does not constitute visual or accessibility acceptance.
 
 ## Completed Phase 6.5F-B5 live visualization workstream
 
@@ -99,8 +96,8 @@ Completed B5 slices:
 
 ## Approved remaining Version 1 sequence
 
-1. Complete Phase 6.5F-B6 — Dashboard Customization & User Preferences.
-2. Phase 6.5F-B7 — Release Polish & Final UX Review.
+1. Phase 6.5F-B7.2 — disposition the open Medium narrow-Inspector focus-containment defect and only other accepted, narrowly scoped audit findings.
+2. Phase 6.5F-B7.3 — complete Product Owner manual visual, responsive, keyboard, screen-reader, reduced-motion, contrast, and adverse-value review.
 3. Phase 6.5G — Historical Memory Retrieval & Detail Preservation.
 4. Phase 6.6 — Validation Framework & Release Certification.
 5. Phase 7 — GitHub Release Preparation.
@@ -110,7 +107,7 @@ Phase 6.5G must occur before Phase 6.6 so the Validation Framework can certify h
 
 ## Phase 6.5F-B6 — Dashboard Customization & User Preferences
 
-Status: Active; B6.1 provides the Settings Snapshot/read foundation, B6.2 the validated in-memory update API, B6.3 the Settings panel UI foundation, B6.4 the configuration-persistence foundation, B6.5 the settings reset and recovery controls, and B6.6 the Connection configuration implementation pending Product Owner and architect review.
+Status: Completed and merged through B6.6. B6.1 provides the Settings Snapshot/read foundation, B6.2 the validated in-memory update API, B6.3 the Settings panel UI foundation, B6.4 the configuration-persistence foundation, B6.5 the settings reset and recovery controls, and B6.6 the Connection configuration implementation.
 
 Implemented B6 scope:
 
@@ -124,18 +121,20 @@ Implemented B6 scope:
 - Avoid destabilizing B5 live widgets.
 - Keep preferences local and understandable.
 
-Future B6 work, including broader preferences, authentication, and multi-user ownership, remains separate and requires explicit Product Owner approval.
+Broader preferences were not part of the completed B6 scope. They remain intentionally deferred and require explicit Product Owner approval; authentication and multi-user ownership remain outside the current Version 1 implementation.
 
 ## Phase 6.5F-B7 — Release Polish & Final UX Review
 
-Status: Planned.
+Status: Active. B7.1 automated engineering review is complete; Product Owner manual approval remains pending.
 
-Planned scope:
+Current scope:
 
 - Final dashboard UX review before release certification.
 - Visual consistency cleanup.
 - Accessibility and reduced-motion review.
 - Release-blocking documentation, packaging, and usability polish.
+- Evidence-based capability, state, Settings, responsive, terminology, and documentation audit.
+- Narrow remediation of demonstrated release-readiness defects with focused regression coverage.
 
 ## Phase 6.5G — Historical Memory Retrieval & Detail Preservation
 

@@ -60,24 +60,28 @@ Runtime processing and Operations visualization are deliberately separate. The p
 
 ## Current implementation status
 
-The current working-tree implementation includes Phase 6.5F-B6.6; Product Owner and architect review are pending:
+Phase 6.5F-B6 is complete and merged. Phase 6.5F-B7.1 has completed its automated engineering audit and remediation pass on the current feature branch; Product Owner manual visual, responsive, keyboard, and accessibility review is still required before dashboard release approval:
 
 - Transparent proxy, diagnostics, context monitoring, compression, dashboard modernization, live request visualization, animated Connection Flow, Live Conversation Timeline, and Conversation Inspector Overview & Intelligence are implemented.
 - Phase 6.5F-B5.6 synchronized documentation through the B5.5.2 implementation.
 - Phase 6.5F-B6.1 added the backend Settings Snapshot and read API foundation.
 - Phase 6.5F-B6.2 added a validated `PATCH /api/dashboard/settings` update API for temporary in-memory runtime settings changes.
 - Phase 6.5F-B6.3 added a dedicated Settings page that loads API metadata dynamically, keeps confirmed and draft state separate, and provides changed-fields-only runtime Save and local Discard actions.
-- Phase 6.5F-B6.4 adds schema-v2 persisted-state metadata, `PUT /api/dashboard/settings/config`, atomic configuration-file writes, and an explicit Save to configuration action that remains separate from runtime Save.
-- Phase 6.5F-B6.5: Settings Reset and Recovery Controls adds metadata-authorized individual, category, and global managed-settings resets that stage built-in defaults through the existing atomic runtime PATCH path, plus Discard recovery to persisted values.
+- Phase 6.5F-B6.4 added schema-v2 persisted-state metadata, `PUT /api/dashboard/settings/config`, atomic configuration-file writes, and an explicit Save to configuration action that remains separate from runtime Save.
+- Phase 6.5F-B6.5: Settings Reset and Recovery Controls added metadata-authorized individual, category, and global managed-settings resets that stage built-in defaults through the existing atomic runtime PATCH path, plus Discard recovery to persisted values.
 - Phase 6.5F-B6.6: Connection Configuration exposes `ollama.base_url` and `ollama.timeout_seconds` as persistable, reset-eligible, restart-required settings and adds an isolated draft-value Test Connection action. Saving does not reconfigure the active Ollama client; a manual ContextKeeper restart is required.
+- Phase 6.5F-B7.1 audited the complete dashboard, added seven focused regression tests, and remediated demonstrated release-readiness defects in document-title escaping, long-endpoint overflow, null telemetry handling, closed Inspector inertness, refresh-failure status, and unsaved-change unload protection. The automated suite increased from a 553-test baseline to 560 passing tests.
 
-Still planned:
+Current review gate and later planned work:
 
-- Broader dashboard customization and preferences.
-- Release polish and final UX review.
+- Product Owner manual visual, responsive, keyboard, and accessibility review of the B7.1 evidence and remediated states.
+- B7 disposition of the open Medium narrow-layout Inspector focus-containment finding documented in the release-readiness audit.
+- Any additional B7 follow-up explicitly approved from that manual review.
 - Durable historical memory retrieval after compression.
 - Validation Framework and AutoQA release certification.
 - Public GitHub release preparation.
+
+Broader dashboard customization and preferences remain intentionally deferred and require separate Product Owner approval.
 
 ## Quick start
 
@@ -192,6 +196,8 @@ Run the automated test suite:
 python -m pytest -q
 ```
 
+Phase 6.5F-B7.1 began from 553 passing tests. Seven focused release-readiness regressions bring the current automated result to 560 passing tests; Product Owner manual dashboard QA remains a separate approval gate.
+
 Focused dashboard coverage lives primarily in:
 
 - `tests/test_app.py`
@@ -200,6 +206,7 @@ Focused dashboard coverage lives primarily in:
 - `tests/test_dashboard_settings.py`
 - `tests/test_dashboard_connection.py`
 - `tests/test_dashboard_settings_ui.py`
+- `tests/test_dashboard_release_readiness.py`
 - `tests/test_config_persistence.py`
 
 See [docs/TEST_PLAN.md](docs/TEST_PLAN.md) for manual and automated validation coverage, including the Settings page, Conversation Timeline, Conversation Inspector, Request Traffic, Connection Flow, responsive layouts, reduced motion, Windows packaging, and regression checks.
@@ -242,6 +249,7 @@ The release script runs preflight checks, builds `dist/ContextKeeper.exe`, build
 - [Test Plan](docs/TEST_PLAN.md)
 - [Conversation Inspector](docs/CONVERSATION_INSPECTOR.md)
 - [Dashboard Layout](docs/DASHBOARD_LAYOUT.md)
+- [Dashboard Release Readiness Audit](docs/DASHBOARD_RELEASE_READINESS_AUDIT.md)
 - [Dashboard Visualization Audit](docs/DASHBOARD_VISUALIZATION_AUDIT.md)
 - [Future Ideas](docs/FUTURE_IDEAS.md)
 

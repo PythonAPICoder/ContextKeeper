@@ -1,8 +1,10 @@
 # ContextKeeper Architecture
 
-Status: Current through the Phase 6.5F-B6.6 working-tree implementation; Product Owner and architect review are pending.
+Status: Phase 6.5F-B6 Settings implementation is complete. Updated for the current Phase 6.5F-B7.1 dashboard release-readiness audit; Product Owner manual visual and accessibility QA remains pending.
 
 ContextKeeper is a local FastAPI application that presents an Ollama-compatible API to clients while observing, measuring, and managing conversation context before requests reach Ollama.
+
+Phase 6.5F-B7.1 does not change the proxy, streaming, context, compression, configuration-precedence, or Settings state architecture described here. It adds only narrow dashboard hardening for defects demonstrated by the audit. See the [Dashboard Release Readiness Audit](DASHBOARD_RELEASE_READINESS_AUDIT.md) for findings, automated evidence, accepted limitations, and the manual QA checklist.
 
 ## High-level flow
 
@@ -182,7 +184,7 @@ Source:
 - `src/ctxkeeper/app.py`
 - `src/ctxkeeper/resources.py`
 
-Phase 6.5F-B6.1 added the settings snapshot/read foundation, B6.2 added validated in-memory runtime updates, B6.3 added the metadata-driven browser client, B6.4 added explicit configuration persistence, B6.5 added managed-default reset and runtime recovery controls, and B6.6 adds restart-required Ollama Connection configuration plus isolated candidate testing without merging draft, persisted, and active runtime state:
+Phase 6.5F-B6 is complete. B6.1 added the settings snapshot/read foundation, B6.2 added validated in-memory runtime updates, B6.3 added the metadata-driven browser client, B6.4 added explicit configuration persistence, B6.5 added managed-default reset and runtime recovery controls, and B6.6 added restart-required Ollama Connection configuration plus isolated candidate testing without merging draft, persisted, and active runtime state:
 
 ```text
 GET /api/dashboard/settings
@@ -200,6 +202,16 @@ The GET endpoint returns schema version 2 with:
 - `differs_from_persisted`, `runtime_editable`, `persistable`, `reset_eligible`, and `restart_required` flags.
 
 The authoritative setting catalog remains in `settings_snapshot.py`; persistence and reset behavior do not introduce a second list of dashboard-managed fields or duplicate default values in the browser. The eight approved Context, Compression, and Dashboard settings remain runtime-editable, persistable, and reset-eligible. Connection adds `ollama.base_url` and `ollama.timeout_seconds`; both are persistable and reset-eligible, both have `runtime_editable: false`, and both have `restart_required: true`. The timeout exposes its authoritative minimum of `1` and no product-level maximum.
+
+The state terms are intentionally distinct:
+
+- **Active runtime value** is the value in the running process. It begins with startup-resolved configuration and can change only for fields accepted by runtime PATCH.
+- **Persisted value** is the freshly read value represented by the active `contextkeeper.yaml` tier. PUT can change it without changing the active runtime value.
+- **Draft value** is the typed browser candidate. Editing alone sends no request and changes neither runtime nor YAML.
+- **Default value** is the built-in `Settings` value supplied by authoritative snapshot metadata. Reset stages this value; reset is not persistence.
+- **Restart required** means a saved value is not applied to the current process. The user must restart ContextKeeper manually, and the currently implemented `CONTEXTKEEPER_OLLAMA_URL` environment override can still determine the active Ollama URL after restart.
+
+The complete ten-field type, range, runtime-editability, persistence, reset, and restart matrix is maintained in [Configuration](CONFIGURATION.md#dashboard-managed-settings-matrix).
 
 Runtime PATCH architecture:
 
@@ -270,7 +282,7 @@ Candidate Connection test architecture:
 - Failure categories distinguish invalid endpoint/timeout/request, DNS resolution, connection refusal, timeout, TLS/certificate failure, HTTP error, malformed or non-Ollama responses, missing/invalid version, and other network errors.
 - The route never writes YAML or mutates the shared runtime settings, active HTTP client reference, active endpoint, health/version snapshot, diagnostics metrics, or model-discovery state. GET, PUT, PATCH, DELETE, HEAD, and OPTIONS on this route return explicit `405` with `Allow: POST`.
 
-Current B6.6 boundary:
+Completed B6 and current B7.1 boundary:
 
 - The Settings page is a management API client, not another source of configuration rules or setting ownership.
 - Settings controls are temporary browser state; no LocalStorage or SessionStorage is used.
@@ -279,6 +291,7 @@ Current B6.6 boundary:
 - The two Connection settings require restart. Saving can make their persisted values differ from the active runtime values until a manual restart; no dashboard action performs live backend reconfiguration or client replacement.
 - `CONTEXTKEEPER_OLLAMA_URL` remains a higher-priority active source than saved YAML. The snapshot presents active and persisted values but does not track or label their provenance, so saving never claims to override an environment value.
 - Test Connection is a transient one-attempt candidate probe, not a save prerequisite, active health check replacement, periodic monitor, model browser, retry control, or diagnostic/recovery subsystem.
+- Listener-host editing, ContextKeeper proxy-port editing, retry-count/retry-delay/backoff controls, and configuration-source provenance UI are intentionally deferred. They are not missing members of the current Settings catalog.
 - No history browser, backup-management UI, rollback workflow, import/export, or multi-process locking.
 - No authentication or multi-user setting ownership.
 - Reset is limited to metadata-approved dashboard-managed settings. It does not delete or recreate YAML, clear logs, metrics, conversations, summaries, model files, or other application data, and it is not a factory reset.
@@ -306,26 +319,32 @@ The browser dashboard is a vanilla HTML/CSS/JavaScript operations console. It cu
 
 The dashboard polls the existing endpoints on the configured refresh interval, defaulting to `1000 ms`. It uses one reschedulable interval and a guard to avoid overlapping refreshes. Page switching does not create polling timers or duplicate listeners. When the runtime refresh interval changes, the canonical `/dashboard/data` value reschedules that same timer; opening Settings adds only its guarded first-load request.
 
+The B7.1 hardening remains inside this browser-rendering boundary: configured document-title text is escaped, unavailable numeric telemetry remains unavailable rather than becoming zero, a closed Conversation Inspector is removed from keyboard navigation, refresh failure/recovery is announced without relying only on color, dirty Settings drafts receive the browser's unload warning, and long topbar endpoint text is constrained. These corrections do not add an API, state owner, polling loop, restart path, or runtime reconfiguration mechanism. Manual viewport, zoom, keyboard, screen-reader, motion, and contrast review still requires Product Owner approval.
+
 ## Module layout
 
 Implemented modules:
 
 ```text
 src/ctxkeeper/
+  __init__.py
   app.py
-  main.py
   branding.py
   config.py
-  resources.py
+  executable.py
   logging_config.py
+  main.py
+  model_context.py
+  resources.py
   context/
   dashboard/
   diagnostics/
-  model_context.py
   proxy/
   service/
   wizard/
 ```
+
+The concrete file-level package tree and module boundaries are summarized in [Coding Standards](CODING_STANDARDS.md#current-project-layout). This implemented `ctxkeeper` package replaces older planning examples that referred to a `contextkeeper` package or unimplemented `routing`, `memory`, and `utils` modules.
 
 Packaging and release support:
 

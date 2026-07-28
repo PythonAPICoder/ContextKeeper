@@ -1,8 +1,10 @@
 # ContextKeeper Test Plan
 
-Status: Current through the Phase 6.5F-B6.6 working-tree implementation; Product Owner and architect review are pending.
+Status: Phase 6.5F-B6 is complete. Phase 6.5F-B7.1 automated verification is complete; Product Owner manual QA and final release disposition are pending.
 
 This document defines automated and manual validation expectations for ContextKeeper. The automated suite is the default regression gate; manual Visual QA remains required for dashboard layout, motion, responsive behavior, and Product Owner acceptance.
+
+The evidence-based findings, classifications, limitations, and manual-review handoff for this phase are maintained in [Dashboard Release Readiness Audit](DASHBOARD_RELEASE_READINESS_AUDIT.md).
 
 ## Standard automated command
 
@@ -18,6 +20,7 @@ Focused dashboard and inspector tests currently live in:
 - `tests/test_dashboard_settings.py`
 - `tests/test_dashboard_connection.py`
 - `tests/test_dashboard_settings_ui.py`
+- `tests/test_dashboard_release_readiness.py`
 - `tests/test_config_persistence.py`
 
 Other focused modules include:
@@ -36,6 +39,28 @@ Other focused modules include:
 - `tests/test_service_runner.py`
 - `tests/test_main_wizard.py`
 - `tests/test_wizard.py`
+
+## Phase 6.5F-B7.1 release gate
+
+The automated baseline entering B7.1 was **553 passing tests**. B7.1 adds seven focused release-gate tests in `tests/test_dashboard_release_readiness.py`; the verified final full-suite result is **560 passing tests**. The seven tests protect:
+
+- HTML escaping of the configured dashboard document title;
+- the authoritative ten-setting catalog, exact metadata, explicit absence of deferred fields, the general metadata-driven renderer, and the specialized Connection identifiers;
+- preservation of unavailable numeric telemetry rather than coercion to zero;
+- Conversation Inspector focus-on-open, Escape close, focus return, and closed-drawer inertness;
+- accessible dashboard-refresh failure and recovery status;
+- browser-navigation warning when a loaded Settings draft has unsaved changes; and
+- protected responsive breakpoints, long-endpoint containment, and reduced-motion contracts.
+
+Rendered JavaScript syntax validation, Python compilation, maintained Markdown relative-link validation, `git diff --check`, and the full pytest suite are all required before the Product Owner handoff; their final command results must be recorded with the implementation summary.
+
+Headless Microsoft Edge engineering measurements exercised CSS viewport widths `6880`, `4587`, and `3440` (the 50%, 75%, and 100% zoom-equivalent widths for the protected 3440-wide desktop target), plus `1900`, `1500`, `1350`, `1000`, `700`, and `344`. After the scoped topbar containment fix:
+
+- `document.body.scrollWidth` and `document.documentElement.scrollWidth` equaled the viewport width at every measured target;
+- a 683-character Ollama endpoint remained contained in the topbar endpoint pill; and
+- the endpoint pill used the implemented clipped/ellipsis presentation instead of increasing the document width.
+
+These are engineering overflow measurements, not Product Owner manual visual or accessibility approval.
 
 ## Core proxy compatibility
 
@@ -156,7 +181,7 @@ Validate:
 - Invalid boolean, integer, percentage, `keep_recent_messages`, `max_summary_tokens`, blank model, unknown field, read-only field, wrong-shape, missing-body, and malformed JSON inputs are rejected.
 - Threshold relationships are validated on the merged proposed state, including partial updates that conflict with retained current threshold values.
 - Atomic rejection is verified: a request containing one valid setting and one invalid setting changes neither value.
-- Reset and Discard recovery payloads receive the same strict complete-proposal validation and all-or-nothing mutation behavior as ordinary PATCH updates.
+- Reset and **Discard changes** recovery payloads receive the same strict complete-proposal validation and all-or-nothing mutation behavior as ordinary PATCH updates.
 - Empty JSON update bodies are deliberately rejected.
 - PATCH does not write configuration automatically, and a runtime update can differ from persisted metadata until an explicit PUT.
 - Malformed or inaccessible persisted state causes PATCH to fail before runtime mutation rather than returning fabricated persisted metadata.
@@ -195,8 +220,8 @@ Settings reset and recovery coverage should confirm:
 - Cancelling category or global confirmation sends no request, changes no setting, and reports cancellation without false success.
 - Successful reset feedback reports a staged count where practical, states that reset did not write configuration, and distinguishes Save-required persisted divergence from an already-matching configuration that needs no save.
 - Runtime, persisted, default, unsaved, and restart-required states remain distinguishable after individual, category, and global reset.
-- Discard restores browser-only drafts locally, with no PATCH for a Connection-only discard; when runtime-editable confirmed values differ from persisted state, it sends one atomic PATCH using each differing `persisted_value`, excludes Connection fields, writes no YAML, and refreshes confirmed/draft metadata from the canonical response.
-- Failed Discard recovery applies no partial update and does not falsely report that runtime was restored.
+- **Discard changes** restores browser-only drafts locally, with no PATCH for a Connection-only draft; when runtime-editable confirmed values differ from persisted state, it sends one atomic PATCH using each differing `persisted_value`, excludes Connection fields, writes no YAML, and refreshes confirmed/draft metadata from the canonical response.
+- Failed **Discard changes** recovery applies no partial update and does not falsely report that runtime was restored.
 - Reset alone never calls `PUT /api/dashboard/settings/config`, creates/replaces YAML, or changes its bytes.
 - Save after reset persists staged defaults through the existing PUT service, refreshes persisted state, retains unmanaged YAML keys/sections, and preserves restart-required guidance.
 - Save validation or storage failure retains the prior valid file and staged runtime/UI state and does not falsely report success.
@@ -241,7 +266,7 @@ Settings UI coverage should confirm:
 
 - Settings navigation is an interactive keyboard-operable page target inside the existing dashboard shell, and Operations remains available.
 - Opening Settings performs a guarded first `GET /api/dashboard/settings`; repeated page switching does not duplicate listeners, loads, or polling timers.
-- Categories and controls are generated from API metadata rather than a hard-coded setting list.
+- The general category/control renderer iterates the validated API snapshot rather than a hard-coded complete setting list. Specialized Connection behavior deliberately recognizes category id `ollama` and setting ids `ollama.base_url` and `ollama.timeout_seconds` to select the URL control, assemble the candidate test, clear stale results, and render the Connection action panel.
 - Connection navigation/card renders exactly once with AI Server Endpoint, Request Timeout, active/saved/default values, persistence-only/restart-required metadata, and Test Connection.
 - Boolean, integer, and string rendering paths preserve value types; supplied minimum/maximum constraints are represented.
 - Labels, descriptions, default/saved values, runtime/persisted difference text, status/live regions, runtime-read-only/non-persistable explanations, reset availability/disabled state, and restart-required indicators have accessible markup.
@@ -261,12 +286,12 @@ Settings UI coverage should confirm:
 - Successful PUT accepts refreshed runtime/persisted metadata while restoring the user's draft, so persisted values can remain pending runtime application.
 - Validation failures map exact API error locations to controls when possible, provide a page-level alert, preserve all draft values, preserve dirty state, and allow correction/retry.
 - PATCH and PUT network, server, and malformed-response paths fail safely, render response data as text, preserve the draft, and allow retry.
-- Discard restores browser-only draft edits locally, sends no PATCH for Connection-only edits, and when confirmed runtime differs from persisted state sends one atomic PATCH using `persisted_value` for every runtime-editable differing setting while excluding Connection fields.
-- Discard validation, network, server, and malformed-response failures preserve the current state and do not falsely report success.
-- The visible notice distinguishes Discard runtime changes, Reset to defaults, and Save to configuration, and states that none writes YAML except Save to configuration and none restarts ContextKeeper automatically.
+- **Discard changes** restores browser-only draft edits locally, sends no PATCH for Connection-only edits, and when confirmed runtime differs from persisted state sends one atomic PATCH using `persisted_value` for every runtime-editable differing setting while excluding Connection fields.
+- **Discard changes** validation, network, server, and malformed-response failures preserve the current state and do not falsely report success.
+- The visible notice distinguishes **Discard changes**, Reset to default, **Reset managed settings to defaults**, and Save to configuration, and states that none writes YAML except Save to configuration and none restarts ContextKeeper automatically.
 - Test Connection sends current typed draft values, prevents duplicate clicks while busy, displays success/failure status, normalized endpoint, latency, and version when available, associates `422` errors accessibly, and clears the result after endpoint or timeout edits.
 - Candidate results remain visually distinct from active Ollama health/version and say explicitly that testing neither saved nor activated the candidate.
-- Restart-required messaging remains visible after save, reset, discard, and successful testing; higher-priority environment override behavior is not misrepresented as editable provenance.
+- Restart-required messaging remains visible after save, reset, **Discard changes**, and successful testing; higher-priority environment override behavior is not misrepresented as editable provenance.
 - No browser storage, automatic persistence, per-setting autosave, reset endpoint, factory reset, restart orchestration, application-data clearing, self-diagnostics, or repair workflow is added.
 - Manual observation should confirm runtime-only changes reset after process restart, persisted changes survive restart, saved Connection values activate only after restart when not superseded by a higher-priority source, and restart-required guidance remains explicit.
 - Existing `/dashboard/data`, proxy/streaming behavior, Conversation Inspector, Connection Flow, Request Traffic, Context Trend, instrument panel, reduced-motion, context-engine, and compression tests remain green.
@@ -277,9 +302,9 @@ Focused B6.6 command:
 python -m pytest -q tests/test_config.py tests/test_config_persistence.py tests/test_dashboard_settings.py tests/test_dashboard_connection.py tests/test_dashboard_settings_ui.py
 ```
 
-Latest B6.6 implementation evidence: the focused command passes 300 tests with two existing third-party deprecation warnings, and the complete `python -m pytest -q` suite passes 552 tests with the same two warnings.
+Historical B6.6 implementation evidence: the focused command passed 300 tests with two existing third-party deprecation warnings, and the complete `python -m pytest -q` suite passed 552 tests with the same two warnings.
 
-Phase 6.5F-B6.6 Product Owner QA should exercise Connection navigation and field metadata; valid hostname, IPv4, bracketed IPv6, HTTPS, and base-path drafts; validation focus; success with endpoint/latency/version; representative DNS/refusal/timeout/TLS/HTTP/malformed-response failures; busy/duplicate-click behavior; stale-result clearing; saving without a successful test; restart-required messaging; active-versus-saved-versus-draft distinction; environment-override guidance; Connection individual/category/global reset; Connection-only Discard with no PATCH; mixed reset/Discard preservation of B6.5 runtime recovery; and responsive/accessibility behavior. Approval remains a manual checkpoint after automated regression passes.
+Phase 6.5F-B6.6 Product Owner QA should exercise Connection navigation and field metadata; valid hostname, IPv4, bracketed IPv6, HTTPS, and base-path drafts; validation focus; success with endpoint/latency/version; representative DNS/refusal/timeout/TLS/HTTP/malformed-response failures; busy/duplicate-click behavior; stale-result clearing; saving without a successful test; restart-required messaging; active-versus-saved-versus-draft distinction; environment-override guidance; Connection individual/category/global reset; Connection-only **Discard changes** with no PATCH; mixed reset/**Discard changes** preservation of B6.5 runtime recovery; and responsive/accessibility behavior. Approval remains a manual checkpoint after automated regression passes.
 
 ## Request Traffic
 
@@ -336,13 +361,15 @@ Manual Visual QA:
 Validate:
 
 - Drawer markup, title, close control, accessible labels, loading state, unavailable state, Overview, and Intelligence render.
-- Timeline entries that map to a real conversation are keyboard and mouse selectable.
+- Timeline entries that map to a real conversation are keyboard and mouse selectable. The Active Conversation card Open button (`opsActiveConversationInspectBtn`, tracking B7.1-PO-01) is keyboard operable and opens the existing drawer without changing URL hash or page navigation.
 - Selected-entry highlight follows active selection.
-- Closing by button and Escape works.
-- Focus returns to the opening timeline entry where practical.
+- Opening moves focus to the visible close control; closing by button and Escape works.
+- Closing returns focus to the opening timeline entry or Open button where it remains available.
+- The closed drawer is inert as well as `aria-hidden`, so its controls are not invisible keyboard stops.
 - Selection persists across dashboard refresh when the selected conversation remains available.
 - If the selected conversation disappears, the drawer reports unavailable instead of silently switching.
 - No additional polling interval is introduced.
+- The narrow effectively full-width drawer remains a nonmodal complementary region rather than a new modal-dialog architecture. B7.1-07 records that keyboard focus can leave this visually covering surface for obscured background controls; focused containment/background-inert remediation or explicit Product Owner acceptance is required. A broad drawer redesign and B5.5.3+ detail capabilities remain deferred.
 
 ## Conversation Inspector: Overview & Intelligence
 
@@ -377,26 +404,21 @@ Privacy checks:
 
 ## Responsive layout and Visual QA
 
-Manual dashboard review should include:
+The B7.1 headless engineering sweep measured CSS viewport widths `6880`, `4587`, `3440`, `1900`, `1500`, `1350`, `1000`, `700`, and `344`. At every width after the scoped containment fix, both the body and document-element scroll widths equaled the viewport width. A 683-character endpoint stayed inside the topbar and used the intended ellipsis treatment. This automated evidence protects overflow invariants but does not establish visual quality, browser-zoom acceptance, keyboard usability, screen-reader behavior, or contrast compliance.
 
-- 3440×1440.
-- 2450×1440.
-- 1720×1440.
-- 50%, 75%, and 100% browser zoom.
-- 100% Windows display scaling where practical.
-- Narrow/mobile breakpoint behavior.
-- No clipping.
-- No horizontal page overflow.
-- Balanced spacing.
-- System instrument panel: CPU Usage, GPU Usage, Memory Usage, Context Usage, Compression Status.
-- System Activity row: Context Trend and Connection Flow.
-- Operations lower row: Traffic, Active Conversation, Live Conversation Timeline.
-- Conversation Inspector desktop drawer and narrow full-width/backdrop behavior.
-- Settings categories and fields at desktop, tablet/narrow desktop, and mobile widths.
-- Settings labels, runtime/saved/default difference text, constraints, badges, individual/category/global reset controls, feedback, and the sticky Discard/runtime Save/configuration Save action bar wrap without horizontal overflow.
-- Connection Test action/results, long endpoint text, latency, version, and failure messages wrap without clipping and distinguish candidate state from active health.
-- Settings loading, empty, retry, runtime-save success, reset-staged success, reset-cancelled, discard-recovery success, configuration-save success, candidate-test success/failure, validation-error, storage-error, and network-error states remain readable without color alone.
-- Reset controls and native confirmation remain keyboard-operable, disabled states remain semantic, and reduced-motion behavior is unchanged.
+### Required Product Owner manual QA matrix
+
+Product Owner review remains pending and must not be recorded as passed from the headless measurements alone.
+
+| Review target | Required checks |
+| --- | --- |
+| `3440×1440`, 100% Windows display scaling | Review the full Operations hierarchy, topbar endpoint, instrument cards, Context Trend, Connection Flow, request traffic, Active Conversation, timeline, Inspector, and Settings. Confirm no clipping, horizontal page overflow, unreadable density, or unexpected card reflow. |
+| Browser zoom 50%, 75%, and 100% | At the protected 3440-wide desktop target, review the zoom-equivalent CSS widths near `6880`, `4587`, and `3440`. Confirm text, focus rings, controls, badges, charts, and sticky Settings actions remain readable and reachable. |
+| Existing responsive transitions | Review widths around `1900`, `1500`, `1350`, `1000`, `700`, and `344`, including just above and below each breakpoint. Confirm intended compacting/stacking, vertical scrolling, full-width narrow Inspector presentation, and no horizontal overflow. |
+| Adverse and long values | Exercise the 683-character endpoint plus long model names, connection errors, validation messages, conversation identifiers, request paths, and status text. Confirm intended wrapping or ellipsis preserves layout and that full values remain available where the current component contract provides them. |
+| Dashboard and Settings states | Review loading, empty, idle, active, warning, failure, unavailable, disabled, unsaved, saved, persisted/runtime divergence, restart-required, Test Connection success/failure, no-active-conversation, and no-history states without relying on color alone. |
+| Keyboard paths | Navigate sidebar pages; open the Inspector from a timeline entry or Active Conversation Open button; verify focus moves to Close, Escape closes, and focus returns; tab past the closed inert drawer; then exercise Settings fields, validation focus, Test Connection, Reset to default, category/global reset confirmation, **Discard changes**, Save to configuration, Save runtime changes, and the unsaved-navigation warning. |
+| Reduced motion and contrast | Repeat active traffic, refresh, drawer, and Settings interactions with reduced motion enabled. Review visible focus, disabled controls, secondary text, badges, warning/error text, and state distinctions for readability and contrast. |
 
 ## Reduced motion
 
@@ -456,10 +478,10 @@ Every release candidate should confirm:
 - Live Conversation Timeline updates.
 - Conversation Inspector opens, updates, and closes.
 - Settings navigation opens the metadata-driven form and returns to Operations without a page reload.
-- Settings runtime Save sends one changed-fields-only PATCH; runtime reset sends one scope-limited atomic PATCH while Connection reset remains draft-only; Save to configuration sends one changed-fields-only PUT only after explicit action; Discard sends no request for browser-only/Connection-only drafts and one atomic PATCH only when restoring persisted runtime values; failed operations preserve recoverable state.
+- Settings runtime Save sends one changed-fields-only PATCH; runtime reset sends one scope-limited atomic PATCH while Connection reset remains draft-only; Save to configuration sends one changed-fields-only PUT only after explicit action; **Discard changes** sends no request for browser-only/Connection-only drafts and one atomic PATCH only when restoring persisted runtime values; failed operations preserve recoverable state.
 - Test Connection uses current drafts and one bounded isolated `/api/version` request, reports normalized endpoint/latency/version or a safe failure category, closes temporary resources, and never changes YAML, active Settings/client/health/discovery state, proxy requests, or streams.
 - Runtime-only setting changes, including staged defaults, return to effective startup values after ContextKeeper restarts; persisted values survive restart, and no dashboard settings action restarts ContextKeeper automatically.
 - Configuration writes retain unrelated/model-specific data, fail atomically, leave no temporary file after ordinary failure cleanup, and do not expose filesystem paths or configuration contents.
-- Reset and Discard never clear logs, metrics, conversations, summaries, model files, or other application data and never alter Ollama-compatible proxy or streaming behavior.
+- Reset and **Discard changes** never clear logs, metrics, conversations, summaries, model files, or other application data and never alter Ollama-compatible proxy or streaming behavior.
 - Reduced-motion behavior is respected.
 - No prompt/response/summary content appears in routine dashboard surfaces.

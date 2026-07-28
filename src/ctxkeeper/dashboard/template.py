@@ -6,6 +6,7 @@ from ..config import Settings
 
 
 def render_dashboard_html(settings: Settings) -> str:
+    dashboard_title_html = escape(settings.dashboard.title)
     ollama_base_url_html = escape(settings.ollama.base_url)
     return f"""
 <!doctype html>
@@ -13,7 +14,7 @@ def render_dashboard_html(settings: Settings) -> str:
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>{settings.dashboard.title}</title>
+<title>{dashboard_title_html}</title>
 <link rel="icon" href="data:," />
 <style>
 :root {{ --bg:#090e1a; --sidebar:#0d1424; --panel:#111827; --card:#182132; --card-strong:#1f2937; --text:#e5e7eb; --muted:#94a3b8; --soft:#cbd5e1; --good:#22c55e; --warn:#f59e0b; --bad:#ef4444; --accent:#38bdf8; --accent-2:#818cf8; --line:#2d3a4f; --glass:rgba(15,23,42,.66); --glass-strong:rgba(24,33,50,.88); --border-card:rgba(203,213,225,.11); --border-card-hot:rgba(56,189,248,.28); --surface-inset-highlight:inset 0 1px 0 rgba(255,255,255,.055); --shadow:0 18px 46px rgba(0,0,0,.28); --shadow-soft:0 10px 24px rgba(0,0,0,.2); --shadow-neutral-soft:0 14px 32px rgba(2,6,23,.24); --glow-good:0 0 0 1px rgba(34,197,94,.07),0 0 18px rgba(34,197,94,.12); --glow-info:0 0 0 1px rgba(56,189,248,.07),0 0 18px rgba(56,189,248,.12); --glow-warn:0 0 0 1px rgba(245,158,11,.07),0 0 18px rgba(245,158,11,.12); --glow-bad:0 0 0 1px rgba(239,68,68,.07),0 0 18px rgba(239,68,68,.12); }}
@@ -42,7 +43,7 @@ button:disabled,[aria-disabled="true"] {{ cursor:not-allowed; opacity:.48; filte
 .nav a.active::before {{ opacity:1; transform:translateY(-50%) scaleY(1); }}
 .nav-kicker {{ color:var(--muted); font-size:11px; text-transform:uppercase; font-weight:800; letter-spacing:.08em; margin:4px 10px; }}
 .sidebar-footer {{ margin-top:auto; color:var(--muted); font-size:12px; line-height:1.5; padding:12px 10px; border-top:1px solid rgba(203,213,225,.09); }}
-.workspace {{ min-width:0; height:100%; min-height:0; overflow:hidden; display:grid; grid-template-rows:auto minmax(0,1fr); }}
+.workspace {{ min-width:0; height:100%; min-height:0; overflow:hidden; display:grid; grid-template-columns:minmax(0,1fr); grid-template-rows:auto minmax(0,1fr); }}
 .topbar {{ position:relative; z-index:5; display:flex; justify-content:space-between; align-items:center; gap:18px; margin:8px 12px 0; padding:10px 14px; background:linear-gradient(135deg,rgba(15,23,42,.84),rgba(24,33,50,.72)); backdrop-filter:blur(20px); border:1px solid var(--border-card); border-radius:12px; box-shadow:var(--shadow-soft),var(--surface-inset-highlight); }}
 .topbar-left {{ min-width:0; display:flex; align-items:center; gap:14px; }}
 .topbar-title {{ min-width:0; }}
@@ -50,8 +51,11 @@ button:disabled,[aria-disabled="true"] {{ cursor:not-allowed; opacity:.48; filte
 .topbar-status-dot {{ width:8px; height:8px; border-radius:50%; background:var(--good); box-shadow:0 0 14px rgba(34,197,94,.7); transition:opacity .18s ease,box-shadow .18s ease,transform .18s ease; }}
 body.is-refreshing .topbar-status {{ border-color:rgba(56,189,248,.26); background:rgba(56,189,248,.09); color:#bae6fd; box-shadow:var(--surface-inset-highlight),0 0 16px rgba(56,189,248,.08); }}
 body.is-refreshing .topbar-status-dot {{ opacity:.58; box-shadow:0 0 10px rgba(56,189,248,.44); transform:scale(.9); }}
-.topbar-actions {{ display:flex; flex-wrap:wrap; justify-content:flex-end; gap:10px; color:var(--muted); font-size:13px; }}
-.topbar-pill {{ display:inline-flex; align-items:center; min-height:30px; padding:5px 10px; border:1px solid var(--border-card); border-radius:999px; background:rgba(15,23,42,.7); box-shadow:var(--surface-inset-highlight); }}
+body.refresh-error .topbar-status {{ border-color:rgba(239,68,68,.3); background:rgba(239,68,68,.1); color:#fecaca; box-shadow:var(--surface-inset-highlight),0 0 16px rgba(239,68,68,.09); }}
+body.refresh-error .topbar-status-dot {{ background:var(--bad); opacity:1; box-shadow:0 0 12px rgba(239,68,68,.55); }}
+.topbar-actions {{ flex:1 1 auto; min-width:0; max-width:100%; display:flex; flex-wrap:wrap; justify-content:flex-end; gap:10px; color:var(--muted); font-size:13px; }}
+.topbar-pill {{ min-width:0; max-width:100%; display:inline-flex; align-items:center; min-height:30px; padding:5px 10px; border:1px solid var(--border-card); border-radius:999px; background:rgba(15,23,42,.7); box-shadow:var(--surface-inset-highlight); }}
+.topbar-endpoint {{ flex:0 1 auto; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }}
 .dashboard-main {{ height:100%; min-height:0; min-width:0; overflow:hidden; display:grid; grid-template-rows:minmax(0,1fr); padding:10px 14px 14px; }}
 h1 {{ margin:0; font-size:25px; }}
 .sub {{ color:var(--muted); margin-top:3px; }}
@@ -230,9 +234,9 @@ h1 {{ margin:0; font-size:25px; }}
 .icon-mark {{ color:var(--accent); font-size:14px; }}
 .badge {{ --badge-ring:rgba(148,163,184,.18); --badge-glow:0 0 12px rgba(148,163,184,.07); display:inline-flex; align-items:center; min-height:22px; padding:2px 7px; border-radius:999px; font-size:11px; font-weight:700; text-transform:uppercase; background:rgba(148,163,184,.16); color:var(--muted); box-shadow:inset 0 0 0 1px var(--badge-ring),var(--surface-inset-highlight),var(--badge-glow); transition:background .18s ease,box-shadow .18s ease,color .18s ease,opacity .18s ease,transform .14s ease; }}
 .badge.positive,.badge.healthy,.badge.low,.badge.online,.badge.active,.badge.running,.badge.ready,.badge.idle,.badge.available,.badge.completed {{ --badge-ring:rgba(34,197,94,.22); --badge-glow:0 0 14px rgba(34,197,94,.1); color:var(--good); background:rgba(34,197,94,.12); }} .badge.info,.badge.busy,.badge.starting,.badge.receiving,.badge.thinking,.badge.streaming,.badge.finalizing,.badge.moderate,.badge.partial,.badge.monitoring,.badge.collecting {{ --badge-ring:rgba(56,189,248,.22); --badge-glow:0 0 14px rgba(56,189,248,.1); color:var(--accent); background:rgba(56,189,248,.12); }} .badge.warning,.badge.medium,.badge.waiting,.badge.pending,.badge.connecting,.badge.approaching {{ --badge-ring:rgba(245,158,11,.24); --badge-glow:0 0 14px rgba(245,158,11,.1); color:var(--warn); background:rgba(245,158,11,.12); }} .badge.critical,.badge.high,.badge.offline,.badge.error {{ --badge-ring:rgba(239,68,68,.24); --badge-glow:0 0 14px rgba(239,68,68,.1); color:var(--bad); background:rgba(239,68,68,.12); }} .badge.disabled,.badge.unavailable,.badge.empty {{ --badge-ring:rgba(148,163,184,.2); --badge-glow:0 0 10px rgba(148,163,184,.06); color:var(--muted); background:rgba(148,163,184,.12); }}
-a.badge:hover {{ transform:translateY(-1px); box-shadow:inset 0 0 0 1px var(--badge-ring),var(--surface-inset-highlight),var(--badge-glow),0 0 0 3px rgba(56,189,248,.08); }}
-a.badge:active {{ transform:translateY(0); opacity:.86; }}
-a.badge:focus-visible {{ outline:2px solid rgba(56,189,248,.72); outline-offset:2px; box-shadow:inset 0 0 0 1px var(--badge-ring),var(--surface-inset-highlight),var(--badge-glow),0 0 0 3px rgba(56,189,248,.12); }}
+a.badge:hover,button.badge:hover:not(:disabled) {{ transform:translateY(-1px); box-shadow:inset 0 0 0 1px var(--badge-ring),var(--surface-inset-highlight),var(--badge-glow),0 0 0 3px rgba(56,189,248,.08); }}
+a.badge:active,button.badge:active:not(:disabled) {{ transform:translateY(0); opacity:.86; }}
+a.badge:focus-visible,button.badge:focus-visible {{ outline:2px solid rgba(56,189,248,.72); outline-offset:2px; box-shadow:inset 0 0 0 1px var(--badge-ring),var(--surface-inset-highlight),var(--badge-glow),0 0 0 3px rgba(56,189,248,.12); }}
 .badge-update {{ animation:badgeSettle .3s ease-out 1; }}
 @keyframes badgeSettle {{ 0% {{ transform:scale(.985); }} 45% {{ transform:scale(1.015); }} 100% {{ transform:scale(1); }} }}
 .panel-list {{ display:grid; gap:8px; }}
@@ -282,8 +286,8 @@ a.badge:focus-visible {{ outline:2px solid rgba(56,189,248,.72); outline-offset:
 .settings-state {{ min-height:150px; display:grid; place-items:center; align-content:center; gap:10px; padding:24px; border:1px dashed rgba(148,163,184,.28); border-radius:10px; background:rgba(15,23,42,.38); text-align:center; }}
 .settings-state-title {{ color:var(--soft); font-size:15px; font-weight:800; }}
 .settings-state-detail {{ max-width:620px; color:var(--muted); font-size:12px; line-height:1.45; }}
-.settings-form {{ display:grid; gap:12px; min-width:0; }}
-.settings-categories {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr)); gap:12px; min-width:0; align-items:start; }}
+.settings-form {{ --settings-category-min-width:440px; container-name:settings-form; container-type:inline-size; display:grid; gap:12px; min-width:0; }}
+.settings-categories {{ display:grid; grid-template-columns:minmax(0,1fr); gap:12px; min-width:0; align-items:start; }}
 .settings-category {{ min-width:0; display:grid; gap:12px; align-content:start; padding:14px; }}
 .settings-category-header {{ min-width:0; display:flex; align-items:flex-start; justify-content:space-between; gap:10px; padding-bottom:10px; border-bottom:1px solid rgba(203,213,225,.1); }}
 .settings-category-heading {{ min-width:0; }}
@@ -328,8 +332,10 @@ a.badge:focus-visible {{ outline:2px solid rgba(56,189,248,.72); outline-offset:
 .settings-button:disabled {{ cursor:not-allowed; opacity:.5; box-shadow:none; transform:none; }}
 .settings-button:focus-visible {{ outline:2px solid rgba(56,189,248,.72); outline-offset:2px; }}
 @media (prefers-reduced-motion: reduce) {{ .settings-button,.settings-input {{ transition:none; }} .settings-button:hover:not(:disabled) {{ transform:none; }} }}
+@container settings-form (min-width: 892px) {{ .settings-categories {{ grid-template-columns:repeat(2,minmax(var(--settings-category-min-width),1fr)); }} }}
+@container settings-form (min-width: 1796px) {{ .settings-categories {{ grid-template-columns:repeat(4,minmax(var(--settings-category-min-width),1fr)); }} }}
 @container settings-connection (max-width: 480px) {{ .settings-item {{ grid-template-columns:1fr; gap:9px; }} }}
-@media (max-width: 700px) {{ .settings-runtime-notice {{ grid-template-columns:1fr; }} .settings-runtime-icon {{ display:none; }} .settings-category {{ padding:11px; }} .settings-category-header,.settings-connection-test-header {{ align-items:stretch; flex-direction:column; }} .settings-category-header .settings-button,.settings-connection-test-header .settings-button {{ align-self:flex-start; }} .settings-item {{ grid-template-columns:1fr; gap:9px; }} .settings-connection-result-details {{ grid-template-columns:1fr; gap:2px; }} .settings-connection-result-details dd + dt {{ margin-top:4px; }} .settings-action-bar {{ align-items:stretch; flex-direction:column; }} .settings-actions {{ width:100%; }} .settings-button {{ flex:1 1 130px; }} .settings-reset-setting,.settings-button.compact {{ flex:0 0 auto; }} }}
+@media (max-width: 700px) {{ .settings-runtime-notice,.settings-categories {{ grid-template-columns:1fr; }} .settings-runtime-icon {{ display:none; }} .settings-category {{ padding:11px; }} .settings-category-header,.settings-connection-test-header {{ align-items:stretch; flex-direction:column; }} .settings-category-header .settings-button,.settings-connection-test-header .settings-button {{ align-self:flex-start; }} .settings-item {{ grid-template-columns:1fr; gap:9px; }} .settings-connection-result-details {{ grid-template-columns:1fr; gap:2px; }} .settings-connection-result-details dd + dt {{ margin-top:4px; }} .settings-action-bar {{ align-items:stretch; flex-direction:column; }} .settings-actions {{ width:100%; }} .settings-button {{ flex:1 1 130px; }} .settings-reset-setting,.settings-button.compact {{ flex:0 0 auto; }} }}
 .bar {{ height:12px; border-radius:999px; background:#334155; overflow:hidden; margin:10px 0; }}
 .fill {{ height:100%; background:var(--accent); width:0%; transition:width .25s ease; }}
 table {{ width:100%; border-collapse:collapse; font-size:13px; table-layout:fixed; }}
@@ -409,7 +415,7 @@ th {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spaci
 .pipe {{ position:relative; height:2px; align-self:center; background:linear-gradient(90deg,rgba(45,58,79,.35),rgba(56,189,248,.85),rgba(45,58,79,.35)); border-radius:99px; opacity:.9; }}
 .pipe::before {{ content:""; position:absolute; inset:-12px 0; border-top:1px dashed rgba(148,163,184,.22); top:50%; }}
 .pipe::after {{ content:""; position:absolute; left:50%; top:50%; width:10px; height:10px; border-radius:50%; transform:translate(-50%,-50%); background:rgba(56,189,248,.5); box-shadow:0 0 18px rgba(56,189,248,.42); }}
-@media (prefers-reduced-motion: reduce) {{ html {{ scroll-behavior:auto; }} .flow-panel.flow-active .flow-svg-packet,.flow-panel.flow-active .flow-svg-packet-halo,.flow-panel.flow-waiting .flow-svg-packet,.flow-panel.flow-waiting .flow-svg-packet-halo,.flow-panel.traffic-outbound .flow-svg-packet,.flow-panel.traffic-outbound .flow-svg-packet-halo,.flow-panel.traffic-inbound .flow-svg-packet,.flow-panel.traffic-inbound .flow-svg-packet-halo,.flow-panel.traffic-outbound .flow-stage::after,.flow-panel.traffic-inbound .flow-stage::after,.flow-panel.traffic-outbound [data-flow-link]::after,.flow-panel.traffic-inbound [data-flow-link]::after,.flow-panel.traffic-processing [data-flow-segment="ollama-model"],.flow-panel.traffic-processing [data-flow-link="ollama-model"]::after,.flow-node.status-pulse,.dot,.value-pop,.badge-update,.ops-activity-summary,.ops-activity-summary .ops-health-status,.ops-activity-summary::after {{ animation:none; }} .flow-svg-packet,.flow-svg-packet-halo,.flow-stage::after {{ opacity:0; }} .nav a,.nav a::before,.topbar-status,.topbar-status-dot,.card,.node,.hero-status,.hero-status::before,.hero-status::after,.hero-stat-card,.hero-stat-icon,.hero-stat-value,.badge,.flow-svg-line,.gauge-progress,.fill,.ops-health-row,.ops-activity-summary,.panel-item,.timeline-item,.live-timeline-event,.conversation-inspector-drawer,.conversation-inspector-backdrop,.conversation-inspector-close,.message,.instrument-gauge-needle,.instrument-gauge-pivot,.instrument-card-value,.trend-line,.trend-area,.request-traffic-bar {{ transition:none; }} .nav a:hover,.nav a:active,.card:hover,.node:hover,.hero-stat-card:hover,.hero-stat-card:focus-within,.hero-stat-card:focus-visible,.hero-stat-card:hover .hero-stat-icon,.hero-stat-card:focus-within .hero-stat-icon,.hero-stat-card:focus-visible .hero-stat-icon,a.badge:hover,a.badge:active,body.is-refreshing .topbar-status-dot {{ transform:none; }} }}
+@media (prefers-reduced-motion: reduce) {{ html {{ scroll-behavior:auto; }} .flow-panel.flow-active .flow-svg-packet,.flow-panel.flow-active .flow-svg-packet-halo,.flow-panel.flow-waiting .flow-svg-packet,.flow-panel.flow-waiting .flow-svg-packet-halo,.flow-panel.traffic-outbound .flow-svg-packet,.flow-panel.traffic-outbound .flow-svg-packet-halo,.flow-panel.traffic-inbound .flow-svg-packet,.flow-panel.traffic-inbound .flow-svg-packet-halo,.flow-panel.traffic-outbound .flow-stage::after,.flow-panel.traffic-inbound .flow-stage::after,.flow-panel.traffic-outbound [data-flow-link]::after,.flow-panel.traffic-inbound [data-flow-link]::after,.flow-panel.traffic-processing [data-flow-segment="ollama-model"],.flow-panel.traffic-processing [data-flow-link="ollama-model"]::after,.flow-node.status-pulse,.dot,.value-pop,.badge-update,.ops-activity-summary,.ops-activity-summary .ops-health-status,.ops-activity-summary::after {{ animation:none; }} .flow-svg-packet,.flow-svg-packet-halo,.flow-stage::after {{ opacity:0; }} .nav a,.nav a::before,.topbar-status,.topbar-status-dot,.card,.node,.hero-status,.hero-status::before,.hero-status::after,.hero-stat-card,.hero-stat-icon,.hero-stat-value,.badge,.flow-svg-line,.gauge-progress,.fill,.ops-health-row,.ops-activity-summary,.panel-item,.timeline-item,.live-timeline-event,.conversation-inspector-drawer,.conversation-inspector-backdrop,.conversation-inspector-close,.message,.instrument-gauge-needle,.instrument-gauge-pivot,.instrument-card-value,.trend-line,.trend-area,.request-traffic-bar {{ transition:none; }} .nav a:hover,.nav a:active,.card:hover,.node:hover,.hero-stat-card:hover,.hero-stat-card:focus-within,.hero-stat-card:focus-visible,.hero-stat-card:hover .hero-stat-icon,.hero-stat-card:focus-within .hero-stat-icon,.hero-stat-card:focus-visible .hero-stat-icon,a.badge:hover,a.badge:active,button.badge:hover:not(:disabled),button.badge:active:not(:disabled),body.is-refreshing .topbar-status-dot {{ transform:none; }} }}
 .small {{ font-size:12px; color:var(--muted); overflow-wrap:anywhere; }}
 .traffic-panel {{ display:grid; grid-template-rows:auto auto 1fr; gap:12px; align-content:start; padding:14px; }}
 .traffic-stats {{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; align-items:stretch; }}
@@ -780,7 +786,7 @@ body.conversation-inspector-open .conversation-inspector-drawer {{ transform:tra
   .badge {{ min-height:19px; padding:1px 6px; }}
 }}
 @media (max-width: 1000px) {{ .app-shell {{ grid-template-columns:220px minmax(0,1fr); }} .dashboard-main {{ padding:14px 16px 18px; }} .ops-hero,.system-activity-grid,.operations-lower {{ grid-template-columns:1fr; }} .hero-title {{ white-space:normal; }} .hero-title span:last-child {{ overflow:visible; text-overflow:clip; }} .ops-health-details {{ grid-template-columns:1fr; }} .ops-health-row {{ grid-template-columns:16px minmax(0,1fr) auto; }} .flow-svg-layer {{ display:none; }} .flow-stage {{ grid-template-columns:1fr; }} .pipe {{ height:20px; width:4px; justify-self:center; }} body.conversation-inspector-open .conversation-inspector-backdrop {{ opacity:1; pointer-events:auto; }} }}
-@media (max-width: 1000px) {{ .app-shell {{ height:100vh; overflow-y:auto; overflow-x:hidden; grid-template-columns:1fr; }} .workspace {{ height:auto; min-height:0; overflow:visible; }} .sidebar {{ position:relative; height:auto; gap:14px; }} .nav {{ grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); }} .sidebar-footer {{ display:none; }} .topbar {{ position:relative; align-items:flex-start; flex-direction:column; }} .dashboard-main {{ height:auto; overflow:visible; padding:18px; }} .page.active,.ops-hero,.system-activity-grid,.operations-lower {{ height:auto; overflow:visible; grid-template-columns:1fr; }} .ops-hero {{ grid-template-areas:"hero" "actions" "stats"; }} .hero-stats-grid {{ grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); }} .traffic-stats {{ grid-template-columns:1fr; }} .instrument-panel {{ grid-template-columns:1fr; }} .instrument-trend-card {{ grid-column:auto; }} .conversation-inspector-drawer {{ width:100vw; border-left:0; }} .conversation-inspector-grid {{ grid-template-columns:1fr; }} .operations-page {{ min-height:auto; grid-template-rows:none; }} .timeline-item {{ grid-template-columns:1fr; }} }}
+@media (max-width: 1000px) {{ .app-shell {{ height:100vh; overflow-y:auto; overflow-x:hidden; grid-template-columns:1fr; }} .workspace {{ height:auto; min-height:0; overflow:visible; }} .sidebar {{ position:relative; height:auto; gap:14px; }} .nav {{ grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); }} .sidebar-footer {{ display:none; }} .topbar {{ position:relative; align-items:flex-start; flex-direction:column; }} .topbar-actions {{ width:100%; justify-content:flex-start; }} .topbar-endpoint {{ flex:1 1 240px; }} .dashboard-main {{ height:auto; overflow:visible; padding:18px; }} .page.active,.ops-hero,.system-activity-grid,.operations-lower {{ height:auto; overflow:visible; grid-template-columns:1fr; }} .ops-hero {{ grid-template-areas:"hero" "actions" "stats"; }} .hero-stats-grid {{ grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); }} .traffic-stats {{ grid-template-columns:1fr; }} .instrument-panel {{ grid-template-columns:1fr; }} .instrument-trend-card {{ grid-column:auto; }} .conversation-inspector-drawer {{ width:100vw; border-left:0; }} .conversation-inspector-grid {{ grid-template-columns:1fr; }} .operations-page {{ min-height:auto; grid-template-rows:none; }} .timeline-item {{ grid-template-columns:1fr; }} }}
 </style>
 </head>
 <body>
@@ -808,11 +814,11 @@ body.conversation-inspector-open .conversation-inspector-drawer {{ transform:tra
       <h1>ContextKeeper</h1>
       <div class="sub">Transparent Ollama Proxy - Diagnostics - System Monitor</div>
     </div>
-    <div class="topbar-status"><span class="topbar-status-dot"></span>Operations</div>
+    <div id="dashboardRefreshStatus" class="topbar-status" role="status" aria-live="polite" aria-atomic="true" aria-label="Dashboard refresh operating normally."><span class="topbar-status-dot"></span><span id="dashboardRefreshStatusText">Operations</span></div>
   </div>
   <div class="topbar-actions">
     <span class="topbar-pill">Proxy port {settings.server.port}</span>
-    <span class="topbar-pill">{ollama_base_url_html}</span>
+    <span class="topbar-pill topbar-endpoint">{ollama_base_url_html}</span>
   </div>
 </header>
 <main class="dashboard-main">
@@ -1020,7 +1026,7 @@ body.conversation-inspector-open .conversation-inspector-drawer {{ transform:tra
       <div class="muted traffic-note">Average response time is summarized in the hero statistics row. Errors are tracked with request statistics.</div>
     </div>
     <div class="card conversation-compact ops-panel">
-      <div class="health-title dashboard-card-header"><h2 class="dashboard-card-title">Active Conversation</h2><div class="dashboard-card-header-actions"><a class="badge info" href="#conversations" data-page-link="conversations">Open</a></div></div>
+      <div class="health-title dashboard-card-header"><h2 class="dashboard-card-title">Active Conversation</h2><div class="dashboard-card-header-actions"><button type="button" id="opsActiveConversationInspectBtn" class="badge info" data-inspect-active-conversation="true" aria-label="Inspect active conversation details" disabled aria-disabled="true">Open</button></div></div>
       <div class="conversation-meta compact">
         <div><div class="small">Conversation ID</div><div id="opsActiveConversationId" class="muted">None</div></div>
         <div><div class="small">Model</div><div id="opsActiveModelName" class="muted">None</div></div>
@@ -1120,7 +1126,7 @@ body.conversation-inspector-open .conversation-inspector-drawer {{ transform:tra
 </div>
 </div>
 <div id="conversationInspectorBackdrop" class="conversation-inspector-backdrop" hidden></div>
-<aside id="conversationInspectorDrawer" class="conversation-inspector-drawer" role="complementary" aria-labelledby="conversationInspectorTitle" aria-hidden="true">
+<aside id="conversationInspectorDrawer" class="conversation-inspector-drawer" role="complementary" aria-labelledby="conversationInspectorTitle" aria-hidden="true" inert>
   <header class="conversation-inspector-header">
     <div class="conversation-inspector-title-row">
       <h2 id="conversationInspectorTitle" class="conversation-inspector-title">Conversation Inspector</h2>
@@ -1230,6 +1236,7 @@ const conversationInspectorState = {{
   inspectorLoading:false,
   inspectorError:null,
   selectedTimelineEventId:null,
+  returnFocusId:null,
   lastDashboardData:null
 }};
 function byId(id) {{
@@ -1505,8 +1512,7 @@ function renderRequestTraffic(requests) {{
   svg.setAttribute('aria-label', requestCountLabel(recentCount) + ' over the last minute; peak bucket ' + maxBucket);
 }}
 function numberOrNull(value) {{
-  const numeric = Number(value);
-  return Number.isFinite(numeric) ? numeric : null;
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }}
 function formatMetricNumber(value, digits) {{
   const numeric = numberOrNull(value);
@@ -3259,6 +3265,11 @@ function initializeSettingsPage() {{
     if (settingsPageState.confirmationRequired) void confirmSettingsAfterAcceptedUpdate();
     else void loadSettings();
   }});
+  window.addEventListener('beforeunload', event => {{
+    if (!settingsPageState.loaded || !changedDraftSettings().length) return;
+    event.preventDefault();
+    event.returnValue = '';
+  }});
   updateSettingsActions();
 }}
 function showPage(pageName) {{
@@ -3302,6 +3313,15 @@ function initializeConversationInspector() {{
       closeConversationInspector();
     }}
   }});
+  const inspectBtn = byId('opsActiveConversationInspectBtn');
+  if (inspectBtn) {{
+    inspectBtn.addEventListener('click', () => {{
+      const activeId = conversationInspectorState.lastDashboardData?.active_conversation?.conversation_id;
+      if (activeId) {{
+        openConversationInspector(activeId, null, {{ returnFocusId: 'opsActiveConversationInspectBtn' }});
+      }}
+    }});
+  }}
 }}
 async function refreshHealth() {{
   const res = await fetch('/health');
@@ -3545,6 +3565,7 @@ function renderConversationInspector() {{
   const isOpen = Boolean(conversationInspectorState.inspectorOpen);
   document.body.classList.toggle('conversation-inspector-open', isOpen);
   drawer.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+  drawer.inert = !isOpen;
   if (backdrop) backdrop.hidden = !isOpen;
   if (!isOpen) {{
     setText('conversationInspectorConversationId', 'No conversation selected', false);
@@ -3605,10 +3626,11 @@ function updateConversationInspectorFromDashboardData(data) {{
   renderConversationInspector();
   syncTimelineSelectionState();
 }}
-function openConversationInspector(conversationId, eventId) {{
+function openConversationInspector(conversationId, eventId, options) {{
   if (!conversationId) return;
   conversationInspectorState.selectedConversationId = conversationId;
   conversationInspectorState.selectedTimelineEventId = eventId || null;
+  conversationInspectorState.returnFocusId = options?.returnFocusId || null;
   conversationInspectorState.inspectorOpen = true;
   conversationInspectorState.inspectorLoading = !conversationInspectorState.lastDashboardData;
   conversationInspectorState.inspectorError = conversationInspectorState.lastDashboardData && !selectedConversationAvailable(conversationInspectorState.lastDashboardData)
@@ -3621,18 +3643,29 @@ function openConversationInspector(conversationId, eventId) {{
 }}
 function closeConversationInspector(options) {{
   const eventId = conversationInspectorState.selectedTimelineEventId;
+  const returnFocusId = conversationInspectorState.returnFocusId;
   conversationInspectorState.selectedConversationId = null;
   conversationInspectorState.selectedTimelineEventId = null;
+  conversationInspectorState.returnFocusId = null;
   conversationInspectorState.inspectorOpen = false;
   conversationInspectorState.inspectorLoading = false;
   conversationInspectorState.inspectorError = null;
   renderConversationInspector();
   syncTimelineSelectionState();
   const shouldReturnFocus = !options || options.returnFocus !== false;
-  if (!shouldReturnFocus || !eventId) return;
-  const trigger = Array.from(document.querySelectorAll('#liveConversationTimelineList [data-event-id]'))
-    .find(entry => entry.dataset.eventId === eventId);
-  if (trigger && typeof trigger.focus === 'function') trigger.focus({{ preventScroll:true }});
+  if (!shouldReturnFocus) return;
+  if (eventId) {{
+    const trigger = Array.from(document.querySelectorAll('#liveConversationTimelineList [data-event-id]'))
+      .find(entry => entry.dataset.eventId === eventId);
+    if (trigger && typeof trigger.focus === 'function') {{
+      trigger.focus({{ preventScroll:true }});
+      return;
+    }}
+  }}
+  if (returnFocusId) {{
+    const trigger = byId(returnFocusId);
+    if (trigger && typeof trigger.focus === 'function') trigger.focus({{ preventScroll:true }});
+  }}
 }}
 function handleTimelineInspectorSelection(event) {{
   const list = byId('liveConversationTimelineList');
@@ -3686,6 +3719,13 @@ function refreshActiveConversation(active, risk) {{
   setText('activeModelName', current.model_name || 'None');
   setText('opsActiveConversationId', current.conversation_id || 'None');
   setText('opsActiveModelName', current.model_name || 'None');
+  const inspectBtn = byId('opsActiveConversationInspectBtn');
+  if (inspectBtn) {{
+    const hasActiveId = Boolean(current.conversation_id);
+    inspectBtn.disabled = !hasActiveId;
+    if (hasActiveId) inspectBtn.removeAttribute('aria-disabled');
+    else inspectBtn.setAttribute('aria-disabled', 'true');
+  }}
   if (current.context) {{
     const contextText = current.context.usage_percent + '% (' + current.context.estimated_tokens + ' / ' + current.context.context_window_tokens + ' tokens)';
     setText('activeContextUsage', contextText);
@@ -3738,9 +3778,18 @@ async function refresh() {{
   setRefreshBusy(true);
   try {{
     await Promise.all([refreshHealth(), refreshMetrics(), refreshDashboardData()]);
+    const recovered = document.body.classList.contains('refresh-error');
     document.body.classList.remove('refresh-error');
+    if (recovered) {{
+      setText('dashboardRefreshStatusText', 'Operations', false);
+      const refreshStatus = byId('dashboardRefreshStatus');
+      if (refreshStatus) refreshStatus.setAttribute('aria-label', 'Dashboard refresh operating normally.');
+    }}
   }} catch (error) {{
     document.body.classList.add('refresh-error');
+    setText('dashboardRefreshStatusText', 'Refresh failed', false);
+    const refreshStatus = byId('dashboardRefreshStatus');
+    if (refreshStatus) refreshStatus.setAttribute('aria-label', 'Dashboard refresh failed. Displayed data may be stale; retrying automatically.');
   }} finally {{
     refreshInFlight = false;
     setRefreshBusy(false);

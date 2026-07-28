@@ -69,8 +69,8 @@ Example: `Phase 6.5F-B4.2`
 | Dashboard modernization B4 workstream | Completed | Phase 6.5F-B4.8 automatic model context discovery is implemented and documented. |
 | Live data visualization and rich widgets | Completed through B5.5.2 | Request Traffic, Connection Flow, Live Conversation Timeline, layout refinement, Connection Flow visibility polish, Conversation Inspector foundation, and Conversation Inspector Overview & Intelligence are implemented; B5.6 synchronized documentation to that state. |
 | Documentation audit and synchronization | Completed | Phase 6.5F-B5.6 audited maintained Markdown documents and aligned documentation with the implementation through B5.5.2. |
-| Dashboard customization and user preferences | Active | Phase 6.5F-B6 has delivered the Settings Snapshot/read API, validated in-memory update API, Settings panel UI foundation, B6.4 explicit configuration persistence, B6.5 managed settings reset/recovery controls, and B6.6 restart-required Ollama Connection configuration with isolated candidate testing; B6.6 Product Owner and architect review are pending. |
-| Release polish and final UX review | Planned | Phase 6.5F-B7 planned before historical memory retrieval and validation certification. |
+| Dashboard customization and user preferences | Completed | Phase 6.5F-B6 delivered the Settings Snapshot/read API, validated in-memory update API, Settings panel UI foundation, B6.4 explicit configuration persistence, B6.5 managed settings reset/recovery controls, and B6.6 restart-required Ollama Connection configuration with isolated candidate testing; B6 is complete and merged. |
+| Release polish and final UX review | Active | Phase 6.5F-B7.1 completed its automated engineering audit, focused remediation, documentation, and regression pass; Product Owner manual visual, responsive, keyboard, and accessibility approval remains pending. |
 | Historical memory retrieval and detail preservation | Planned | Dedicated Phase 6.5G approved before Phase 6.6; no implementation exists yet. |
 | Validation framework and release certification | Planned | Dedicated Phase 6.6 approved after Phase 6.5G and before Phase 7; no implementation exists yet. |
 | GitHub release preparation | Planned | Phase 7 planned after Phase 6.6 certification. |
@@ -1868,7 +1868,7 @@ Validation:
 
 ### Phase 6.5F-B6.6: Connection Configuration
 
-Status: Implemented in the working tree; Product Owner and architect review pending.
+Status: Completed and merged.
 
 Date: 2026-07-23.
 
@@ -1951,7 +1951,51 @@ Validation:
 
 - Focused B6.6 automated result: 300 tests passed with two existing third-party deprecation warnings.
 - Full B6.6 automated result: 552 tests passed with the same two warnings.
-- Product Owner visual and interaction QA remains the acceptance checkpoint; this phase is not committed, merged, pushed, or released by this working-tree implementation.
+- Phase 6.5F-B6.6 was subsequently completed and merged. Its recorded 552-test validation result remains the historical B6.6 evidence.
+
+### Phase 6.5F-B7.1: Dashboard Release Readiness Audit
+
+Status: Automated engineering audit, focused remediation, documentation synchronization, and regression verification complete on the feature branch; Product Owner manual approval pending.
+
+Date: 2026-07-23.
+
+Branch: `phase-6-5f-b7-1-dashboard-release-readiness-audit`.
+
+Objective:
+
+- Evaluate the complete Phase 6.5F dashboard against maintained design, accessibility, responsive-layout, state-handling, Settings-completion, and Version 1 release requirements.
+- Produce a definitive capability inventory and evidence-based release-readiness audit.
+- Add narrowly scoped regression coverage for important implemented behavior that was insufficiently protected.
+- Avoid broad redesign, unrelated refactoring, deferred feature implementation, and changes to proxy or streaming contracts.
+
+Automated engineering findings and remediation:
+
+- Corrected unsafe dashboard document-title rendering, classified Critical because an unescaped configured title could enter executable HTML context.
+- Corrected long Connection endpoint workspace overflow, classified High because it could cause major layout loss at a supported target.
+- Corrected null telemetry rendering, classified Medium because partial data could produce misleading values or client errors.
+- Made the closed Conversation Inspector inert, classified Medium, so hidden drawer controls are removed from keyboard interaction until the Inspector opens.
+- Added an explicit, screen-reader-readable refresh failure status, classified Medium, instead of relying on an otherwise unused body class.
+- Added an unsaved-change unload guard, classified Medium, while preserving network-free in-shell navigation and the existing no-browser-storage boundary.
+- Recorded one open Medium follow-up: in the visually full-width narrow Inspector, keyboard focus can move to obscured background controls. Focused containment/background-inert remediation or explicit Product Owner acceptance is required.
+- Implemented B7.1-PO-01 Active Conversation Inspector Trigger (Product Owner UX Enhancement / Release-Readiness Requirement Change): added a semantic Open button (`opsActiveConversationInspectBtn`) to the Active Conversation card that begins disabled until a valid active conversation exists, opens the existing right-side drawer without changing the URL hash or leaving the Operations page, and returns focus to the Open button on Escape or Close. Verification evidence prior to follow-up: 52 targeted tests passed, 562 full suite tests passed, git diff --check passed, Product Owner manual QA passed at 75% zoom, and Product Owner manual QA had already passed at 50% zoom.
+
+Focused regression coverage:
+
+- Added `tests/test_dashboard_release_readiness.py` with seven focused tests covering the demonstrated title-escaping, overflow, null-state, Inspector, refresh-status, unload-protection, and deferred-control contracts.
+- Preserved active-versus-persisted Settings semantics, draft-only Test Connection behavior, restart-required Connection handling, configuration precedence, HTML escaping, transparent proxy behavior, and streaming behavior.
+
+Documentation:
+
+- Added `docs/DASHBOARD_RELEASE_READINESS_AUDIT.md`.
+- Synchronized the maintained status, roadmap, history, test, architecture, configuration, layout, component, accessibility, and documentation-index references needed for B7.1.
+- Kept broader preferences, listener-host/proxy-port editing, retry/backoff controls, configuration-source provenance UI, restart controls, and other explicitly excluded features deferred.
+
+Validation:
+
+- Baseline automated suite: 553 tests passing.
+- Added regression coverage: seven tests.
+- Final automated suite: 560 tests passing.
+- Product Owner manual visual, responsive, keyboard, screen-reader, contrast, reduced-motion, and adverse-value QA remains required. This automated engineering result does not claim manual acceptance or release approval.
 
 ### Phase 6.5G — Historical Memory Retrieval & Detail Preservation (Approved Plan)
 
@@ -2133,11 +2177,11 @@ Scope boundary:
 
 ## Current Project State
 
-- Current active implementation phase: Phase 6.5F-B6.6: Connection Configuration; Product Owner and architect review pending.
+- Current active review phase: Phase 6.5F-B7.1: Dashboard Release Readiness Audit. Automated engineering work is complete; Product Owner manual approval is pending.
 - Phase 6.5F-B4.8 — Automatic Model Context Discovery is implemented.
-- Phase 6.5F-B5.1 through the B6.6 working tree are represented in source, tests, and maintained documentation.
-- Latest focused B6.6 Settings/Connection validation result: 300 tests passed with two existing third-party deprecation warnings.
-- Latest full B6.6 automated validation result: 552 tests passed with the same two warnings.
+- Phase 6.5F-B5.1 through B7.1 are represented in source, tests, and maintained documentation.
+- Historical B6.6 validation remains 300 focused tests and 552 full-suite tests passing with two existing third-party deprecation warnings.
+- Phase 6.5F-B7.1 began from 553 passing tests and finishes with 560 passing tests after seven focused regressions.
 - Dashboard status: modern operations-console dashboard with live proxy, Ollama, request, context, compression, conversation, intelligence, health, operational activity, recommendations, grouped five-card system instrument panel, Context Trend, Request Traffic, animated Connection Flow, Live Conversation Timeline, Conversation Inspector drawer, Conversation Inspector Overview, deterministic Conversation Inspector Intelligence, and an interactive metadata-driven runtime-versus-persisted Settings page with managed-default reset/recovery controls plus restart-required Ollama Connection configuration and isolated candidate testing.
 - Major capabilities currently present:
   - FastAPI-based transparent Ollama proxy.
@@ -2151,26 +2195,23 @@ Scope boundary:
   - Isolated one-attempt candidate Ollama Connection testing with normalized endpoint, measured latency, version, safe failures, and no active-state mutation.
   - Windows service foundation, PyInstaller executable foundation, first-run setup wizard, Inno Setup installer foundation, and release build script.
 - Planned work still ahead:
-  - Product Owner and architect review for Phase 6.5F-B6.6.
-  - Later broader dashboard preference work after explicit approval.
-  - Phase 6.5F-B7 — Release Polish & Final UX Review.
+  - Product Owner manual visual, responsive, keyboard, and accessibility review and approval for Phase 6.5F-B7.1.
+  - Any additional Phase 6.5F-B7 follow-up explicitly approved from manual findings.
   - Phase 6.5G — Historical Memory Retrieval & Detail Preservation.
   - Phase 6.6 — Validation Framework & Release Certification.
   - Phase 7 — GitHub Release.
   - Version 1.0 Release.
   - Version 2+ architectural ideas tracked in `docs/FUTURE_IDEAS.md`, intentionally outside the Version 1.0 release scope.
 
-Do not treat remaining planned Phase 6.5F-B6/B7, Phase 6.5G, Phase 6.6, Phase 7, or Version 2+ roadmap content as implemented until source and tests confirm that state.
+Broader dashboard preferences remain intentionally deferred and require separate Product Owner approval. Do not treat additional B7 follow-up, Phase 6.5G, Phase 6.6, Phase 7, or Version 2+ roadmap content as implemented until source and tests confirm that state.
 
 ## Planned Next Steps
 
 This section is tentative and subject to refinement. These names and boundaries are planning labels, not completed commitments.
 
-- Phase 6.5F-B5 — Live Data Visualization & Rich Widgets.
-- Phase 6.5F-B6 — Dashboard Customization & User Preferences.
-  - Product Owner and architect review for Phase 6.5F-B6.6: Connection Configuration.
-  - Later broader dashboard preference work after explicit approval.
-- Phase 6.5F-B7 — Release Polish & Final UX Review.
+- Phase 6.5F-B7.1 — Product Owner manual visual, responsive, keyboard, and accessibility review of the Dashboard Release Readiness Audit.
+- Additional Phase 6.5F-B7 follow-up only when explicitly approved from demonstrated manual findings.
+- Broader dashboard customization and preferences remain deferred and are not an active phase commitment.
 - Phase 6.5G — Historical Memory Retrieval & Detail Preservation.
   - Phase 6.5G.1 — Durable Conversation Archive.
   - Phase 6.5G.2 — Historical Search & Ranking.

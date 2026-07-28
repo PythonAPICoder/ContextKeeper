@@ -860,11 +860,49 @@ def test_connection_setting_cards_stack_by_card_width_and_keep_long_content_in_f
 
 
 def test_settings_responsive_accessibility_and_dashboard_lifecycle_guards(dashboard_html: str) -> None:
+    settings_css = _source_between(
+        dashboard_html,
+        ".settings-page {",
+        ".bar {",
+    )
+    two_column_css = _source_between(
+        dashboard_html,
+        "@container settings-form (min-width: 892px)",
+        "@container settings-form (min-width: 1796px)",
+    )
+    four_column_css = _source_between(
+        dashboard_html,
+        "@container settings-form (min-width: 1796px)",
+        "@container settings-connection",
+    )
     mobile_css = _source_between(
         dashboard_html,
         "@media (max-width: 700px)",
         ".bar {",
     )
+    assert (
+        ".settings-form { --settings-category-min-width:440px; "
+        "container-name:settings-form; container-type:inline-size;"
+        in dashboard_html
+    )
+    assert (
+        ".settings-categories { display:grid; grid-template-columns:minmax(0,1fr);"
+        in dashboard_html
+    )
+    assert (
+        ".settings-categories { "
+        "grid-template-columns:repeat(2,minmax(var(--settings-category-min-width),1fr)); }"
+        in two_column_css
+    )
+    assert (
+        ".settings-categories { "
+        "grid-template-columns:repeat(4,minmax(var(--settings-category-min-width),1fr)); }"
+        in four_column_css
+    )
+    assert "repeat(3," not in settings_css
+    assert "repeat(4,minmax(0,1fr))" not in settings_css
+    assert "auto-fit,minmax(min(100%,360px),1fr)" not in settings_css
+    assert ".settings-runtime-notice,.settings-categories { grid-template-columns:1fr; }" in mobile_css
     assert ".settings-input:focus-visible,.settings-checkbox:focus-visible" in dashboard_html
     assert ".settings-button:focus-visible" in dashboard_html
     assert ".settings-button:disabled { cursor:not-allowed; opacity:.5" in dashboard_html
@@ -877,6 +915,15 @@ def test_settings_responsive_accessibility_and_dashboard_lifecycle_guards(dashbo
     assert ".settings-item { grid-template-columns:1fr" in mobile_css
     assert ".settings-connection-result-details { grid-template-columns:1fr" in mobile_css
     assert ".settings-action-bar { align-items:stretch; flex-direction:column" in mobile_css
+    action_bar_css = _source_between(
+        dashboard_html,
+        ".settings-action-bar {",
+        ".settings-dirty-summary {",
+    )
+    assert "position:sticky" in action_bar_css
+    assert "bottom:0" in action_bar_css
+    assert "z-index:3" in action_bar_css
+    assert "min-width:0" in action_bar_css
     assert ".settings-reset-setting,.settings-button.compact { flex:0 0 auto; }" in mobile_css
     assert "@media (prefers-reduced-motion: reduce)" in dashboard_html
     assert ".settings-button,.settings-input { transition:none; }" in dashboard_html

@@ -1,8 +1,10 @@
 # ContextKeeper API Compatibility
 
-Status: Current through the Phase 6.5F-B6.6 working-tree implementation; Product Owner and architect review are pending.
+Status: Phase 6.5F-B6 Settings implementation is complete. Updated for the current Phase 6.5F-B7.1 dashboard release-readiness audit; Product Owner manual visual and accessibility QA remains pending.
 
 ContextKeeper must behave like an Ollama-compatible API server so existing clients can point to ContextKeeper instead of Ollama without code changes.
+
+Phase 6.5F-B7.1 preserves the API and streaming contracts in this document. Its implementation changes are narrow dashboard hardening only. See the [Dashboard Release Readiness Audit](DASHBOARD_RELEASE_READINESS_AUDIT.md) for the evidence and remaining manual QA.
 
 ## Compatibility goal
 
@@ -90,9 +92,13 @@ PATCH, PUT, and candidate testing are intentionally separate. Runtime-editable r
 
 The Connection test accepts `{ "base_url": ..., "timeout_seconds": ... }`, validates the values, and performs one isolated `GET` to the normalized base-path-preserving `/api/version` URL. The temporary client uses `trust_env=False`, a timeout capped at `min(timeout_seconds, 10)`, no retries, and normal TLS verification. HTTP `200` carries every validated probe outcome, connected or failed; request validation returns `422` with field detail. GET, PUT, PATCH, DELETE, HEAD, and OPTIONS on the test resource return explicit `405` with `Allow: POST`.
 
+The Test Connection payload always represents the current browser draft. A successful candidate response does not mean the endpoint is active or persisted, does not replace active proxy health, and is never a prerequisite for either Save action. The active runtime value, disk-derived persisted value, built-in default, and browser draft remain separate states.
+
 The management API exposes no Ollama credentials, request bodies, prompt/response text, configuration paths, model override maps, or full configuration contents. Candidate-test failures expose only a normalized endpoint when safe, latency when attempted, a bounded failure category, and a user-readable message. Persistence and candidate-test errors use safe local-management details and do not use the upstream `502` proxy error contract.
 
-Phase 6.5F-B6.6: Connection Configuration extends only the local management client, approved settings metadata, configuration validation/persistence allowlist, and isolated candidate probe. Testing or saving a candidate never changes the active endpoint/client, health/version metrics, diagnostics, model discovery, forwarded method, request body, response, or streaming behavior of Ollama-compatible `/api/*` and `/v1/*` clients. A manual restart is required to activate saved Connection values.
+The completed Phase 6.5F-B6 Connection Configuration work extends only the local management client, approved settings metadata, configuration validation/persistence allowlist, and isolated candidate probe. Testing or saving a candidate never changes the active endpoint/client, health/version metrics, diagnostics, model discovery, forwarded method, request body, response, or streaming behavior of Ollama-compatible `/api/*` and `/v1/*` clients. A manual restart is required to activate saved Connection values. If `CONTEXTKEEPER_OLLAMA_URL` is set, that currently implemented higher-priority environment source can continue to determine the active URL after restart; no current command provides a per-setting command-line override.
+
+Listener-host and ContextKeeper proxy-port editing, retry-count/retry-delay/backoff controls, configuration-source provenance UI, environment-variable editing, and command-line editing are intentionally absent from this management API. Existing model-discovery retry behavior remains internal and is not reused by Test Connection.
 
 ## Error behavior
 
@@ -115,13 +121,20 @@ Candidate Test Connection failures are deliberately different: identifiable DNS,
 - Unknown supported Ollama endpoints pass through.
 - ContextKeeper dashboard and diagnostics do not require client code changes.
 
-## Out of scope for current Version 1 implementation
+## Planned later in Version 1
 
-- Authentication.
-- Multi-user permissions.
-- Cloud model providers.
-- Model routing.
-- Plugin APIs.
-- Historical memory retrieval after compression.
-- Full OpenAI API compatibility beyond proxied `/v1/*` passthrough behavior.
-- Runtime backend switching, active-client replacement, automatic restart, authentication/credentials, multiple AI servers, failover/load balancing, cloud providers, TLS trust management, retry settings, or background Connection monitoring.
+These approved Version 1 phases are planned but not implemented by the current API:
+
+- Phase 6.5G durable historical-memory preservation, search, retrieval, and detail recovery after compression.
+- Phase 6.6 Validation Framework, AutoQA, stress/soak verification, reports, and release certification. It is expected to exercise the public Ollama-compatible API where practical, but no Validation API shape is promised by this document.
+
+Current compression and dashboard behavior must not be described as if either later phase already exists.
+
+## Intentionally deferred or post-Version 1
+
+- Authentication, credentials, accounts, multi-user permissions, ownership, and workspace isolation.
+- Multiple AI servers or profiles, cloud model providers, failover, load balancing, and background Connection monitoring.
+- Runtime backend switching, active-client replacement, automatic or manual restart controls, Windows service controls, self-diagnostics, and automated recovery.
+- Listener-host editing, ContextKeeper proxy-port editing, retry-count/retry-delay/backoff controls, configuration-source provenance UI, environment-variable editing, and command-line editing.
+- TLS trust or certificate management, credential storage, and secrets-management UI.
+- Model routing, plugin APIs, and full OpenAI API compatibility beyond transparent `/v1/*` passthrough behavior.

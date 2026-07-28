@@ -1,8 +1,10 @@
 # ContextKeeper Configuration
 
-Status: Current through the Phase 6.5F-B6.6 working-tree implementation; Product Owner and architect review are pending. Verified against `src/ctxkeeper/config.py`, `src/ctxkeeper/resources.py`, `src/ctxkeeper/dashboard/settings_snapshot.py`, `src/ctxkeeper/dashboard/config_persistence.py`, `src/ctxkeeper/dashboard/connection_test.py`, `src/ctxkeeper/dashboard/routes.py`, and `src/ctxkeeper/dashboard/template.py`.
+Status: Phase 6.5F-B6 Settings implementation is complete. Updated for the current Phase 6.5F-B7.1 dashboard release-readiness audit; Product Owner manual visual and accessibility QA remains pending. Verified against `src/ctxkeeper/config.py`, `src/ctxkeeper/resources.py`, `src/ctxkeeper/dashboard/settings_snapshot.py`, `src/ctxkeeper/dashboard/config_persistence.py`, `src/ctxkeeper/dashboard/connection_test.py`, `src/ctxkeeper/dashboard/routes.py`, and `src/ctxkeeper/dashboard/template.py`.
 
 ContextKeeper is configured through `contextkeeper.yaml`, with a small set of environment variable overrides. The first-run wizard creates this file when it is missing.
+
+See the [Dashboard Release Readiness Audit](DASHBOARD_RELEASE_READINESS_AUDIT.md) for B7.1 evidence, known limitations, and the Product Owner Settings and viewport QA checklist. B7.1 preserves the completed B6 configuration model and corrects only demonstrated dashboard defects.
 
 ## Configuration file location
 
@@ -90,14 +92,14 @@ No environment variable currently overrides dashboard refresh timing, context th
 
 ## Configuration precedence
 
-The configuration precedence policy, from highest to lowest, is:
+The abstract configuration precedence policy, from highest to lowest, is:
 
 1. Command-line setting overrides, where a command supports them.
 2. Supported environment variable overrides.
 3. Values loaded from `contextkeeper.yaml`.
 4. Built-in defaults from `Settings`.
 
-Current source behavior implements no command-line setting override. The `--configure` flag launches the configuration wizard and exits; it does not provide per-setting runtime overrides. Among the currently implemented value sources, loading begins with built-in defaults, overlays YAML, and finally overlays the supported environment variables. `CONTEXTKEEPER_OLLAMA_URL` can therefore make the active `ollama.base_url` differ from the saved YAML value displayed in the Connection category.
+The first tier is reserved by policy for a command that explicitly supports a setting override; current source behavior implements no command-line setting override. The `--configure` flag launches the configuration wizard and exits and is not a per-setting runtime override. The effective order among currently implemented value sources is therefore supported environment variables, YAML, then built-in defaults. In particular, `CONTEXTKEEPER_OLLAMA_URL` can make the active `ollama.base_url` differ from the saved YAML value displayed in the Connection category.
 
 Save to configuration writes only the YAML tier. It does not edit command-line arguments or environment variables and cannot override a higher-priority source. The current settings snapshot reports the active and persisted values but does not track or label the active value's provenance; the dashboard must not imply that saving YAML supersedes an environment override.
 
@@ -113,7 +115,7 @@ POST  /api/dashboard/settings/connection/test
                                       Test draft Connection values in isolation
 ```
 
-None of these dashboard management routes is proxied to Ollama. Ordinary field editing sends no request. Runtime Save and runtime-editable reset/Discard recovery use PATCH and never write YAML. Connection resets are browser-draft operations and do not PATCH. Save to configuration uses PUT and never applies runtime changes or restarts ContextKeeper. Test Connection performs one isolated probe and changes neither YAML nor active state. B6.6 adds neither a reset endpoint nor a live-reconfiguration endpoint.
+None of these dashboard management routes is proxied to Ollama. Ordinary field editing sends no request. Runtime Save and runtime-editable reset/Discard recovery use PATCH and never write YAML. Connection resets are browser-draft operations and do not PATCH. Save to configuration uses PUT and never applies runtime changes or restarts ContextKeeper. Test Connection performs one isolated probe and changes neither YAML nor active state. The completed B6 implementation adds neither a reset endpoint nor a live-reconfiguration endpoint.
 
 ### GET settings snapshot
 
@@ -131,7 +133,7 @@ Schema version 2 includes, for each setting:
 
 GET freshly reads and validates the active configuration so persisted metadata reflects disk rather than only startup state. GET is read-only: it changes neither runtime state nor the file. A missing file is represented by validated built-in defaults until an explicit PUT creates it. Invalid UTF-8, malformed/non-mapping YAML, an invalid existing configuration, or a read failure returns a safe error rather than manufacturing persisted metadata.
 
-The categories are ordered Connection, Context, Compression, and Dashboard. The eight pre-B6.6 settings remain runtime-editable, persistable, and reset-eligible. `ollama.base_url` and `ollama.timeout_seconds` are persistable and reset-eligible but not runtime-editable, and both require restart. Their successful PUT can make `persisted_value` differ from the active runtime `value` until the user manually restarts ContextKeeper; there is no automatic restart action. Reset eligibility remains an explicit server-owned contract rather than a browser-side allowlist.
+The categories are ordered Connection, Context, Compression, and Dashboard. Eight settings are runtime-editable, persistable, and reset-eligible. `ollama.base_url` and `ollama.timeout_seconds` are persistable and reset-eligible but not runtime-editable, and both require restart. Their successful PUT can make `persisted_value` differ from the active runtime `value` until the user manually restarts ContextKeeper; there is no automatic restart action. Reset eligibility remains an explicit server-owned contract rather than a browser-side allowlist.
 
 ### PATCH runtime settings
 
@@ -269,30 +271,42 @@ PyYAML preserves parsed configuration values, including unmanaged categories and
 
 ### Settings page state and feedback
 
-The browser keeps the confirmed server snapshot separate from the editable draft. It computes runtime changes against `value`, persistence changes against `persisted_value`, and reset availability against `default_value` plus `reset_eligible`, all with typed equality. Save runtime changes submits only runtime-editable draft/runtime differences through PATCH. Runtime-editable resets PATCH authoritative defaults, while Connection resets stage persistence-only defaults locally. Save to configuration submits draft/persisted differences through PUT. Save to configuration is disabled when no eligible persistence difference exists, never runs automatically from editing or reset, shows an in-progress label, and locks conflicting controls while pending.
+The browser keeps the confirmed server snapshot separate from the editable draft:
+
+- **Active runtime value** is snapshot `value`: the value used by the running process.
+- **Persisted value** is `persisted_value`: the freshly read value represented by the YAML tier.
+- **Draft value** is the typed browser candidate. Editing it changes neither runtime nor YAML.
+- **Default value** is `default_value`: the built-in value supplied by server-owned metadata.
+- **Restart required** is metadata stating that persistence alone cannot apply the value to the current process. ContextKeeper never restarts automatically.
+
+The page computes runtime changes against `value`, persistence changes against `persisted_value`, and reset availability against `default_value` plus `reset_eligible`, all with typed equality. Save runtime changes submits only runtime-editable draft/runtime differences through PATCH. Runtime-editable resets PATCH authoritative defaults, while Connection resets stage persistence-only defaults locally. Save to configuration submits draft/persisted differences through PUT. Save to configuration is disabled when no eligible persistence difference exists, never runs automatically from editing or reset, shows an in-progress label, and locks conflicting controls while pending.
 
 Successful reset feedback states that defaults are staged and reset did not write configuration. It distinguishes persisted differences that require Save to configuration from an already-matching persisted state that needs no save. Successful PUT refreshes runtime/persisted metadata while restoring the user's draft values, so a newly persisted Connection value remains unapplied to runtime until restart. Validation, network, server, and malformed-response failures retain the relevant state and present inline feedback. Discard is local for browser-only drafts and uses one PATCH only when runtime-editable confirmed values must be restored from persisted metadata. Per-setting text identifies active runtime, saved configuration, built-in default, and draft values; badges identify runtime-read-only, non-persistable, runtime-different-from-saved, and restart-required states without relying on color alone.
 
-The Connection card also has a Test Connection action and transient result region. The request uses the current endpoint and timeout drafts even when they differ from active or saved values. While the request is pending, the action is busy and disabled so repeated clicks cannot create concurrent probes. Editing either Connection draft clears the prior result so it cannot be mistaken for evidence about new values. Success displays the tested endpoint, measured latency, Ollama version, and an explicit reminder that the test did not save or activate anything. Failure displays a safe categorized explanation and states that runtime and saved configuration were not changed. A successful test is optional and is never required before Save.
+The Connection card also has a Test Connection action and transient result region. The request uses the current endpoint and timeout **drafts** even when they differ from active or persisted values. It does not test or replace the active client merely because the draft matches a saved value. While the request is pending, the action is busy and disabled so repeated clicks cannot create concurrent probes. Editing either Connection draft clears the prior result so it cannot be mistaken for evidence about new values. Success displays the tested endpoint, measured latency, Ollama version, and an explicit reminder that the test did not save, persist, or activate anything. Failure displays a safe categorized explanation and states that runtime and saved configuration were not changed. A successful test is optional and is never required before Save.
 
 `POST`, `PUT`, and `DELETE` on `/api/dashboard/settings` itself continue to return `405`; configuration persistence is available only at the separate `/api/dashboard/settings/config` resource.
 
-Exposed settings:
+### Dashboard-managed Settings matrix
 
-| Category | Setting | Reset eligible |
-| --- | --- | --- |
-| Connection | `ollama.base_url` | Yes |
-| Connection | `ollama.timeout_seconds` | Yes |
-| Context | `context.enabled` | Yes |
-| Context | `context.warning_threshold_percent` | Yes |
-| Context | `context.compression_threshold_percent` | Yes |
-| Context | `context.keep_recent_messages` | Yes |
-| Compression | `compression.enabled` | Yes |
-| Compression | `compression.summarizer_model` | Yes |
-| Compression | `compression.max_summary_tokens` | Yes |
-| Dashboard | `dashboard.refresh_interval_ms` | Yes |
+These are the complete ten fields exposed by the schema-v2 snapshot and rendered Settings page:
+
+| Category | Setting | Type and accepted range | Runtime editable | Persistable | Reset eligible | Restart required |
+| --- | --- | --- | --- | --- | --- | --- |
+| Connection | `ollama.base_url` | String; normalized absolute HTTP(S) URL | No | Yes | Yes | Yes |
+| Connection | `ollama.timeout_seconds` | Integer, minimum `1`, no product maximum | No | Yes | Yes | Yes |
+| Context | `context.enabled` | Boolean | Yes | Yes | Yes | No |
+| Context | `context.warning_threshold_percent` | Integer, `0` through `100` | Yes | Yes | Yes | No |
+| Context | `context.compression_threshold_percent` | Integer, `0` through `100` | Yes | Yes | Yes | No |
+| Context | `context.keep_recent_messages` | Integer, minimum `1`, no product maximum | Yes | Yes | Yes | No |
+| Compression | `compression.enabled` | Boolean | Yes | Yes | Yes | No |
+| Compression | `compression.summarizer_model` | Nonblank string | Yes | Yes | Yes | No |
+| Compression | `compression.max_summary_tokens` | Integer, minimum `1`, no product maximum | Yes | Yes | Yes | No |
+| Dashboard | `dashboard.refresh_interval_ms` | Integer, minimum `1`, no product maximum | Yes | Yes | Yes | No |
 
 Startup-only or unexposed fields remain rejected by both update APIs, including server host/port, logging paths, metrics settings, model override maps, `context.default_context_window_tokens`, and `context.minimum_threshold_percent`. The two approved Ollama Connection fields are accepted only by persisted configuration PUT, not runtime PATCH.
+
+Listener-host editing (`server.host`) and ContextKeeper proxy-port editing (`server.port`) are intentionally deferred from the Settings UI. Retry-count, retry-delay, and backoff controls are also deferred; the existing internal model-discovery retry behavior is not a dashboard setting. Configuration-source provenance UI is deferred: the snapshot reports active and persisted values and their difference, but not the source that produced the active value. Environment-variable editing, command-line editing, automatic restart, and manual restart controls are not implemented.
 
 ## Validation rules
 
@@ -347,7 +361,7 @@ Both Connection settings are:
 - eligible for reset to authoritative built-in defaults;
 - marked restart-required.
 
-Save updates the YAML tier atomically but leaves the canonical runtime `Settings`, active Ollama client, in-flight requests/streams, and active dashboard health/discovery state unchanged. ContextKeeper does not restart automatically. A manual restart is required before the saved values can become active, subject to higher-priority environment or command-line sources. Saving a syntactically valid but currently unreachable endpoint is allowed.
+Save updates the YAML tier atomically but leaves the canonical runtime `Settings`, active Ollama client, in-flight requests/streams, and active dashboard health/discovery state unchanged. ContextKeeper does not restart automatically. A manual restart is required before the saved values can become active. For `ollama.base_url`, the currently implemented higher-priority source is `CONTEXTKEEPER_OLLAMA_URL`; if it remains set, it can continue to override the saved YAML value after restart. The abstract precedence policy reserves a command-line tier, but no current command supplies a per-setting override. Saving a syntactically valid but currently unreachable endpoint is allowed.
 
 ### Test Connection
 

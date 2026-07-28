@@ -138,6 +138,10 @@ def test_dashboard_conversation_inspector_foundation_contract() -> None:
     assert "inspectorOpen:false" in html
     assert "inspectorLoading:false" in html
     assert "inspectorError:null" in html
+    assert "returnFocusId:null" in html
+    assert 'id="opsActiveConversationInspectBtn"' in html
+    assert 'data-inspect-active-conversation="true"' in html
+    assert '<a class="badge info" href="#conversations" data-page-link="conversations">Open</a>' not in html
     assert "data-inspector-conversation-id" in html
     assert "aria-pressed" in html
     assert "is-selected" in html

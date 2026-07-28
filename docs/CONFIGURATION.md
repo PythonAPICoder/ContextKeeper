@@ -308,6 +308,8 @@ Startup-only or unexposed fields remain rejected by both update APIs, including 
 
 Listener-host editing (`server.host`) and ContextKeeper proxy-port editing (`server.port`) are intentionally deferred from the Settings UI. Retry-count, retry-delay, and backoff controls are also deferred; the existing internal model-discovery retry behavior is not a dashboard setting. Configuration-source provenance UI is deferred: the snapshot reports active and persisted values and their difference, but not the source that produced the active value. Environment-variable editing, command-line editing, automatic restart, and manual restart controls are not implemented.
 
+For post-1.0 development, the Settings architecture will expand under the **Unified Local and Cloud LLM Provider Support** initiative (see [Roadmap](ROADMAP.md#unified-local-and-cloud-llm-provider-support)) to introduce **Provider Profiles** for managing multiple local and cloud connections. In Version 1, the 10-field Dashboard-managed matrix remains authoritative and restricted to a single Ollama connection without runtime switching. Post-1.0 configuration will support secure provider credential storage and authentication mechanisms (API Keys, OAuth, JWT, Azure Managed Identity, mTLS) adhering strictly to the **Zero-Leakage Security Guardrail** (ensuring credentials are never exposed through API snapshots, telemetry, logs, or diagnostic exports). Furthermore, runtime backend selection and capability-driven configuration controls will be governed by the normalized **Provider Capability Model** rather than provider identity, maintaining full backward compatibility for existing Ollama deployments.
+
 ## Validation rules
 
 - `server.port` must be between `1` and `65535`.

@@ -136,6 +136,12 @@ ContextKeeper probes Ollama for dashboard health through `/api/version` and disc
 
 The Settings page candidate Test Connection operation is separate from both paths. It creates one temporary `httpx.AsyncClient` with `trust_env=False`, sends exactly one bounded request to the candidate endpoint's base-path-preserving `/api/version` URL, and closes the client through its async context manager. Its result does not replace the active endpoint/client or overwrite active health, version, metrics, model-discovery, or diagnostics state. Existing model-discovery retry/backoff remains a separate runtime behavior; candidate testing does not retry.
 
+### Post-1.0 Architectural Direction: Provider-Neutral Gateway
+
+In Version 1, ContextKeeper remains an Ollama-focused transparent proxy where Ollama is the single upstream model runtime. For post-1.0 development, the architecture will evolve toward a provider-neutral AI gateway and observability platform (see [Unified Local and Cloud LLM Provider Support](ROADMAP.md#unified-local-and-cloud-llm-provider-support)) while preserving full backward compatibility with existing Ollama deployments. This documentation update does not authorize implementation.
+
+This post-1.0 evolution adheres to the **Provider Independence Principle**: no production code outside the provider abstraction layer will require knowledge of a specific provider implementation. Application components and UI behavior will be driven by a normalized **Provider Capability Model** (exposing boolean flags such as `supports_streaming`, `supports_tools`, `supports_images`, `supports_vision` and metadata like `max_context_tokens`) rather than provider identity. Furthermore, it enforces the **Progressive Capability Principle** (graceful feature degradation without warnings or errors when capabilities are unsupported) and a strict **Zero-Leakage Security Guardrail** (preventing credential leakage across logs, telemetry, HTML, API responses, or exported diagnostics). Future extensibility will be supported via a provider plugin or extension architecture without modifying core logic.
+
 ## Dashboard snapshot path
 
 Source:
@@ -358,7 +364,7 @@ Planned but not implemented as runtime subsystems:
 
 - durable historical memory retrieval;
 - Validation/AutoQA engine;
-- routing engine;
+- routing and provider-neutral gateway engine (see [Unified Local and Cloud LLM Provider Support](ROADMAP.md#unified-local-and-cloud-llm-provider-support));
 - plugin engine;
 - multi-user/workspace isolation.
 

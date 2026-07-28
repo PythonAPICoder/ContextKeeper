@@ -228,7 +228,7 @@ Long-term ideas are preserved in [Future Ideas](FUTURE_IDEAS.md). Potential area
 - User/workspace isolation.
 - Model routing.
 - Plugin architecture.
-- Multi-server and cloud-provider orchestration.
+- Unified Local and Cloud LLM Provider Support.
 - Agents and voice interfaces.
 - Advanced analytics and benchmarking.
 - Custom dashboard widgets.
@@ -236,6 +236,60 @@ Long-term ideas are preserved in [Future Ideas](FUTURE_IDEAS.md). Potential area
 Promotion rule:
 
 - Future ideas should be promoted into the roadmap only when the Product Owner approves them as planned work.
+
+### Unified Local and Cloud LLM Provider Support
+
+Status: Approved post-1.0 architectural direction. This documentation update does NOT authorize implementation.
+
+This initiative defines ContextKeeper's long-term evolution from an Ollama-specific proxy into a provider-neutral AI gateway and observability platform while preserving full backward compatibility with existing Ollama deployments. In Version 1, ContextKeeper remains an Ollama-focused transparent proxy; post-1.0 evolves toward a provider-neutral architecture using adapter-based provider abstractions.
+
+#### Architecture Requirements & Core Principles
+
+- **Provider Independence Principle**: No production code outside the provider abstraction layer should require knowledge of any specific provider implementation. Application behavior should be driven by the Provider Capability Model rather than provider identity.
+  ```text
+  Dashboard & Core Engine
+          ↓
+  Provider Capability Model
+          ↓
+  Provider Adapter
+          ↓
+  Provider Runtime (Local or Cloud)
+  ```
+  Avoid provider-specific conditional logic throughout the application.
+- **Progressive Capability Principle**: If a provider does not support a capability, ContextKeeper adapts naturally by hiding or disabling only the affected functionality without producing unnecessary warnings or errors (e.g., no image capability → image controls hidden; no streaming → streaming indicators disabled; no tool support → tool controls hidden; no JSON mode → structured-output controls unavailable). The interface adapts according to the Provider Capability Model rather than provider identity.
+- **Zero-Leakage Security Guardrail**: All provider credentials and authentication headers must be securely stored and permanently scrubbed or excluded from request logs, telemetry, exception traces, browser HTML, API responses, and exported diagnostics.
+- **Future Extensibility**: Future provider integrations should eventually be possible without modifying ContextKeeper core logic through a provider plugin or extension architecture.
+- **Backward Compatibility**: Full backward compatibility with existing Ollama deployments, APIs, and client integrations is preserved across all implementation phases.
+
+#### Provider Capability Model
+
+The Provider Capability Model is the normalized architectural contract implemented by every provider adapter. Capabilities include (but are not limited to):
+
+- **Boolean capabilities**: `supports_streaming`, `supports_tools`, `supports_images`, `supports_vision`, `supports_multimodal`, `supports_embeddings`, `supports_reasoning`, `supports_json_mode`, `supports_function_calling`, `supports_audio`, `supports_structured_output`, `supports_batch_requests`, `supports_context_discovery`, `supports_usage_reporting`, `supports_fine_tuning`.
+- **Normalized metadata**: `max_context_tokens`, `max_output_tokens`, `tokenizer_family`, `provider_version`.
+
+Unknown values are acceptable; not every provider will expose every capability. The model is versioned to allow future expansion while maintaining backward compatibility.
+
+#### Authentication
+
+Post-1.0 will support secure provider credential and authentication management allowing future authentication mechanisms such as API Keys, OAuth, JWT, Azure Managed Identity, mTLS, and additional provider-specific authentication mechanisms while strictly enforcing the Zero-Leakage Security Guardrail.
+
+#### Roadmap Workstreams
+
+1. **Provider Foundation**: Establish an internal provider-neutral request, response, and streaming data model. Build adapter interfaces abstracting model execution, capability detection, and model listing. Implement local inference adapters: Ollama (retaining 100% backward compatibility), LM Studio, llama.cpp server, vLLM, and other OpenAI-compatible local endpoints. Enable runtime provider selection and separate local connection profiles without breaking existing conversation tracking or context meters.
+2. **Cloud Provider Integration**: Implement secure API credential storage and authentication mechanisms (API Keys, OAuth, JWT, Azure Managed Identity, mTLS) enforcing the Zero-Leakage Security Guardrail. Implement cloud provider adapters: OpenAI, Anthropic Claude, Google Gemini, Azure OpenAI, and compatible hosted providers. Add provider-specific error handling, timeout, retry policies, and authentication header injection.
+3. **Provider Management & Dashboard**: Introduce **Provider Profiles** within Settings for managing multiple local and cloud connections without making this a separate implementation phase. Enable runtime provider selection, connection testing, and health reporting. Enhance the Topbar and Instrument Panel with active provider/model badges, connection latency, and capability-driven UI controls derived from the Provider Capability Model. Preserve ContextKeeper's visual design language and accessibility standards.
+4. **Unified Observability & Routing**: Adapt the Context Engine, Tokenizer, and Compression Manager to handle provider-specific tokenizers and summary-generation models across different backends. Provide unified analytics, routing, token accounting, and comparative diagnostics. Long-term roadmap objectives include provider benchmarking, latency comparison, throughput comparison, and future quality comparison metrics; these are long-term roadmap goals rather than immediate implementation commitments.
+
+#### Explicit Non-Goals
+
+This initiative does NOT attempt to become:
+- A replacement for provider-native APIs;
+- A workflow orchestration platform;
+- An autonomous agent framework;
+- A generic AI automation platform.
+
+ContextKeeper remains strictly focused on provider abstraction, observability, diagnostics, conversation management, context management, and interoperability.
 
 ## Roadmap guardrails
 

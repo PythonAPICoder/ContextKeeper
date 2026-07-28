@@ -263,7 +263,7 @@ The Version 1 direction is to ship a production-quality local tool that preserve
 4. Prepare the public GitHub release.
 5. Ship Version 1.0.
 
-Long-term v2+ ideas are tracked in [docs/FUTURE_IDEAS.md](docs/FUTURE_IDEAS.md). They are not current implementation commitments.
+Long-term v2+ ideas are tracked in [docs/FUTURE_IDEAS.md](docs/FUTURE_IDEAS.md) and [docs/ROADMAP.md](docs/ROADMAP.md#unified-local-and-cloud-llm-provider-support). Notably, post-1.0 development defines the **Unified Local and Cloud LLM Provider Support** initiative, evolving ContextKeeper from an Ollama-specific proxy into a provider-neutral AI gateway and observability platform supporting local inference (Ollama, LM Studio, llama.cpp, vLLM) and cloud providers (OpenAI, Anthropic Claude, Google Gemini, Azure OpenAI). While Version 1 remains strictly Ollama-focused, post-1.0 architecture employs adapter-based abstractions conforming to the **Provider Independence Principle** (making decisions based on a normalized **Provider Capability Model** rather than provider identity), the **Progressive Capability Principle** (graceful UI and feature degradation), and a strict **Zero-Leakage Security Guardrail** (preventing credential exposure across logs, telemetry, or diagnostics). These are architectural directions, not current implementation commitments.
 
 ## Current limitations
 
@@ -277,7 +277,7 @@ Long-term v2+ ideas are tracked in [docs/FUTURE_IDEAS.md](docs/FUTURE_IDEAS.md).
 - Settings reset is limited to metadata-approved dashboard-managed fields. It is not a factory reset, does not clear application data, and does not provide restart, self-diagnostic, repair, backup-history, or rollback controls.
 - Connection configuration supports one Ollama backend only. Saving never replaces the active client or switches in-flight requests; Test Connection is a transient one-attempt candidate probe, not background monitoring, and a manual restart is required to activate saved Connection values.
 - HTTPS endpoints use normal system/Python certificate verification. ContextKeeper does not provide certificate installation, trust management, client certificates, or a verification-bypass control.
-- Authentication, multi-user permissions, cloud model providers, routing, plugins, and multi-server orchestration are future ideas, not current Version 1 behavior.
+- Authentication, multi-user permissions, cloud model providers, routing, plugins, and multi-server orchestration (including the provider-neutral AI gateway architecture defined in [docs/ROADMAP.md](docs/ROADMAP.md#unified-local-and-cloud-llm-provider-support)) are planned post-1.0 architectural directions, not current Version 1 behavior.
 - Windows service installation hooks are still placeholders.
 
 ## Package naming note

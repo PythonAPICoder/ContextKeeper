@@ -88,5 +88,6 @@ URL.
 -   Automatic model routing
 -   Project memory
 -   Plugin architecture
+-   Unified Local and Cloud LLM Provider Support (provider-neutral AI gateway and observability platform; see [Roadmap](ROADMAP.md#unified-local-and-cloud-llm-provider-support))
 -   Multi-server support
 -   Agent orchestration

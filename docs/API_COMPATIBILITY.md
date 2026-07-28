@@ -133,8 +133,8 @@ Current compression and dashboard behavior must not be described as if either la
 ## Intentionally deferred or post-Version 1
 
 - Authentication, credentials, accounts, multi-user permissions, ownership, and workspace isolation.
-- Multiple AI servers or profiles, cloud model providers, failover, load balancing, and background Connection monitoring.
-- Runtime backend switching, active-client replacement, automatic or manual restart controls, Windows service controls, self-diagnostics, and automated recovery.
+- Multiple AI servers or profiles, cloud model providers, failover, load balancing, and background Connection monitoring (see [Unified Local and Cloud LLM Provider Support](ROADMAP.md#unified-local-and-cloud-llm-provider-support)). In Version 1, ContextKeeper remains strictly Ollama-focused; post-1.0 will introduce adapter-based local and cloud provider support driven by a normalized Provider Capability Model while preserving 100% backward compatibility for Ollama and `/v1/*` client integrations.
+- Runtime backend switching, active-client replacement, automatic or manual restart controls, Windows service controls, self-diagnostics, and automated recovery (to be addressed post-1.0 under Provider Foundation and Provider Management & Dashboard workstreams).
 - Listener-host editing, ContextKeeper proxy-port editing, retry-count/retry-delay/backoff controls, configuration-source provenance UI, environment-variable editing, and command-line editing.
-- TLS trust or certificate management, credential storage, and secrets-management UI.
+- TLS trust or certificate management, credential storage, and secrets-management UI (to be addressed post-1.0 enforcing the Zero-Leakage Security Guardrail).
 - Model routing, plugin APIs, and full OpenAI API compatibility beyond transparent `/v1/*` passthrough behavior.

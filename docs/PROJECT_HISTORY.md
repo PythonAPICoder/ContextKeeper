@@ -2279,6 +2279,7 @@ Version 2+ planning areas:
 - Intelligent routing: automatic model routing, capability-aware model selection, context-window-aware routing, model-performance benchmarking, resource-aware routing, cost and latency optimization, and local-server availability awareness.
 - Plugin platform: plugin SDK, third-party integrations, custom validation scenarios, custom dashboard widgets, custom memory providers, custom routing policies, and controlled plugin permissions and isolation.
 - Infrastructure: multi-server support, load balancing, distributed ContextKeeper nodes, failover, remote execution, server health, and capability discovery.
+- Unified Local and Cloud LLM Provider Support: post-1.0 architectural evolution into a provider-neutral AI gateway and observability platform supporting local servers (Ollama, LM Studio, llama.cpp, vLLM) and cloud providers (OpenAI, Anthropic Claude, Google Gemini, Azure OpenAI). Governed by the Provider Independence Principle, Progressive Capability Principle, and Zero-Leakage Security Guardrail (see [Roadmap](ROADMAP.md#unified-local-and-cloud-llm-provider-support)).
 - Agents and voice: agent orchestration, autonomous workflows, voice-first interaction, Jarvis-style assistant integration, voice and visual input integrations, and coordination of specialized local agents.
 - Analytics and benchmarking: advanced model benchmarks, long-term usage analytics, model comparisons, historical performance trends, context-compression effectiveness metrics, memory-retrieval effectiveness metrics, and validation trend reporting.
 
